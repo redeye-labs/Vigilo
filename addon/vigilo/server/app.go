@@ -14,15 +14,16 @@ import (
 )
 
 type App struct {
-	store   *Store
-	events  *EventLog
-	tesla   *Tesla
-	tailnet *Tailnet
-	ha      *HA
-	certs   Certs
-	ft      *FleetTelemetry
-	bus     *Bus
-	version string
+	store      *Store
+	events     *EventLog
+	tesla      *Tesla
+	tailnet    *Tailnet
+	ha         *HA
+	mqttManual *MQTTService // broker dalle opzioni (facoltativo)
+	certs      Certs
+	ft         *FleetTelemetry
+	bus        *Bus
+	version    string
 
 	mu            sync.Mutex
 	lastAwareSent time.Time
@@ -247,6 +248,14 @@ func (a *App) Refresh(ctx context.Context) error {
 
 // ---------- configurazione automatica ----------
 
+// mqttService: broker manuale dalle opzioni se impostato, altrimenti quello del Supervisor (Mosquitto).
+func (a *App) mqttService(ctx context.Context) (*MQTTService, error) {
+	if a.mqttManual != nil {
+		return a.mqttManual, nil
+	}
+	return a.ha.MQTT(ctx)
+}
+
 // Setup esegue i passi automatici che sono pronti: certificati, telemetria, MQTT, dominio, config auto.
 func (a *App) Setup(ctx context.Context) {
 	host := a.tailnet.Host()
@@ -255,7 +264,7 @@ func (a *App) Setup(ctx context.Context) {
 			log.Printf("certificati: %v", err)
 		}
 	}
-	if m, err := a.ha.MQTT(ctx); err == nil {
+	if m, err := a.mqttService(ctx); err == nil {
 		a.setMQTTErr("")
 		if err := a.bus.Ensure(m); err != nil {
 			a.setMQTTErr("connessione MQTT: " + err.Error())

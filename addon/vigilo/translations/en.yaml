@@ -8,3 +8,18 @@ configuration:
     name: Tailscale auth key (optional)
     description: >-
       Leave empty to log in with the link shown on the Vigilo page, or paste an auth key from the Tailscale admin console.
+  mqtt_host:
+    name: Manual MQTT broker – host (optional)
+    description: >-
+      Leave empty to use the Mosquitto broker automatically. Fill in (e.g. "core-mosquitto") only if
+      Vigilo cannot find the broker by itself.
+  mqtt_port:
+    name: Manual MQTT broker – port
+    description: Default 1883 (8883 with SSL).
+  mqtt_username:
+    name: Manual MQTT broker – username
+    description: A Home Assistant or Mosquitto broker user.
+  mqtt_password:
+    name: Manual MQTT broker – password
+  mqtt_ssl:
+    name: Manual MQTT broker – SSL

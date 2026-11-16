@@ -200,8 +200,12 @@ func (a *App) saveSettings(in Settings) {
 func (a *App) writeSettings(w http.ResponseWriter, ctx context.Context) {
 	c, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	avail, _ := a.ha.NotifyServices(c)
-	writeJSON(w, 200, map[string]any{"ok": true, "settings": a.store.Get().Settings, "available_targets": avail})
+	avail, err := a.ha.NotifyServices(c)
+	out := map[string]any{"ok": true, "settings": a.store.Get().Settings, "available_targets": avail}
+	if err != nil {
+		out["targets_error"] = err.Error()
+	}
+	writeJSON(w, 200, out)
 }
 
 // ================= interfaccia Home Assistant (Ingress) =================

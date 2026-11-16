@@ -22,6 +22,27 @@ var version = "dev"
 type Options struct {
 	TailscaleHostname string `json:"tailscale_hostname"`
 	TailscaleAuthKey  string `json:"tailscale_authkey"`
+	// Broker MQTT manuale (facoltativo): se mqtt_host è vuoto si usa quello fornito dal Supervisor (Mosquitto).
+	MQTTHost     string `json:"mqtt_host"`
+	MQTTPort     int    `json:"mqtt_port"`
+	MQTTUsername string `json:"mqtt_username"`
+	MQTTPassword string `json:"mqtt_password"`
+	MQTTSSL      bool   `json:"mqtt_ssl"`
+}
+
+// manualMQTT restituisce il broker configurato a mano, o nil se non impostato.
+func (o Options) manualMQTT() *MQTTService {
+	if o.MQTTHost == "" {
+		return nil
+	}
+	port := o.MQTTPort
+	if port == 0 {
+		port = 1883
+		if o.MQTTSSL {
+			port = 8883
+		}
+	}
+	return &MQTTService{Host: o.MQTTHost, Port: port, SSL: o.MQTTSSL, Username: o.MQTTUsername, Password: o.MQTTPassword}
 }
 
 func main() {
@@ -49,13 +70,22 @@ func main() {
 		log.Fatalf("chiave: %v", err)
 	}
 	app := &App{
-		store:   store,
-		events:  NewEventLog(*dataDir),
-		tesla:   tesla,
-		tailnet: NewTailnet(*dataDir, opts.TailscaleHostname, opts.TailscaleAuthKey, telemetryListen),
-		ha:      NewHA(),
-		certs:   Certs{dir: filepath.Join(*dataDir, "tls")},
-		version: version,
+		store:      store,
+		events:     NewEventLog(*dataDir),
+		tesla:      tesla,
+		tailnet:    NewTailnet(*dataDir, opts.TailscaleHostname, opts.TailscaleAuthKey, telemetryListen),
+		ha:         NewHA(),
+		mqttManual: opts.manualMQTT(),
+		certs:      Certs{dir: filepath.Join(*dataDir, "tls")},
+		version:    version,
+	}
+	if src := app.ha.Source(); src != "" {
+		log.Printf("Supervisor: token trovato (%s)", src)
+	} else {
+		log.Printf("Supervisor: token NON trovato; MQTT automatico, notifiche ed eventi non funzioneranno")
+	}
+	if app.mqttManual != nil {
+		log.Printf("MQTT: broker manuale %s:%d", app.mqttManual.Host, app.mqttManual.Port)
 	}
 	app.ft = &FleetTelemetry{bin: *ftBin, dir: filepath.Join(*dataDir, "fleet-telemetry"), certs: app.certs}
 	app.bus = &Bus{app: app}

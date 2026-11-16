@@ -32,5 +32,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=fleettelemetry /fleet-telemetry /usr/bin/fleet-telemetry
 COPY --from=build /out/vigilo /usr/bin/vigilo
+# s6-overlay (/init dell'immagine base) di default azzera l'ambiente del processo principale:
+# senza questo il server non vede SUPERVISOR_TOKEN (il server legge comunque anche /run/s6/container_environment).
+ENV S6_KEEP_ENV=1
 WORKDIR /data
 CMD ["/usr/bin/vigilo", "-data", "/data", "-ingress", ":8099", "-fleet-telemetry", "/usr/bin/fleet-telemetry"]

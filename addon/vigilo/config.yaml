@@ -1,5 +1,5 @@
 name: Vigilo
-version: "1.0.0"
+version: "1.0.1"
 slug: vigilo
 description: Avvisi Sentinella in tempo reale, comandi e storico per la tua auto, con l'app Android Vigilo.
 url: https://github.com/redeye-labs/Vigilo
@@ -22,3 +22,8 @@ options:
 schema:
   tailscale_hostname: "match(^[a-z0-9-]{1,40}$)"
   tailscale_authkey: password?
+  mqtt_host: str?
+  mqtt_port: port?
+  mqtt_username: str?
+  mqtt_password: password?
+  mqtt_ssl: bool?

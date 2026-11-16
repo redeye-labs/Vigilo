@@ -102,11 +102,15 @@ Blueprint pronti (Aware e Panic): vedi il README del repository.
 |---|---|---|
 | `tailscale_hostname` | `vigilo` | nome del nodo nel tailnet |
 | `tailscale_authkey` | — | facoltativa: chiave di autenticazione invece del login interattivo |
+| `mqtt_host` | — | facoltativo: broker MQTT manuale (es. `core-mosquitto`); vuoto = Mosquitto rilevato in automatico |
+| `mqtt_port` | `1883` | porta del broker manuale (8883 con SSL) |
+| `mqtt_username` / `mqtt_password` | — | credenziali del broker manuale |
+| `mqtt_ssl` | `false` | connessione cifrata al broker manuale |
 
 ## Problemi comuni
 
 - **Funnel non attivo**: mancano HTTPS Certificates o l'attributo `funnel` nella policy.
-- **MQTT non connesso**: installa/avvia Mosquitto, poi riavvia Vigilo.
+- **MQTT non connesso**: installa/avvia Mosquitto, poi riavvia Vigilo. Se non basta, compila `mqtt_host`, `mqtt_username` e `mqtt_password` nella Configurazione.
 - **«L'auto ha inviato dati» rosso**: normale finché l'auto non si sveglia (apri l'auto o guida).
 - **Chiave virtuale**: il link `https://tesla.com/_ak/vigilo.<tailnet>.ts.net` va aperto sul telefono con l'app Tesla installata.
 

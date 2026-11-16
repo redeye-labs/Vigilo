@@ -11,24 +11,70 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
 // HA parla con Home Assistant tramite il Supervisor (token SUPERVISOR_TOKEN fornito all'add-on).
 type HA struct {
+	mu     sync.Mutex
 	token  string
+	source string
 	client *http.Client
 }
 
 func NewHA() *HA {
-	return &HA{token: os.Getenv("SUPERVISOR_TOKEN"), client: &http.Client{Timeout: 15 * time.Second}}
+	h := &HA{client: &http.Client{Timeout: 15 * time.Second}}
+	h.token, h.source = supervisorToken()
+	return h
 }
 
-func (h *HA) Available() bool { return h.token != "" }
+// supervisorEnvDirs: l'immagine base usa s6-overlay (/init), che di default azzera l'ambiente del
+// processo principale e salva le variabili del container in questi file (come fa "with-contenv").
+var supervisorEnvDirs = []string{"/run/s6/container_environment", "/var/run/s6/container_environment"}
+
+// supervisorToken cerca il token del Supervisor nell'ambiente e, se manca, nei file di s6-overlay.
+// Restituisce anche la fonte (mai il valore) per il registro.
+func supervisorToken() (token, source string) {
+	for _, name := range []string{"SUPERVISOR_TOKEN", "HASSIO_TOKEN"} {
+		if v := strings.TrimSpace(os.Getenv(name)); v != "" {
+			return v, "ambiente " + name
+		}
+	}
+	for _, dir := range supervisorEnvDirs {
+		for _, name := range []string{"SUPERVISOR_TOKEN", "HASSIO_TOKEN"} {
+			if b, err := os.ReadFile(dir + "/" + name); err == nil {
+				if v := strings.TrimSpace(string(b)); v != "" {
+					return v, dir + "/" + name
+				}
+			}
+		}
+	}
+	return "", ""
+}
+
+func (h *HA) Available() bool { return h.ensureToken() }
+
+// ensureToken riprova a leggere il token se all'avvio non c'era.
+func (h *HA) ensureToken() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.token == "" {
+		h.token, h.source = supervisorToken()
+	}
+	return h.token != ""
+}
+
+// Source descrive da dove arriva il token (per il registro), o "" se manca.
+func (h *HA) Source() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.source
+}
 
 func (h *HA) do(ctx context.Context, method, path string, body any, out any) error {
-	if h.token == "" {
-		return errors.New("Supervisor non disponibile (avvio fuori da Home Assistant)")
+	if !h.ensureToken() {
+		return errors.New("token del Supervisor mancante: controlla che Vigilo sia avviato come componente aggiuntivo di Home Assistant e riavvialo")
 	}
 	var rd io.Reader
 	if body != nil {
@@ -45,7 +91,11 @@ func (h *HA) do(ctx context.Context, method, path string, body any, out any) err
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 4<<20))
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("Home Assistant %s %s: %d", method, path, resp.StatusCode)
+		msg := strings.TrimSpace(string(b))
+		if len(msg) > 200 {
+			msg = msg[:200]
+		}
+		return fmt.Errorf("Supervisor %s %s: HTTP %d %s", method, path, resp.StatusCode, msg)
 	}
 	if out != nil {
 		return json.Unmarshal(b, out)
@@ -67,7 +117,7 @@ func (h *HA) MQTT(ctx context.Context) (*MQTTService, error) {
 		Data MQTTService `json:"data"`
 	}
 	if err := h.do(ctx, "GET", "/services/mqtt", nil, &r); err != nil {
-		return nil, fmt.Errorf("broker MQTT non trovato (installa l'add-on Mosquitto broker): %w", err)
+		return nil, fmt.Errorf("broker MQTT non trovato tramite il Supervisor (%w); verifica che Mosquitto broker sia avviato, oppure compila mqtt_host/mqtt_username/mqtt_password nella Configurazione di Vigilo", err)
 	}
 	if r.Data.Host == "" {
 		return nil, errors.New("broker MQTT non configurato: installa e avvia l'add-on Mosquitto broker")
@@ -96,7 +146,14 @@ func (h *HA) NotifyServices(ctx context.Context) ([]string, error) {
 			out = append(out, name)
 		}
 	}
-	sort.Strings(out)
+	// Prima i telefoni (mobile_app_*), poi gli altri servizi notify.
+	sort.Slice(out, func(i, j int) bool {
+		pi, pj := strings.HasPrefix(out[i], "mobile_app_"), strings.HasPrefix(out[j], "mobile_app_")
+		if pi != pj {
+			return pi
+		}
+		return out[i] < out[j]
+	})
 	return out, nil
 }
 

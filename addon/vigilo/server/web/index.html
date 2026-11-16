@@ -139,7 +139,7 @@ async function loadSettings(){
   const r=await api('ui/settings'); if(!r.settings) return; settingsLoaded=true;
   const s=r.settings, sel=new Set(s.notify_targets||[]);
   const all=[...new Set([...(r.available_targets||[]),...sel])];
-  $('targets').innerHTML=all.length?all.map(t=>`<label><input type="checkbox" value="${esc(t)}" ${sel.has(t)?'checked':''}> notify.${esc(t)}</label>`).join(''):'<p class="mut">Nessun telefono trovato: installa l\'app Home Assistant sul telefono.</p>';
+  $('targets').innerHTML=all.length?all.map(t=>`<label><input type="checkbox" value="${esc(t)}" ${sel.has(t)?'checked':''}> notify.${esc(t)}</label>`).join(''):(r.targets_error?`<p class="mut">Impossibile leggere i telefoni da Home Assistant: ${esc(r.targets_error)}</p>`:'<p class="mut">Nessun telefono trovato: installa l\'app Home Assistant sul telefono.</p>');
   $('naware').checked=s.notify_aware; $('npanic').checked=s.notify_panic; $('nprob').checked=s.notify_problems; $('thr').value=s.aware_throttle_sec;
 }
 async function saveSettings(){
