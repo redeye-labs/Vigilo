@@ -9,3 +9,6 @@ private-key.pem
 dist/
 .kotlin/
 .env
+*.jks
+*.keystore
+keystore.properties

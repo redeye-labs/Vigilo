@@ -90,6 +90,7 @@ fun GuideScreenContent(
             "Home Assistant fa da server, il telefono mostra l'auto e riceve gli avvisi.",
             onBack = onBack,
         )
+        GuideText("Scarica Vigilo solo dal repository ufficiale github.com/redeye-labs/Vigilo. Dalla 1.2.0 la firma dell'APK è nuova: se hai la 1.1.x, disinstallala prima, poi installa questa versione e rabbina di nuovo col QR.")
 
         GuideStep(1, "Installa il componente aggiuntivo", done = paired) {
             GuideText("In Home Assistant: Impostazioni › App (o «Componenti aggiuntivi») › Store › menu ⋮ › Repository. Aggiungi questo indirizzo e installa «Vigilo».")

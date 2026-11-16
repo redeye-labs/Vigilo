@@ -55,7 +55,17 @@
 | Notifications | pick phones and throttle | Aware with throttle, Panic on the `alarm_stream` channel |
 | Android app | install the app from [Releases](https://github.com/redeye-labs/Vigilo/releases/latest), open Settings → Collega a Home Assistant → Inquadra QR, and scan this QR. Do not tap «Rigenera» if an app is already paired. | token pairing; the step turns green once the app is connected |
 
-4. Install the latest app from **Releases** (`Vigilo-1.1.3.apk`), open the in-app **Guide**, scan the QR. Live checks turn green.
+**Download Vigilo only from the official repository** [github.com/redeye-labs/Vigilo](https://github.com/redeye-labs/Vigilo).
+
+4. Install the latest app from **Releases** (`Vigilo-1.2.0.apk`), open the in-app **Guide**, scan the QR. Live checks turn green.
+
+Starting with **1.2.0** the APK is signed with a new key. If you already have 1.1.x (or earlier), **uninstall it first**, then install 1.2.0 and pair again by scanning the QR.
+
+Official signing certificate SHA-256 fingerprint:
+
+`61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
+
+Verify with: `apksigner verify --print-certs Vigilo-1.2.0.apk`
 
 ### Blueprints (optional)
 
@@ -91,6 +101,21 @@ key, OAuth callback, token-protected app API, mTLS telemetry port.
 ## Build
 
 - App: `./gradlew assembleRelease` (JDK 17+, Android SDK 36).
+  Release signing does not use the debug key. Set these environment variables
+  (never put the password in repository files):
+
+  ```bash
+  export VIGILO_KEYSTORE_PATH=/path/to/vigilo-release.jks
+  export VIGILO_KEY_ALIAS=vigilo
+  export VIGILO_KEYSTORE_PASSWORD  # keystore password, environment only
+  ./gradlew assembleRelease
+  ```
+
+  Alternatively, a gitignored `keystore.properties` file may contain only
+  `storeFile=/path/to/vigilo-release.jks` and `keyAlias=vigilo`. The password
+  stays in `VIGILO_KEYSTORE_PASSWORD` only. If anything is missing, the release
+  build fails with a clear error; there is no fallback to the debug key.
+
 - Add-on server: `cd addon/vigilo/server && go build .` (Go 1.27).
 
 ## Credits and licenses

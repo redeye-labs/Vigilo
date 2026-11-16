@@ -87,9 +87,20 @@ Valori per il portale Tesla (te li dà la procedura già pronti):
 
 ### 4. App Android
 
-1. Scarica l'ultima app dalla pagina **Releases** del repository (`Vigilo-1.1.3.apk`) e installala.
+**Scarica Vigilo solo dal repository ufficiale** [github.com/redeye-labs/Vigilo](https://github.com/redeye-labs/Vigilo).
+
+1. Scarica l'ultima app dalla pagina **Releases** del repository (`Vigilo-1.2.0.apk`) e installala.
 2. Al primo avvio si apre la **Guida**: premi «Scansiona il QR» e inquadra il QR dell'ultimo passo.
 3. La guida mostra i **controlli dal vivo** del componente aggiuntivo: quando sono tutti spuntati hai finito.
+
+Dalla **1.2.0** la chiave di firma dell'APK è nuova. Se hai già la 1.1.x (o precedente), **disinstallala prima**,
+poi installa la 1.2.0 e rabbina l'app inquadrando di nuovo il QR.
+
+Impronta SHA-256 del certificato di firma ufficiale:
+
+`''' + FP + '''`
+
+Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.2.0.apk`
 
 <img src="docs/screens/guida-abbinamento.png" width="230" alt="Abbinamento">
 
@@ -160,6 +171,21 @@ controllo periodico, comandi tramite un proxy di firma tuo. È la modalità dell
 ## Compilare
 
 - App: `./gradlew assembleRelease` (JDK 17+, Android SDK 36) → `app/build/outputs/apk/release/`.
+  La firma di rilascio non usa la chiave di sviluppo: imposta queste variabili d'ambiente
+  (la password non va mai nei file del repository):
+
+  ```bash
+  export VIGILO_KEYSTORE_PATH=/percorso/del/vigilo-release.jks
+  export VIGILO_KEY_ALIAS=vigilo
+  export VIGILO_KEYSTORE_PASSWORD  # la password della chiave, solo in ambiente
+  ./gradlew assembleRelease
+  ```
+
+  In alternativa, un file `keystore.properties` (è nel `.gitignore`) può contenere solo
+  `storeFile=/percorso/del/vigilo-release.jks` e `keyAlias=vigilo`. La password resta
+  esclusivamente in `VIGILO_KEYSTORE_PASSWORD`. Se manca qualcosa, la build di rilascio
+  fallisce con un errore chiaro: non c'è alcun fallback alla chiave debug.
+
 - Server: `cd addon/vigilo/server && go build .` (Go 1.27). Test di integrazione facoltativo con un broker MQTT e il binario fleet-telemetry: vedi `integration_test.go`.
 
 ## Crediti e licenze

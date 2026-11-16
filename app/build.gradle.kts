@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,6 +7,37 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.devtools.ksp")
     id("app.cash.paparazzi")
+}
+
+// Firma di rilascio. Password solo da VIGILO_KEYSTORE_PASSWORD (mai scritta nei file del repo).
+fun envOrBlank(name: String): String = System.getenv(name)?.trim().orEmpty()
+
+val keystoreProps: Properties? = rootProject.file("keystore.properties").takeIf { it.isFile }?.let { f ->
+    Properties().apply { f.inputStream().use { load(it) } }
+}
+
+val releaseStorePath: String = envOrBlank("VIGILO_KEYSTORE_PATH").ifBlank {
+    keystoreProps?.getProperty("storeFile").orEmpty().trim()
+}
+val releaseKeyAlias: String = envOrBlank("VIGILO_KEY_ALIAS").ifBlank {
+    keystoreProps?.getProperty("keyAlias").orEmpty().trim()
+}
+val releaseStorePassword: String = envOrBlank("VIGILO_KEYSTORE_PASSWORD")
+
+fun requireReleaseSigning() {
+    val missing = mutableListOf<String>()
+    if (releaseStorePath.isEmpty()) missing += "VIGILO_KEYSTORE_PATH (o storeFile in keystore.properties)"
+    if (releaseKeyAlias.isEmpty()) missing += "VIGILO_KEY_ALIAS (o keyAlias in keystore.properties)"
+    if (releaseStorePassword.isEmpty()) missing += "VIGILO_KEYSTORE_PASSWORD"
+    if (releaseStorePath.isNotEmpty() && !file(releaseStorePath).isFile) {
+        missing += "file keystore non trovato"
+    }
+    if (missing.isNotEmpty()) {
+        error(
+            "Firma di rilascio non configurata: " + missing.joinToString("; ") +
+                ". Imposta le variabili d'ambiente descritte nel README. Nessun fallback alla chiave di sviluppo."
+        )
+    }
 }
 
 android {
@@ -15,20 +48,40 @@ android {
         applicationId = "io.github.redeyelabs.vigilo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.1.3"
+        versionCode = 20
+        versionName = "1.2.0"
         // Schema del redirect OAuth: vigilo://oauth/callback
         manifestPlaceholders["oauthScheme"] = "vigilo"
+    }
+
+    signingConfigs {
+        create("release") {
+            // Path e alias: variabili d'ambiente, oppure keystore.properties (senza password).
+            // Password: solo VIGILO_KEYSTORE_PASSWORD. Mai un fallback alla chiave debug.
+            val storePath = releaseStorePath
+            val alias = releaseKeyAlias
+            val password = releaseStorePassword
+            if (storePath.isNotEmpty() && alias.isNotEmpty() && password.isNotEmpty() && file(storePath).isFile) {
+                storeFile = file(storePath)
+                storePassword = password
+                keyAlias = alias
+                keyPassword = password
+            }
+        }
     }
 
     buildTypes {
         release {
             // Non minificare: R8 aveva già rotto il TLS del proxy, e può toccare
-            // serialization/Room/WorkManager/widget. Firma debug per installarla sopra le versioni esistenti.
-            // Restano escluse solo le risorse PQC inutili di Bouncy Castle (packaging).
+            // serialization/Room/WorkManager/widget. Restano escluse solo le risorse PQC
+            // inutili di Bouncy Castle (packaging).
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("debug")
+            val canSign = releaseStorePath.isNotEmpty() && releaseKeyAlias.isNotEmpty() &&
+                releaseStorePassword.isNotEmpty() && file(releaseStorePath).isFile
+            if (canSign) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -103,3 +156,12 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
 }
+
+// Blocca assemble/bundle release se manca la firma, senza cadere sulla chiave debug.
+gradle.taskGraph.whenReady {
+    val releaseTasks = gradle.taskGraph.allTasks.any { t ->
+        t.name == "assembleRelease" || t.name == "bundleRelease" || t.name == "packageRelease"
+    }
+    if (releaseTasks) requireReleaseSigning()
+}
+
