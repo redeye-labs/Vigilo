@@ -141,7 +141,7 @@ mkdir -p "$DIR"
 if [ -d "$DIR/standalone" ]; then
   # Aggiornamento: si sostituisce tutto tranne dati e configurazione.
   find "$DIR" -mindepth 1 -maxdepth 1 ! -name standalone -exec rm -rf {} +
-  find "$DIR/standalone" -mindepth 1 -maxdepth 1 ! -name data ! -name .env -exec rm -rf {} +
+  find "$DIR/standalone" -mindepth 1 -maxdepth 1 ! -name data ! -name .env ! -name .image-release -exec rm -rf {} +
   ok "aggiornamento: data/ e .env conservati"
 fi
 (cd "$TMP/src" && tar --exclude=./standalone/data --exclude=./standalone/.env -cf - .) | (cd "$DIR" && tar -xf -)
@@ -169,14 +169,88 @@ chmod 600 "$ENVF" 2>/dev/null || true
 ok "nome Tailscale: $host"
 
 # ---------------------------------------------------------------------------
-step "Avvio di Vigilo (la prima volta 5–15 minuti: scarica e compila)"
+step "Avvio di Vigilo (la prima volta qualche minuto: scarica circa 70 MB)"
 # Un vecchio container «vigilo» di un'altra cartella bloccherebbe l'avvio: lo togliamo (i dati sono nella cartella).
 proj="$("${DOCKER[@]}" inspect -f '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' vigilo 2>/dev/null || true)"
 if [ -n "$proj" ] && [ "$proj" != "$DIR/standalone" ]; then
   warn "trovato un container vigilo di un'altra cartella ($proj): lo sostituisco"
   "${DOCKER[@]}" rm -f vigilo >/dev/null
 fi
-(cd "$DIR/standalone" && "${COMPOSE[@]}" up -d --build) || die "Avvio non riuscito: guarda i messaggi qui sopra."
+# retry N "cosa" comando...: ripete con pause crescenti (errori di rete passeggeri, es. "tls: bad record MAC").
+retry() {
+  local n="$1" what="$2" t; shift 2
+  for t in $(seq 1 "$n"); do
+    "$@" && return 0
+    if [ "$t" -lt "$n" ]; then
+      warn "$what: tentativo $t di $n non riuscito (spesso è un errore di rete passeggero), riprovo tra $((10 * t)) secondi"
+      sleep $((10 * t))
+    fi
+  done
+  return 1
+}
+IMAGE="${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:preview}"
+RELTAG="${VIGILO_RELEASE_TAG:-docker-preview-1}"
+MARKER="$DIR/standalone/.image-release"
+# Immagine già pronta dalla pre-release su GitHub (file .tar.gz, verificato con sha256), poi "docker load".
+image_from_release() {
+  local arch json line url size digest f
+  arch="$("${DOCKER[@]}" version -f '{{.Server.Arch}}' 2>/dev/null || true)"
+  case "$arch" in amd64|arm64) ;; *) case "$(uname -m)" in aarch64|arm64) arch=arm64 ;; *) arch=amd64 ;; esac ;; esac
+  json="$(curl -fsSL -H 'User-Agent: vigilo-installer' "https://api.github.com/repos/$REPO/releases/tags/$RELTAG" 2>/dev/null)" \
+    || { warn "non riesco a leggere la pre-release $RELTAG su GitHub"; return 1; }
+  # Nel JSON di un asset "size" e "digest" vengono prima di "browser_download_url".
+  line="$(printf '%s' "$json" | tr ',{}' '\n\n\n' | awk -v want="vigilo-standalone-$arch.tar.gz" '
+    /"size":/ { s=$0; sub(/.*"size": */, "", s) }
+    /"digest":/ { d=$0; sub(/.*"digest": *"/, "", d); sub(/".*/, "", d) }
+    /"browser_download_url":/ { u=$0; sub(/.*"browser_download_url": *"/, "", u); sub(/".*/, "", u)
+      n=split(u, p, "/"); if (p[n] == want) { print u, s, d; exit } }')"
+  [ -n "$line" ] || { warn "nella pre-release $RELTAG manca l'immagine per $arch"; return 1; }
+  read -r url size digest <<<"$line"
+  if "${DOCKER[@]}" image inspect "$IMAGE" >/dev/null 2>&1 && [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$digest $url" ]; then
+    ok "immagine già aggiornata"; return 0
+  fi
+  f="$TMP/image.tar.gz"
+  dl() {
+    printf '        scarico l'"'"'immagine di Vigilo (%s MB, %s)...\n' "$((size / 1048576))" "$arch"
+    curl -fL --retry 2 --progress-bar -o "$f" "$url" || return 1
+    [ "$(wc -c <"$f" | tr -d ' ')" = "$size" ] || { warn "download incompleto"; return 1; }
+    case "$digest" in sha256:*)
+      if command -v sha256sum >/dev/null 2>&1; then
+        [ "sha256:$(sha256sum "$f" | cut -d' ' -f1)" = "$digest" ] || { warn "download rovinato (impronta diversa)"; return 1; }
+      fi ;;
+    esac
+  }
+  retry 4 "Download" dl || return 1
+  printf '        carico l'"'"'immagine in Docker...\n'
+  "${DOCKER[@]}" load -i "$f" || { warn "docker load non riuscito"; return 1; }
+  rm -f "$f"
+  printf '%s %s\n' "$digest" "$url" >"$MARKER"
+  ok "immagine pronta ($RELTAG, $arch)"
+}
+compose_in() { (cd "$DIR/standalone" && "${COMPOSE[@]}" "$@"); }
+ready=0
+if [ "${VIGILO_BUILD:-}" != "1" ]; then
+  if image_from_release; then ready=1
+  else
+    printf '        provo a scaricare l'"'"'immagine con Docker...\n'
+    # Se il registro risponde "non esiste / accesso negato" è inutile riprovare.
+    pull_once() {
+      compose_in pull vigilo 2>&1 | tee "$TMP/pull.log" && return 0
+      grep -qiE 'denied|not found|manifest unknown|unauthorized' "$TMP/pull.log" && { NOPULL=1; return 0; }
+      return 1
+    }
+    NOPULL=0
+    if retry 3 "docker compose pull" pull_once && [ "$NOPULL" = 0 ]; then ready=1; rm -f "$MARKER"; fi
+  fi
+fi
+if [ "$ready" = 1 ]; then
+  compose_in up -d --no-build || die "Avvio non riuscito: guarda i messaggi qui sopra."
+else
+  warn "immagine pronta non disponibile: compilo Vigilo dal sorgente (5–15 minuti)"
+  retry 4 "Compilazione" compose_in up -d --build \
+    || die "Avvio non riuscito. Di solito è la connessione: rete instabile, oppure un firewall o un antivirus che controlla il traffico HTTPS e rovina i download. Riprova più tardi o da un'altra rete: i dati restano."
+  rm -f "$MARKER"
+fi
 printf '    attendo che Vigilo sia pronto'
 status=""
 for _ in $(seq 1 60); do

@@ -1,13 +1,15 @@
 # Vigilo senza Home Assistant.
-# Avvio:   docker compose up -d --build      (dalla cartella "standalone")
+# Avvio:   docker compose pull && docker compose up -d   (dalla cartella "standalone": immagine già pronta)
+#          docker compose up -d --build                  (per chi sviluppa: compila dal sorgente)
 # Pagina:  http://<indirizzo-del-server>:8099   utente: vigilo   password: vedi README
 # Le variabili si impostano nel file .env accanto a questo (facoltativo, vedi .env.example).
 services:
   vigilo:
+    # Immagine già pronta (amd64/arm64). "build" serve solo a chi sviluppa (docker compose up -d --build).
+    image: ${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:preview}
     build:
       context: ..
       dockerfile: standalone/Dockerfile
-    image: vigilo-standalone:local
     container_name: vigilo
     restart: unless-stopped
     init: true                      # raccoglie i processi figli (fleet-telemetry, mosquitto)

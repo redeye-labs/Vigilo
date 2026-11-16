@@ -12,7 +12,8 @@ ARG TARGETOS
 ARG TARGETARCH
 WORKDIR /src
 COPY addon/vigilo/server/go.mod addon/vigilo/server/go.sum ./
-RUN go mod download
+# Riprova: con reti instabili (o antivirus che ispezionano HTTPS) il download può fallire a metà.
+RUN for i in 1 2 3; do go mod download && exit 0; echo "go mod download non riuscito (tentativo $i), riprovo..."; sleep 5; done; exit 1
 COPY addon/vigilo/server/ ./
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags "-s -w -X main.version=${BUILD_VERSION}" -o /out/vigilo .
@@ -29,8 +30,8 @@ LABEL \
     org.opencontainers.image.version="${BUILD_VERSION}" \
     org.opencontainers.image.source="https://github.com/redeye-labs/Vigilo" \
     org.opencontainers.image.licenses="MIT"
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates libstdc++6 mosquitto tzdata \
+RUN apt-get -o Acquire::Retries=3 update \
+    && apt-get -o Acquire::Retries=3 install -y --no-install-recommends ca-certificates libstdc++6 mosquitto tzdata \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=fleettelemetry /fleet-telemetry /usr/bin/fleet-telemetry
 COPY --from=build /out/vigilo /usr/bin/vigilo

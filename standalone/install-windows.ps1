@@ -255,6 +255,67 @@ function Copy-VigiloFiles([string]$Source, [string]$Dir) {
     }
 }
 
+# ---------- immagine Docker ----------
+
+# Ripete un'azione fino a $Tries volte con una pausa crescente; restituisce $true se riesce.
+function Invoke-WithRetry([scriptblock]$Action, [int]$Tries, [string]$What) {
+    for ($t = 1; $t -le $Tries; $t++) {
+        if (& $Action) { return $true }
+        if ($t -lt $Tries) {
+            $wait = 10 * $t
+            Write-Note "$What`: tentativo $t di $Tries non riuscito (spesso $([char]0x00E8) un errore di rete passeggero). Riprovo tra $wait secondi..."
+            Start-Sleep -Seconds $wait
+        }
+    }
+    return $false
+}
+
+# Scarica l'immagine gia' pronta dalla pre-release su GitHub con Windows (non dalla rete di Docker/WSL,
+# che con alcuni antivirus rovina i download: "tls: bad record MAC") e la carica in Docker.
+# Restituisce $true se l'immagine e' pronta (anche se era gia' aggiornata).
+function Get-ImageFromRelease([string]$Image, [string]$MarkerFile) {
+    $tag = if ($env:VIGILO_RELEASE_TAG) { $env:VIGILO_RELEASE_TAG } else { 'docker-preview-1' }
+    $arch = (Invoke-Quiet $script:Docker @('version', '-f', '{{.Server.Arch}}')).Out.Trim()
+    if ($arch -notin @('amd64', 'arm64')) { $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' } }
+    try {
+        $rel = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$($script:Repo)/releases/tags/$tag" -Headers @{ 'User-Agent' = 'vigilo-installer' }
+    } catch {
+        Write-Note "Non riesco a leggere la pre-release $tag su GitHub ($($_.Exception.Message))."
+        return $false
+    }
+    $asset = $rel.assets | Where-Object { $_.name -eq "vigilo-standalone-$arch.tar.gz" } | Select-Object -First 1
+    if (-not $asset) { Write-Note "Nella pre-release $tag manca l'immagine per $arch."; return $false }
+    $stamp = "$($asset.id) $($asset.updated_at)"
+    $have = (Invoke-Quiet $script:Docker @('image', 'inspect', $Image)).Code -eq 0
+    if ($have -and (Test-Path $MarkerFile) -and ((Get-Content -LiteralPath $MarkerFile -Raw).Trim() -eq $stamp)) {
+        Write-Ok "immagine gi$([char]0x00E0) aggiornata"
+        return $true
+    }
+    $file = Join-Path ([System.IO.Path]::GetTempPath()) $asset.name
+    $mb = [math]::Round($asset.size / 1MB)
+    $ok = Invoke-WithRetry -Tries 4 -What 'Download' -Action {
+        Write-Info "scarico l'immagine di Vigilo ($mb MB, $arch)..."
+        try {
+            Invoke-WebRequest -UseBasicParsing -Uri $asset.browser_download_url -OutFile $file
+        } catch { Write-Note $_.Exception.Message; return $false }
+        if ((Get-Item -LiteralPath $file).Length -ne $asset.size) { Write-Note 'download incompleto'; return $false }
+        if ($asset.digest -and $asset.digest -like 'sha256:*') {
+            $h = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLower()
+            if ("sha256:$h" -ne $asset.digest) { Write-Note 'download rovinato (impronta diversa)'; return $false }
+        }
+        return $true
+    }
+    if (-not $ok) { Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue; return $false }
+    Write-Info 'carico l''immagine in Docker...'
+    $code = Invoke-Visible $script:Docker @('load', '-i', $file)
+    Remove-Item -LiteralPath $file -Force -ErrorAction SilentlyContinue
+    if ($code -ne 0) { Write-Note "docker load non riuscito (codice $code)."; return $false }
+    New-Item -ItemType Directory -Force -Path (Split-Path $MarkerFile) | Out-Null
+    Write-TextFile $MarkerFile @($stamp)
+    Write-Ok "immagine pronta ($($rel.tag_name), $arch)"
+    return $true
+}
+
 # ---------- installazione ----------
 
 function Install-Vigilo {
@@ -372,18 +433,54 @@ function Install-Vigilo {
     Write-Ok "nome Tailscale: $name"
 
     # 5) Avvio del container
-    Write-Step 'Avvio di Vigilo (la prima volta 5-15 minuti: scarica e compila)'
+    Write-Step 'Avvio di Vigilo (la prima volta qualche minuto: scarica circa 70 MB)'
     $wd = Invoke-Quiet $script:Docker @('inspect', '-f', '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}', 'vigilo')
     $wdPath = $wd.Out.Trim()
     if ($wd.Code -eq 0 -and $wdPath -and ($wdPath.TrimEnd('\') -ne $sa.TrimEnd('\'))) {
         Write-Note "trovato un container vigilo di un'altra cartella ($wdPath): lo sostituisco (i dati restano nella cartella)."
         $null = Invoke-Quiet $script:Docker @('rm', '-f', 'vigilo')
     }
+    # Immagine: 1) gia' pronta dalla pre-release GitHub (scaricata da Windows), 2) docker compose pull,
+    # 3) solo se nessuna delle due funziona, compilazione dal sorgente. VIGILO_BUILD=1 forza la compilazione.
+    $image = if ($env:VIGILO_IMAGE) { $env:VIGILO_IMAGE } else { 'ghcr.io/redeye-labs/vigilo-standalone:preview' }
+    $marker = Join-Path $sa 'data\.image-release'
+    $build = $env:VIGILO_BUILD -eq '1'
     Push-Location $sa
     try {
-        $code = Invoke-Visible $script:Docker @('compose', 'up', '-d', '--build')
+        $ready = $false
+        if (-not $build) {
+            $ready = Get-ImageFromRelease $image $marker
+            if (-not $ready) {
+                Write-Info 'provo a scaricare l''immagine con Docker...'
+                $script:NoPull = $false
+                $ready = Invoke-WithRetry -Tries 3 -What 'docker compose pull' -Action {
+                    $r = Invoke-Quiet $script:Docker @('compose', 'pull', 'vigilo')
+                    Write-Host $r.Out
+                    if ($r.Code -eq 0) { return $true }
+                    # "non esiste / accesso negato": inutile riprovare
+                    if ($r.Out -match '(?i)denied|not found|manifest unknown|unauthorized') { $script:NoPull = $true; return $true }
+                    return $false
+                }
+                if ($script:NoPull) { $ready = $false }
+                if ($ready) { Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue }
+            }
+        }
+        if ($ready) {
+            $code = Invoke-Visible $script:Docker @('compose', 'up', '-d', '--no-build')
+        } else {
+            Write-Note 'Immagine pronta non disponibile: compilo Vigilo dal sorgente (5-15 minuti).'
+            $okb = Invoke-WithRetry -Tries 4 -What 'Compilazione' -Action {
+                (Invoke-Visible $script:Docker @('compose', 'up', '-d', '--build')) -eq 0
+            }
+            $code = if ($okb) { 0 } else { 1 }
+            if ($okb) { Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue }
+        }
     } finally { Pop-Location }
-    if ($code -ne 0) { Stop-Install 'Avvio non riuscito: guarda i messaggi qui sopra (spesso basta rilanciare).' }
+    if ($code -ne 0) {
+        Stop-Install ("Avvio non riuscito. Di solito $([char]0x00E8) la connessione: rete instabile, oppure un antivirus " +
+            "o un firewall che controlla il traffico HTTPS e rovina i download. Prova con un'altra rete " +
+            "o sospendi per qualche minuto il controllo HTTPS dell'antivirus, poi rilancia: i dati restano.")
+    }
     Write-Host -NoNewline '        attendo che Vigilo sia pronto'
     $status = ''
     for ($i = 0; $i -lt 60; $i++) {
