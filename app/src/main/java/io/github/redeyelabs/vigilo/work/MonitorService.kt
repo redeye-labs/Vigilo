@@ -8,6 +8,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationManagerCompat
 import io.github.redeyelabs.vigilo.data.Prefs
 import io.github.redeyelabs.vigilo.notify.Notifier
+import io.github.redeyelabs.vigilo.notify.ServiceStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,9 +16,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Servizio in primo piano con due usi:
@@ -25,50 +23,62 @@ import java.util.Locale
  * - notifiche allarme dall'app (modalità Home Assistant): interroga gli eventi dell'add-on
  *   ogni [BACKEND_ALARM_POLL_MS], così un Aware/Panic può fare suonare Vigilo anche a schermo spento.
  *
- * Mostra una notifica fissa (obbligatoria per Android).
+ * Mostra una notifica fissa e silenziosa con batteria, autonomia e stato della Sentinella.
  */
 class MonitorService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var lastText: String? = null
+    private var lastBattery: Int? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val n = Notifier.serviceNotification(this, "Avvio…")
-        if (Build.VERSION.SDK_INT >= 34) startForeground(Notifier.SERVICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        else startForeground(Notifier.SERVICE_ID, n)
+        val initial = Monitor.lastSnapshot(Prefs.get(this))
+        postService(
+            ServiceStatus.text(initial) ?: ServiceStatus.FALLBACK_TEXT,
+            initial?.batteryLevel,
+            force = true,
+            foreground = true,
+        )
         scope.coroutineContext[kotlinx.coroutines.Job]?.children?.forEach { it.cancel() }
         scope.launch {
-            val fmt = SimpleDateFormat("HH:mm", Locale.ITALY)
             while (isActive) {
                 val p = Prefs.get(this@MonitorService)
                 val pollAlarms = Scheduler.shouldPollBackendAlarms(p)
                 if (!p.intensiveEnabled && !pollAlarms) { stopSelf(); break }
-                val txt = if (pollAlarms) {
-                    val r = runCatching { Monitor.syncBackendEvents(this@MonitorService, p) }
-                    r.fold(
-                        onSuccess = { "In ascolto degli allarmi da Home Assistant · ${fmt.format(Date())}" },
-                        onFailure = { "Errore: ${it.message}" },
-                    )
-                } else {
-                    val r = Monitor.runOnce(this@MonitorService)
-                    r.fold(
-                        onSuccess = { s ->
-                            val sentry = when (s?.sentry) { true -> "Sentinella ON"; false -> "Sentinella OFF"; null -> "Sentinella ?" }
-                            val conn = if (s?.online == true) "online" else (s?.connectionState ?: "?")
-                            "$sentry · ${s?.batteryLevel ?: "?"}% · $conn · ${fmt.format(Date())}"
-                        },
-                        onFailure = { "Errore: ${it.message}" },
-                    )
-                }
-                runCatching {
-                    NotificationManagerCompat.from(this@MonitorService)
-                        .notify(Notifier.SERVICE_ID, Notifier.serviceNotification(this@MonitorService, txt))
+                // runOnce in modalità backend aggiorna anche lo snapshot (batteria, km, Sentinella)
+                // e importa gli eventi nuovi per le notifiche allarme.
+                val r = Monitor.runOnce(this@MonitorService)
+                if (r.isSuccess) {
+                    val s = r.getOrNull() ?: Monitor.lastSnapshot(p)
+                    postService(ServiceStatus.text(s) ?: ServiceStatus.FALLBACK_TEXT, s?.batteryLevel)
+                } else if (lastText == null) {
+                    postService(ServiceStatus.FALLBACK_TEXT, null)
                 }
                 val wait = if (pollAlarms) BACKEND_ALARM_POLL_MS else p.intensiveMinutes * 60_000L
                 delay(wait)
             }
         }
         return START_STICKY
+    }
+
+    /**
+     * Aggiorna la notifica fissa solo se testo o batteria sono cambiati, così non ripete
+     * suono o animazione. [foreground] va usato all'avvio (startForeground obbligatorio).
+     */
+    private fun postService(text: String, battery: Int?, force: Boolean = false, foreground: Boolean = false) {
+        if (!force && text == lastText && battery == lastBattery) return
+        lastText = text
+        lastBattery = battery
+        val n = Notifier.serviceNotification(this, text, battery)
+        if (foreground) {
+            if (Build.VERSION.SDK_INT >= 34) startForeground(Notifier.SERVICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            else startForeground(Notifier.SERVICE_ID, n)
+        } else {
+            runCatching {
+                NotificationManagerCompat.from(this).notify(Notifier.SERVICE_ID, n)
+            }
+        }
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
