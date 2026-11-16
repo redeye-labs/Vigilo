@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.3
+- Corretto: l'auto non riusciva a collegarsi alla telemetria. La porta pubblica 8443 accettava la
+  connessione ma la chiudeva subito senza rispondere (l'inoltro "TCPForward" della serve config di
+  Tailscale non arrivava a fleet-telemetry). Ora Vigilo apre il Funnel 8443 direttamente e inoltra il TCP
+  grezzo a fleet-telemetry (127.0.0.1:4443), senza terminare il TLS: l'auto vede il certificato della
+  nostra CA e il suo mTLS arriva intatto.
+- Registro: ogni connessione sulla 8443 (indirizzo, SNI, esito, durata, byte); handshake falliti sulla
+  443 con client, SNI e motivo; messaggi di Tailscale su Funnel/inoltri non più silenziati.
+- Nuovo controllo "Porta telemetria 8443 raggiungibile da internet" (con "Controlla anche da internet"):
+  verifica che risponda fleet-telemetry con il certificato giusto per vigilo.<tailnet>.ts.net.
+
 ## 1.0.2
 - Corretto: "Fleet API (404)" al passo 5. La configurazione della telemetria ora viene firmata in locale
   (Schnorr/P-256, come il proxy ufficiale e tesla-jws) e inviata direttamente a

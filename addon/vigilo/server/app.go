@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -389,6 +391,9 @@ func (a *App) Checks(ctx context.Context, deep bool) []Check {
 	if deep && ts.Host != "" {
 		ok, detail := checkPublicKey(ctx, ts.Host, a.tesla.PublicKeyPEM())
 		add("pubkey", "Chiave pubblica visibile da internet", ok, detail)
+		ca, _ := a.certs.CAPEM()
+		ok, detail = checkTelemetryPort(ctx, ts.Host, telemetryPort, ca)
+		add("telemetry_port", "Porta telemetria 8443 raggiungibile da internet", ok, detail)
 	}
 	add("partner", "Dominio registrato presso Tesla", s.PartnerDomain != "" && s.PartnerDomain == ts.Host, s.PartnerDomain)
 	add("vehicle", "Auto selezionata", s.VIN != "", s.VehicleName)
@@ -406,6 +411,37 @@ func (a *App) Checks(ctx context.Context, deep bool) []Check {
 	}
 	add("car", "L'auto ha inviato dati", connected, detail)
 	return out
+}
+
+// checkTelemetryPort si collega a host:8443 come farebbe l'auto e verifica che risponda fleet-telemetry
+// con il certificato della nostra CA per quel nome. (Senza certificato client l'handshake può poi essere
+// rifiutato: va bene, conta che il certificato del server sia quello giusto.)
+func checkTelemetryPort(ctx context.Context, host string, port int, caPEM string) (bool, string) {
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(caPEM)) {
+		return false, "CA della telemetria non pronta"
+	}
+	verified := false
+	d := &tls.Dialer{NetDialer: &net.Dialer{Timeout: 15 * time.Second}, Config: &tls.Config{
+		RootCAs: pool, ServerName: host, MinVersion: tls.VersionTLS12,
+		VerifyConnection: func(cs tls.ConnectionState) error {
+			verified = len(cs.PeerCertificates) > 0
+			return nil
+		},
+	}}
+	cctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	c, err := d.DialContext(cctx, "tcp", fmt.Sprintf("%s:%d", host, port))
+	if c != nil {
+		c.Close()
+	}
+	if verified {
+		return true, ""
+	}
+	if err != nil {
+		return false, "nessuna risposta TLS valida: " + err.Error()
+	}
+	return false, "risposta senza certificato"
 }
 
 func checkPublicKey(ctx context.Context, host string, want []byte) (bool, string) {
