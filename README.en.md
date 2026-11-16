@@ -92,6 +92,27 @@ a 64-bit Raspberry Pi 4/5 or a VPS. It works on amd64 and arm64. Without Home As
 **Requirements:** Docker with Compose v2.24 or later, a Tailscale account with HTTPS and Funnel (as above),
 an app on the Tesla developer portal, and the Vigilo Android app 1.3 or later.
 
+**Automatic install (recommended):**
+
+- **Windows 10/11:** download [`install-windows.bat`](https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.bat) and double-click it.
+  Or press Windows + R, paste and press Enter:
+  ```
+  powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
+  ```
+  The installer checks and updates WSL (if `wsl --update` is missing or its download fails, it fetches the
+  official package from GitHub), installs Docker Desktop with winget if missing (asks first), downloads
+  Vigilo to `%USERPROFILE%\Vigilo`, starts it, copies the password to the clipboard and opens the page. If a
+  reboot is needed it says so: run it again afterwards and it picks up where it left off. Re-running it
+  updates Vigilo and keeps data and settings. To remove everything: `uninstall-windows.ps1` in `standalone`.
+- **Linux, NAS, Raspberry Pi:**
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash
+  ```
+  Installs Docker if missing (asks first), downloads Vigilo to `~/vigilo`, starts it and prints the address
+  and password. To remove everything: `bash ~/vigilo/standalone/install.sh --uninstall`.
+
+**Manual install:**
+
 1. Get the project and prepare the configuration:
    ```bash
    git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git

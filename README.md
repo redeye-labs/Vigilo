@@ -134,6 +134,27 @@ Assistant:
 **Cosa serve:** Docker con Compose v2.24 o successivo, un account Tailscale con HTTPS e Funnel (come
 sopra), un'app sul portale sviluppatori Tesla e l'app Android Vigilo 1.3 o successiva.
 
+**Installazione automatica (consigliata):**
+
+- **Windows 10/11:** scarica [`install-windows.bat`](https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.bat) e aprilo con doppio clic.
+  Oppure tasto Windows + R, incolla e premi Invio:
+  ```
+  powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
+  ```
+  L'installatore controlla e aggiorna WSL (se `wsl --update` non esiste o il download fallisce, scarica il
+  pacchetto ufficiale da GitHub), installa Docker Desktop con winget se manca (chiede prima conferma), scarica
+  Vigilo in `%USERPROFILE%\Vigilo`, lo avvia, copia la password negli appunti e apre la pagina. Se serve un
+  riavvio lo dice: dopo il riavvio rilancialo e riprende da dove era. Rilanciarlo aggiorna Vigilo e conserva
+  dati e configurazione. Per togliere tutto: `uninstall-windows.ps1` nella cartella `standalone`.
+- **Linux, NAS, Raspberry Pi:**
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash
+  ```
+  Installa Docker se manca (chiede prima conferma), scarica Vigilo in `~/vigilo`, lo avvia e stampa indirizzo
+  e password. Per togliere tutto: `bash ~/vigilo/standalone/install.sh --uninstall`.
+
+**Installazione a mano:**
+
 1. Scarica il progetto e prepara la configurazione:
    ```bash
    git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git

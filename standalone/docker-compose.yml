@@ -1,6 +1,7 @@
 # Vigilo senza Home Assistant.
 # Avvio:   docker compose up -d --build      (dalla cartella "standalone")
 # Pagina:  http://<indirizzo-del-server>:8099   utente: vigilo   password: vedi README
+# Le variabili si impostano nel file .env accanto a questo (facoltativo, vedi .env.example).
 services:
   vigilo:
     build:
@@ -14,8 +15,13 @@ services:
       - "8099:8099"                 # procedura guidata: solo rete di casa, NON aprirla sul router
     volumes:
       - ./data:/data                # chiavi, token, stato: da conservare e da non condividere
-    env_file:
-      - path: .env
-        required: false
     environment:
       TZ: ${TZ:-Europe/Rome}
+      VIGILO_TS_HOSTNAME: ${VIGILO_TS_HOSTNAME:-vigilo}
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      VIGILO_UI_PASSWORD: ${VIGILO_UI_PASSWORD:-}
+      VIGILO_REGION: ${VIGILO_REGION:-eu}
+      MQTT_HOST: ${MQTT_HOST:-}
+      MQTT_PORT: ${MQTT_PORT:-}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}

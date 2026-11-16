@@ -8,6 +8,16 @@ attiva solo in questo container.
 
 > **In prova:** non ancora provata con un'auto vera. Vedi «Provarla senza toccare Home Assistant» qui sotto.
 
+## Installazione automatica
+
+- Windows: doppio clic su `install-windows.bat` (aggiorna WSL anche quando `wsl --update` non c'è o il suo
+  download fallisce con «Errore nel supporto per il canale sicuro»: scarica l'ultimo `.msi` da
+  github.com/microsoft/WSL con TLS 1.2 e lo installa con `msiexec /passive`; se serve un riavvio lo dice e
+  dopo il riavvio si rilancia). Disinstallazione: `uninstall-windows.ps1`.
+- Linux/NAS: `curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash` (disinstallazione: `install.sh --uninstall`).
+
+Istruzioni complete nel README principale, sezione «Installazione senza Home Assistant (Docker)».
+
 ## Cosa c'è nel container
 
 | Componente | Ruolo |
@@ -92,6 +102,12 @@ The same server as the Home Assistant add-on (`addon/vigilo/server`), started wi
 Docker container. The add-on does not change: standalone mode only turns on in this container.
 
 > **Preview:** not yet tested with a real car. See "Try it without touching Home Assistant" below.
+
+**Automatic install:** Windows: double-click `install-windows.bat` (it updates WSL even when `wsl --update`
+is missing or its download fails with a secure-channel error, by fetching the latest `.msi` from
+github.com/microsoft/WSL over TLS 1.2 and installing it with `msiexec /passive`; it tells you when a reboot is
+needed). Uninstall: `uninstall-windows.ps1`. Linux/NAS: `curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash`
+(uninstall: `install.sh --uninstall`).
 
 **What runs inside:**
 
