@@ -8,8 +8,8 @@ ManifestDPIAware true
 
 !define APPNAME     "Vigilo (Docker)"
 !define PUBLISHER   "RedEye Labs"
-!define VERSION     "0.1.0-preview"
-!define VERSION4    "0.1.0.0"
+!define VERSION     "0.1.1-preview"
+!define VERSION4    "0.1.1.0"
 !define UNINSTKEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\VigiloDocker"
 !define URL         "https://github.com/redeye-labs/Vigilo"
 !define PAGEURL     "http://localhost:8099"
@@ -64,10 +64,12 @@ LangString WelcomeText ${LANG_ITALIAN} "Questo programma prepara Vigilo senza Ho
 LangString WelcomeText ${LANG_ENGLISH} "This program sets up Vigilo without Home Assistant.$\r$\n$\r$\nAt the end a window checks WSL and Docker Desktop (it asks before installing anything missing), downloads Vigilo and starts it. Then the setup page opens in your browser.$\r$\n$\r$\nVigilo on Home Assistant is not touched. No administrator rights needed."
 LangString FinishTitle ${LANG_ITALIAN} "Quasi fatto"
 LangString FinishTitle ${LANG_ENGLISH} "Almost done"
-LangString FinishText ${LANG_ITALIAN} "Premi Fine: si apre una finestra blu che installa e avvia Vigilo (la prima volta qualche minuto). Quando ti chiede il nome premi Invio.$\r$\n$\r$\nNel menu Start trovi $\"Vigilo - Apri pagina$\" e $\"Vigilo - Aggiorna$\"."
-LangString FinishText ${LANG_ENGLISH} "Click Finish: a blue window installs and starts Vigilo (a few minutes the first time). When it asks for the name, press Enter.$\r$\n$\r$\nThe Start menu has $\"Vigilo - Apri pagina$\" (open page) and $\"Vigilo - Aggiorna$\" (update)."
+LangString FinishText ${LANG_ITALIAN} "Premi Fine: si apre una finestra che installa e avvia Vigilo (la prima volta qualche minuto). Quando ti chiede il nome premi Invio.$\r$\n$\r$\nPer entrare nella pagina: nome utente vigilo, password mostrata alla fine nella finestra (e copiata negli appunti).$\r$\n$\r$\nNel menu Start trovi $\"Vigilo - Apri pagina$\", $\"Vigilo - Mostra password$\" e $\"Vigilo - Aggiorna$\"."
+LangString FinishText ${LANG_ENGLISH} "Click Finish: a console window installs and starts Vigilo (a few minutes the first time). When it asks for the name, press Enter.$\r$\n$\r$\nTo log in: user vigilo, the password is shown at the end of that window (and copied to the clipboard).$\r$\n$\r$\nThe Start menu has $\"Vigilo - Apri pagina$\" (open page), $\"Vigilo - Mostra password$\" (show password) and $\"Vigilo - Aggiorna$\" (update)."
 LangString FinishRun ${LANG_ITALIAN} "Installa e avvia Vigilo adesso"
 LangString FinishRun ${LANG_ENGLISH} "Install and start Vigilo now"
+LangString PwDesc ${LANG_ITALIAN} "Password della pagina di Vigilo (nome utente: vigilo)"
+LangString PwDesc ${LANG_ENGLISH} "Password for the Vigilo page (user: vigilo)"
 LangString UnCancelled ${LANG_ITALIAN} "Disinstallazione annullata."
 LangString UnCancelled ${LANG_ENGLISH} "Uninstall cancelled."
 LangString UnDockerErr ${LANG_ITALIAN} "Il container Vigilo non è stato rimosso (Docker spento?).$\r$\nRimuovere comunque collegamenti e programma? I dati restano in %USERPROFILE%\Vigilo."
@@ -90,6 +92,8 @@ Section "Vigilo" SecMain
   WriteINIStr "$SMPROGRAMS\Vigilo\Vigilo – Apri pagina.url" "InternetShortcut" "IconIndex" "0"
   CreateShortcut "$SMPROGRAMS\Vigilo\Vigilo – Aggiorna.lnk" ${PS} \
     '-NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\avvia-installazione.ps1"' "$INSTDIR\vigilo.ico" 0
+  CreateShortcut "$SMPROGRAMS\Vigilo\Vigilo – Mostra password.lnk" "$WINDIR\notepad.exe" \
+    '"$PROFILE\Vigilo\standalone\data\ui_password"' "$INSTDIR\vigilo.ico" 0 SW_SHOWNORMAL "" "$(PwDesc)"
   CreateShortcut "$SMPROGRAMS\Vigilo\Disinstalla Vigilo.lnk" "$INSTDIR\Disinstalla.exe" "" "$INSTDIR\vigilo.ico" 0
 
   ; App installate (per utente)
@@ -128,6 +132,7 @@ Section "Uninstall"
 
   Delete "$SMPROGRAMS\Vigilo\Vigilo – Apri pagina.url"
   Delete "$SMPROGRAMS\Vigilo\Vigilo – Aggiorna.lnk"
+  Delete "$SMPROGRAMS\Vigilo\Vigilo – Mostra password.lnk"
   Delete "$SMPROGRAMS\Vigilo\Disinstalla Vigilo.lnk"
   RMDir "$SMPROGRAMS\Vigilo"
   Delete "$INSTDIR\install-windows.ps1"

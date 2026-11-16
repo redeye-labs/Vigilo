@@ -99,21 +99,23 @@ a Raspberry Pi 4/5. An installer does almost everything for you.
 2. **Double-click** it. If a blue "Windows protected your PC" screen appears, click **"More info"**, then
    **"Run anyway"**: the file isn't digitally signed yet. Click **Next**, then **Finish**. No administrator
    rights needed.
-3. A blue window does the rest. It asks before updating WSL or installing Docker Desktop. If the PC then
+3. A console window does the rest. It asks before updating WSL or installing Docker Desktop. If the PC then
    needs a reboot, it tells you: afterwards open **"Vigilo – Aggiorna"** from the Start menu and it picks up
    where it left off.
 4. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`. If you already run Vigilo on
    Home Assistant, keep `vigilo-docker` or pick another name that's different from the one you use there.
 5. **Wait a few minutes.** The first run downloads about 70 MB.
-6. Your browser then opens **http://localhost:8099** by itself.
-   - User: **`vigilo`**
-   - Password: it's already on the clipboard, so paste it with **Ctrl+V**. It's also saved in
-     `%USERPROFILE%\Vigilo\standalone\data\ui_password`.
+6. Your browser then opens **http://localhost:8099** by itself and asks you to sign in:
+   - **User name: `vigilo`** (always this).
+   - **Password:** Vigilo creates it on first start. It's printed at the end of the install window, in the
+     "PER ENTRARE NELLA PAGINA DI VIGILO" box, and it's already on the clipboard: press **Ctrl+V** in the
+     password field. To see it again later, open **"Vigilo – Mostra password"** from the Start menu, or open
+     `%USERPROFILE%\Vigilo\standalone\data\ui_password` in Notepad.
 7. Follow the **7 steps** on the page, the same as the add-on. At step 7, scan the QR from inside Vigilo
    (Settings → Collega a Home Assistant → Inquadra QR), then turn on **"Notifiche allarme anche dall'app"**.
 
-The Start menu has **"Vigilo – Apri pagina"** (open page) and **"Vigilo – Aggiorna"** (update: gets the
-latest fixes and keeps your data and settings). To uninstall: **Settings → Apps → Installed apps →
+The Start menu has **"Vigilo – Apri pagina"** (open page), **"Vigilo – Mostra password"** (show password)
+and **"Vigilo – Aggiorna"** (update: gets the latest fixes and keeps your data and settings). To uninstall: **Settings → Apps → Installed apps →
 Vigilo (Docker) → Uninstall**. It asks before deleting your data; if you don't confirm, the data stays.
 
 **Second option: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat).** Download it and double-click it. If
@@ -138,9 +140,9 @@ Without the `.exe`: to update, open the `.bat` again; to uninstall, right-click
 2. If Docker is missing, the installer asks whether to install it. Say yes.
 3. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`.
 4. **Wait a few minutes** the first time (it downloads about 70 MB).
-5. At the end it prints the address, for example `http://192.168.x.x:8099`, and the command that shows the
-   password (`sudo cat ~/vigilo/standalone/data/ui_password`). Open the address from a browser on your home
-   network. User: **`vigilo`**.
+5. At the end it prints a "PER ENTRARE NELLA PAGINA DI VIGILO" box with the address (for example
+   `http://192.168.x.x:8099`), the **user name `vigilo`** and the **password**. Open the address from a browser
+   on your home network. To see the password again: `sudo cat ~/vigilo/standalone/data/ui_password`.
 6. Follow the **7 steps** on the page, as above.
 
 **Update:** run the same line again. **Uninstall:** `bash ~/vigilo/standalone/install.sh --uninstall`.

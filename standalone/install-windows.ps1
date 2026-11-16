@@ -499,26 +499,55 @@ function Install-Vigilo {
     Write-Step 'Fatto'
     $pw = Get-EnvValue $envFile 'VIGILO_UI_PASSWORD'
     $pwFile = Join-Path $sa 'data\ui_password'
+    $fromEnv = [bool]$pw
     if (-not $pw) {
-        for ($i = 0; $i -lt 30 -and -not (Test-Path $pwFile); $i++) { Start-Sleep -Seconds 1 }
-        if (Test-Path $pwFile) { $pw = (Get-Content -LiteralPath $pwFile -Raw).Trim() }
+        # Vigilo crea la password al primo avvio: aspetta qualche secondo che il file compaia.
+        for ($i = 0; $i -lt 30; $i++) {
+            if (Test-Path -LiteralPath $pwFile) {
+                $pw = (Get-Content -LiteralPath $pwFile -Raw -ErrorAction SilentlyContinue)
+                if ($pw) { $pw = $pw.Trim() }
+                if ($pw) { break }
+            }
+            Start-Sleep -Seconds 1
+        }
     }
     $copied = $false
     if ($pw) {
         try { Set-Clipboard -Value $pw; $copied = $true } catch { $copied = $false }
     }
     $url = "http://localhost:$($script:Port)"
+    $line = '    ' + ('=' * 64)
     Write-Host ''
-    Write-Host "    Pagina di Vigilo:  $url" -ForegroundColor White
-    Write-Host '    Utente:            vigilo' -ForegroundColor White
-    if ($copied) {
-        Write-Host "    Password:          gi$([char]0x00E0) copiata negli appunti: incollala con Ctrl+V" -ForegroundColor White
+    Write-Host $line -ForegroundColor Green
+    Write-Host '     PER ENTRARE NELLA PAGINA DI VIGILO' -ForegroundColor Green
+    Write-Host ''
+    Write-Host "     Indirizzo:     $url" -ForegroundColor White
+    Write-Host '     Nome utente:   vigilo' -ForegroundColor White
+    if ($pw) {
+        Write-Host "     Password:      $pw" -ForegroundColor White
     } else {
-        Write-Host "    Password:          nel file $pwFile (aprilo con il Blocco note)" -ForegroundColor White
+        Write-Host "     Password:      nel file $pwFile" -ForegroundColor White
     }
     Write-Host ''
+    if ($copied) {
+        Write-Host "     La password $([char]0x00E8) gi$([char]0x00E0) copiata negli appunti: nel browser incollala con Ctrl+V." -ForegroundColor Yellow
+    }
+    if ($fromEnv) {
+        Write-Host '     (password scelta da te nel file .env, voce VIGILO_UI_PASSWORD)'
+    } else {
+        Write-Host "     La password $([char]0x00E8) salvata anche in:"
+        Write-Host "       $pwFile"
+    }
+    $sm = if ($env:APPDATA) { Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Vigilo' } else { '' }
+    if ($sm -and (Test-Path -LiteralPath $sm)) {
+        Write-Host "     Dal menu Start: $([char]0x00AB)Vigilo $([char]0x2013) Mostra password$([char]0x00BB) e $([char]0x00AB)Vigilo $([char]0x2013) Apri pagina$([char]0x00BB)."
+    }
+    Write-Host $line -ForegroundColor Green
+    Write-Host ''
     Write-Info "Nella pagina segui i passi, a partire da $([char]0x00AB)Genera link di accesso$([char]0x00BB) per Tailscale."
-    Write-Info 'Aggiornare: rilancia questa installazione. Disinstallare: uninstall-windows.ps1 nella cartella standalone.'
+    Write-Info 'Aggiornare: rilancia questa installazione (o dal menu Start, se hai usato Vigilo-Setup.exe).'
+    Write-Info 'Disinstallare: Impostazioni > App (Vigilo-Setup.exe) oppure uninstall-windows.ps1 nella cartella standalone.'
+    Write-Info "Apro la pagina nel browser..."
     try { Start-Process $url | Out-Null } catch { Write-Note "Apri tu il browser su $url" }
 }
 

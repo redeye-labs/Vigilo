@@ -269,14 +269,34 @@ if command -v ip >/dev/null 2>&1; then ip="$(ip -4 route get 1.1.1.1 2>/dev/null
 [ -n "$ip" ] || ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
 [ -n "$ip" ] || ip="<indirizzo-del-server>"
 pw_env="$(sed -n 's/^VIGILO_UI_PASSWORD=//p' "$ENVF" | tail -1)"
-printf '\n  Apri dal browser di un computer di casa:  %shttp://%s:%s%s\n' "$B" "$ip" "$PORT" "$N"
-printf '  Utente: %svigilo%s\n' "$B" "$N"
-if [ -n "$pw_env" ]; then
-  printf '  Password: quella che hai scritto in %s (VIGILO_UI_PASSWORD)\n' "$ENVF"
-else
-  printf '  Password: salvata in %s/standalone/data/ui_password\n' "$DIR"
-  printf '            per leggerla:  %ssudo cat %s/standalone/data/ui_password%s\n' "$B" "$DIR" "$N"
+PWF="$DIR/standalone/data/ui_password"
+pw="$pw_env"
+if [ -z "$pw" ]; then
+  # Vigilo crea la password al primo avvio (il file può essere di root: in quel caso si legge con sudo).
+  for _ in $(seq 1 30); do
+    pw="$(cat "$PWF" 2>/dev/null || $SUDO cat "$PWF" 2>/dev/null || true)"
+    pw="$(printf '%s' "$pw" | tr -d '\r\n')"
+    [ -n "$pw" ] && break
+    sleep 1
+  done
 fi
+LINE="  ================================================================"
+printf '\n%s%s%s\n' "$G" "$LINE" "$N"
+printf '   %sPER ENTRARE NELLA PAGINA DI VIGILO%s\n\n' "$B" "$N"
+printf '   Indirizzo:     %shttp://%s:%s%s   (dal browser di un computer di casa)\n' "$B" "$ip" "$PORT" "$N"
+printf '   Nome utente:   %svigilo%s\n' "$B" "$N"
+if [ -n "$pw" ]; then
+  printf '   Password:      %s%s%s\n\n' "$B" "$pw" "$N"
+else
+  printf '   Password:      nel file %s\n\n' "$PWF"
+fi
+if [ -n "$pw_env" ]; then
+  printf '   (password scelta da te nel file .env, voce VIGILO_UI_PASSWORD)\n'
+else
+  printf '   La password è salvata anche in %s\n' "$PWF"
+  printf '   Per rivederla:  %ssudo cat %s%s\n' "$B" "$PWF" "$N"
+fi
+printf '%s%s%s\n' "$G" "$LINE" "$N"
 printf '\n  Poi segui la procedura guidata (passo 1: «Genera link di accesso» per Tailscale).\n'
 printf '  Non aprire la porta %s sul router.\n' "$PORT"
 printf '  Aggiornare: rilancia lo stesso comando. Disinstallare: aggiungi «-s -- --uninstall» dopo bash.\n'
