@@ -72,6 +72,29 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             onChange = { vm.saveBackendSettings(it) },
         )
 
+        if (paired) {
+            Section("Notifiche dall'app")
+            var notifyFromApp by remember { mutableStateOf(p.notifyAlarmsFromApp) }
+            Toggle("Notifiche allarme anche dall'app", p.notifyAlarmsFromApp) {
+                notifyFromApp = it
+                p.notifyAlarmsFromApp = it
+                vm.applyMonitoring()
+            }
+            Text(
+                "Gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. Resta accesa una notifica fissa e si consuma un po' più di batteria.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (notifyFromApp) {
+                Toggle("Suona anche in silenzioso", p.alarmBypassSilent) { p.alarmBypassSilent = it }
+                Text(
+                    "Usa il volume della sveglia, anche con il telefono in silenzioso.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
         Section("Aggiornamento")
         val autoSec by vm.autoRefreshSeconds.collectAsState()
         Text("Aggiornamento automatico della schermata Auto", style = MaterialTheme.typography.labelLarge)

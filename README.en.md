@@ -59,20 +59,22 @@
 
 4. Install the latest app from **Releases**, or open [this link](https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk) on the phone (the wizard also has a “Scarica l'app” QR for the normal camera). Then open the in-app **Guide** and scan the pairing QR from inside Vigilo. Live checks turn green.
 
-Starting with **1.2.0** the APK is signed with a new key. If you already have 1.1.x (or earlier), **uninstall it first**, then install 1.2.0 and pair again by scanning the QR.
+Starting with **1.2.0** the APK is signed with a new key. If you already have 1.1.x (or earlier), **uninstall it first**, then install 1.2.0 (or later) and pair again by scanning the QR.
 
 Official signing certificate SHA-256 fingerprint:
 
 `61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
 
-Verify with: `apksigner verify --print-certs Vigilo-1.2.0.apk`
+Verify with: `apksigner verify --print-certs Vigilo-1.3.0.apk`
+
+In **1.3.0**, Settings (when the app is paired with Home Assistant) has **Notifiche allarme anche dall'app** (off by default): Aware and Panic alerts also come from Vigilo, with a 15–20 second delay. **Suona anche in silenzioso** (on when the first option is on) uses the alarm volume.
 
 ### Blueprints (optional)
 
 [![Import Aware blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fredeye-labs%2FVigilo%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fvigilo%2Fsentinella_aware.yaml)
 [![Import Panic blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fredeye-labs%2FVigilo%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fvigilo%2Fsentinella_panic.yaml)
 
-The add-on already sends notifications itself; use the blueprints only if you prefer HA automations (and turn the add-on's off).
+The add-on already sends notifications itself; use the blueprints only if you prefer HA automations (and turn the add-on's off). The Aware blueprint now has an optional “Suona come una sveglia” input (off by default) to use the `alarm_stream` channel. Re-import the blueprint from Settings → Automations & scenes → Blueprints (or the button above); existing automations keep the previous behaviour until you enable the new option.
 
 ## Costs
 

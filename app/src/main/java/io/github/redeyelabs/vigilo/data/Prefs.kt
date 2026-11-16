@@ -60,6 +60,14 @@ class Prefs private constructor(private val sp: SharedPreferences) {
     /** Ultimo id evento già importato dal componente aggiuntivo. */
     var backendLastEventId: Long get() = sp.getLong("backend_last_event", 0); set(v) = sp.edit { putLong("backend_last_event", v) }
     val backendMode: Boolean get() = backendUrl.isNotBlank() && backendToken.isNotBlank()
+    /**
+     * Se acceso (solo modalità Home Assistant): l'app interroga gli eventi dell'add-on ogni pochi
+     * secondi e mostra una notifica propria per gli allarmi Aware/Panic. Spento di default, per
+     * non raddoppiare le notifiche già inviate da Home Assistant.
+     */
+    var notifyAlarmsFromApp: Boolean get() = sp.getBoolean("notify_app_alarms", false); set(v) = sp.edit { putBoolean("notify_app_alarms", v) }
+    /** Se acceso insieme a [notifyAlarmsFromApp], la notifica usa il volume della sveglia (anche in silenzioso). Acceso di default. */
+    var alarmBypassSilent: Boolean get() = sp.getBoolean("alarm_bypass_silent", true); set(v) = sp.edit { putBoolean("alarm_bypass_silent", v) }
     fun unpairBackend() = sp.edit { remove("backend_url"); remove("backend_token"); remove("backend_last_event"); remove("last_snapshot") }
 
     // --- Proxy comandi firmati (tesla-http-proxy) ---

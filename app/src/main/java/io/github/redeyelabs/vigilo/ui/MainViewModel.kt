@@ -339,6 +339,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 loggedIn.value = true
                 snapshot.value = Backend.toSnapshot(st)
                 Scheduler.applyTelemetryRenew(getApplication())
+                Scheduler.applyIntensive(getApplication())
                 toast(if (st.vin.isBlank()) "Abbinato a Home Assistant ✔ Scegli l'auto nel componente aggiuntivo." else "Abbinato a Home Assistant ✔")
                 runCatching { Monitor.syncBackendEvents(getApplication()) }
                 onDone(true)
@@ -354,6 +355,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         backendSettings.value = null
         loggedIn.value = prefs.isLoggedIn
         snapshot.value = null
+        Scheduler.applyIntensive(getApplication())
         toast("Home Assistant scollegato.")
     }
 

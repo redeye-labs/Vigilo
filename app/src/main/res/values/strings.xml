@@ -4,7 +4,9 @@
     <string name="widget_name">Vigilo – stato auto</string>
     <string name="widget_desc">Batteria e stato Sentinella della tua auto</string>
     <string name="channel_alarm">Allarmi Sentinella</string>
-    <string name="channel_alarm_desc">Eventi sospetti rilevati mentre la Sentinella è attiva</string>
+    <string name="channel_alarm_desc">Eventi sospetti rilevati mentre la Sentinella è attiva. Suona con il volume delle notifiche.</string>
+    <string name="channel_alarm_loud">Allarmi Sentinella (anche in silenzioso)</string>
+    <string name="channel_alarm_loud_desc">Stessi allarmi, con il suono e il volume della sveglia, anche se il telefono è in silenzioso.</string>
     <string name="channel_status">Avvisi auto</string>
     <string name="channel_status_desc">Auto aperta, finestrino aperto, ricarica, batteria bassa</string>
     <string name="channel_service">Monitoraggio attivo</string>

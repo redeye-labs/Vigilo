@@ -20,9 +20,12 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Monitoraggio "intensivo" in primo piano: controlla ogni N minuti (1..30), più spesso del limite di
- * 15 minuti di WorkManager. Mostra una notifica fissa (obbligatoria per Android). Ogni lettura di
- * vehicle_data è a pagamento secondo il listino Fleet API: usare con giudizio.
+ * Servizio in primo piano con due usi:
+ * - monitoraggio intensivo (modalità diretta): legge lo stato ogni N minuti;
+ * - notifiche allarme dall'app (modalità Home Assistant): interroga gli eventi dell'add-on
+ *   ogni [BACKEND_ALARM_POLL_MS], così un Aware/Panic può fare suonare Vigilo anche a schermo spento.
+ *
+ * Mostra una notifica fissa (obbligatoria per Android).
  */
 class MonitorService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -38,25 +41,39 @@ class MonitorService : Service() {
             val fmt = SimpleDateFormat("HH:mm", Locale.ITALY)
             while (isActive) {
                 val p = Prefs.get(this@MonitorService)
-                if (!p.intensiveEnabled) { stopSelf(); break }
-                val r = Monitor.runOnce(this@MonitorService)
-                val txt = r.fold(
-                    onSuccess = { s ->
-                        val sentry = when (s?.sentry) { true -> "Sentinella ON"; false -> "Sentinella OFF"; null -> "Sentinella ?" }
-                        val conn = if (s?.online == true) "online" else (s?.connectionState ?: "?")
-                        "$sentry · ${s?.batteryLevel ?: "?"}% · $conn · ${fmt.format(Date())}"
-                    },
-                    onFailure = { "Errore: ${it.message}" },
-                )
+                val pollAlarms = Scheduler.shouldPollBackendAlarms(p)
+                if (!p.intensiveEnabled && !pollAlarms) { stopSelf(); break }
+                val txt = if (pollAlarms) {
+                    val r = runCatching { Monitor.syncBackendEvents(this@MonitorService, p) }
+                    r.fold(
+                        onSuccess = { "In ascolto degli allarmi da Home Assistant · ${fmt.format(Date())}" },
+                        onFailure = { "Errore: ${it.message}" },
+                    )
+                } else {
+                    val r = Monitor.runOnce(this@MonitorService)
+                    r.fold(
+                        onSuccess = { s ->
+                            val sentry = when (s?.sentry) { true -> "Sentinella ON"; false -> "Sentinella OFF"; null -> "Sentinella ?" }
+                            val conn = if (s?.online == true) "online" else (s?.connectionState ?: "?")
+                            "$sentry · ${s?.batteryLevel ?: "?"}% · $conn · ${fmt.format(Date())}"
+                        },
+                        onFailure = { "Errore: ${it.message}" },
+                    )
+                }
                 runCatching {
                     NotificationManagerCompat.from(this@MonitorService)
                         .notify(Notifier.SERVICE_ID, Notifier.serviceNotification(this@MonitorService, txt))
                 }
-                delay(p.intensiveMinutes * 60_000L)
+                val wait = if (pollAlarms) BACKEND_ALARM_POLL_MS else p.intensiveMinutes * 60_000L
+                delay(wait)
             }
         }
         return START_STICKY
     }
 
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
+
+    companion object {
+        const val BACKEND_ALARM_POLL_MS = 18_000L
+    }
 }

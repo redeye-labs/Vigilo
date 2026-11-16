@@ -82,7 +82,7 @@ object Monitor {
         if (st.name.isNotBlank()) p.vehicleName = st.name
         val s = Backend.toSnapshot(st)
         save(ctx, p, s)
-        runCatching { syncBackendEvents(ctx, p, be) }
+        runCatching { syncBackendEventsLocked(ctx, p, be) }
         p.lastError = ""
         Result.success(s)
     } catch (e: Exception) {
@@ -91,7 +91,10 @@ object Monitor {
     }
 
     /** Importa nello storico locale gli eventi nuovi del componente aggiuntivo (Aware, Panic, comandi…). */
-    suspend fun syncBackendEvents(ctx: Context, p: Prefs = Prefs.get(ctx), be: Backend = Backend(p)): Int {
+    suspend fun syncBackendEvents(ctx: Context, p: Prefs = Prefs.get(ctx), be: Backend = Backend(p)): Int =
+        mutex.withLock { syncBackendEventsLocked(ctx, p, be) }
+
+    private suspend fun syncBackendEventsLocked(ctx: Context, p: Prefs, be: Backend): Int {
         var after = p.backendLastEventId
         var list = be.events(after)
         if (list.isEmpty() && after > 0) {
@@ -101,11 +104,38 @@ object Monitor {
         }
         if (list.isEmpty()) return 0
         val dao = AppDatabase.get(ctx).events()
+        val notify = p.notifyAlarmsFromApp
+        val now = System.currentTimeMillis()
         list.sortedBy { it.id }.forEach { e ->
             dao.insert(EventEntity(timestamp = e.ts, type = e.type, title = e.title, message = e.message))
+            if (shouldNotifyBackendAlarm(notify, e.type, e.ts, e.id, after, now)) {
+                Notifier.show(ctx, Notifier.CH_ALARM, e.title.ifBlank { "Allarme Sentinella" }, e.message)
+            }
         }
         p.backendLastEventId = list.maxOf { it.id }
         return list.size
+    }
+
+    /**
+     * Notifica solo allarmi Aware/Panic nuovi, e solo se l'evento non è più vecchio di [maxAgeMs].
+     * Così, alla prima sincronizzazione dopo aver acceso l'opzione, gli eventi già visti
+     * (id ≤ last id) e quelli vecchi non fanno suonare il telefono.
+     */
+    internal fun shouldNotifyBackendAlarm(
+        notifyEnabled: Boolean,
+        type: String,
+        eventTs: Long,
+        eventId: Long,
+        afterId: Long,
+        now: Long = System.currentTimeMillis(),
+        maxAgeMs: Long = 10 * 60_000L,
+    ): Boolean {
+        if (!notifyEnabled) return false
+        if (!EventType.isAlert(type)) return false
+        if (eventId <= afterId) return false
+        if (eventTs <= 0L) return false
+        if (now - eventTs > maxAgeMs) return false
+        return true
     }
 
     private suspend fun save(ctx: Context, p: Prefs, s: Snapshot) {

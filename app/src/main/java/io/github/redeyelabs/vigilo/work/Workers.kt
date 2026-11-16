@@ -148,10 +148,15 @@ object Scheduler {
         wm.enqueueUniquePeriodicWork(TEL_RENEW, ExistingPeriodicWorkPolicy.UPDATE, req)
     }
 
+    /** True se l'app deve interrogare gli eventi dell'add-on per notificare gli allarmi da sola. */
+    fun shouldPollBackendAlarms(p: Prefs): Boolean = p.backendMode && p.notifyAlarmsFromApp
+
+    /** Avvia il servizio in primo piano per il monitoraggio intensivo e/o le notifiche allarme dall'app. */
     fun applyIntensive(ctx: Context) {
         val p = Prefs.get(ctx)
         val i = Intent(ctx, MonitorService::class.java)
-        if (p.intensiveEnabled) ContextCompat.startForegroundService(ctx, i) else ctx.stopService(i)
+        if (p.intensiveEnabled || shouldPollBackendAlarms(p)) ContextCompat.startForegroundService(ctx, i)
+        else ctx.stopService(i)
     }
 
     /** Prossima occorrenza della regola dopo [afterNow]. */
@@ -201,6 +206,6 @@ class BootReceiver : BroadcastReceiver() {
         Scheduler.applyPolling(context)
         Scheduler.applyTelemetryRenew(context)
         runBlocking { Scheduler.rescheduleAll(context) }
-        if (Prefs.get(context).intensiveEnabled) Scheduler.applyIntensive(context)
+        Scheduler.applyIntensive(context)
     }
 }

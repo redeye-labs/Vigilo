@@ -48,8 +48,8 @@ android {
         applicationId = "io.github.redeyelabs.vigilo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "1.2.0"
+        versionCode = 21
+        versionName = "1.3.0"
         // Schema del redirect OAuth: vigilo://oauth/callback
         manifestPlaceholders["oauthScheme"] = "vigilo"
     }

@@ -82,6 +82,12 @@ fun NotificationsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 )
                 Spacer(Modifier.height(8.dp))
                 HaAlertSettings(haSettings) { vm.saveBackendSettings(it) }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Per riceverle anche dall'app Vigilo, con suono, apri Impostazioni e attiva «Notifiche allarme anche dall'app».",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }) else null,
     )

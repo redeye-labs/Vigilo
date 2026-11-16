@@ -94,13 +94,15 @@ Valori per il portale Tesla (te li dà la procedura già pronti):
 3. La guida mostra i **controlli dal vivo** del componente aggiuntivo: quando sono tutti spuntati hai finito.
 
 Dalla **1.2.0** la chiave di firma dell'APK è nuova. Se hai già la 1.1.x (o precedente), **disinstallala prima**,
-poi installa la 1.2.0 e rabbina l'app inquadrando di nuovo il QR.
+poi installa la 1.2.0 (o successiva) e rabbina l'app inquadrando di nuovo il QR.
 
 Impronta SHA-256 del certificato di firma ufficiale:
 
-`''' + FP + '''`
+`61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
 
-Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.2.0.apk`
+Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.0.apk`
+
+Nella **1.3.0**, in Impostazioni (con l'app abbinata a Home Assistant) puoi attivare **Notifiche allarme anche dall'app** (spenta di default): gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. L'opzione **Suona anche in silenzioso** (accesa insieme alla prima) usa il volume della sveglia.
 
 <img src="docs/screens/guida-abbinamento.png" width="230" alt="Abbinamento">
 
@@ -110,7 +112,7 @@ Il componente aggiuntivo invia già le notifiche da solo. Se preferisci gestirle
 (e disattivi quelle del componente, per non riceverle doppie):
 
 [![Importa: Sentinella Aware](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fredeye-labs%2FVigilo%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fvigilo%2Fsentinella_aware.yaml)
-**Aware** – qualcuno vicino all'auto: più telefoni, pausa configurabile.
+**Aware** – qualcuno vicino all'auto: più telefoni, pausa configurabile. Opzione facoltativa «Suona come una sveglia» (spenta di default) per usare il canale `alarm_stream` anche in silenzioso o in «Non disturbare». Se hai già importato il blueprint, ri-importalo da Impostazioni → Automazioni e scene → Blueprint (oppure dal pulsante qui sopra): le automazioni già create restano come prima finché non attivi la nuova opzione.
 
 [![Importa: Sentinella Panic](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fredeye-labs%2FVigilo%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fvigilo%2Fsentinella_panic.yaml)
 **Panic** – allarme: canale `alarm_stream` (suona come una sveglia anche in «Non disturbare»).

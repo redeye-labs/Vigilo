@@ -38,6 +38,14 @@ blueprint:
       default: "Sentinella: attenzione"
       selector:
         text: {}
+    alarm_stream:
+      name: Suona come una sveglia (Android)
+      description: >-
+        Se attivo, usa il canale alarm_stream e suona anche con il telefono in silenzioso
+        o in «Non disturbare». Lasciato spento, il comportamento resta quello di sempre.
+      default: false
+      selector:
+        boolean: {}
 mode: single
 max_exceeded: silent
 triggers:
@@ -51,6 +59,7 @@ variables:
   devices: !input notify_devices
   title: !input title
   throttle: !input throttle
+  alarm: !input alarm_stream
 actions:
   - repeat:
       for_each: "{{ devices }}"
@@ -61,7 +70,7 @@ actions:
             title: "{{ title }}"
             message: "Qualcuno si è fermato vicino all'auto ({{ now().strftime('%H:%M') }})."
             data:
-              channel: Sentinella
+              channel: "{{ 'alarm_stream' if alarm else 'Sentinella' }}"
               importance: high
               priority: high
               ttl: 0
