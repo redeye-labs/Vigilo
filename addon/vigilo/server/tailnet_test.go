@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestUnwrapTLSListener(t *testing.T) {
@@ -68,6 +69,72 @@ func TestTelemetryPassthrough(t *testing.T) {
 	conn, err := tls.Dial("tcp", front.Addr().String(), &tls.Config{RootCAs: pool, ServerName: host})
 	if err != nil {
 		t.Fatalf("handshake attraverso il passthrough: %v", err)
+	}
+	defer conn.Close()
+	if _, err := conn.Write([]byte("ping")); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(conn, buf); err != nil || string(buf) != "ping" {
+		t.Fatalf("eco: %q %v", buf, err)
+	}
+}
+
+// Se fleet-telemetry parte un attimo dopo, l'inoltro deve aspettare e completare l'handshake.
+func TestTelemetryPassthroughWaitsForBackend(t *testing.T) {
+	dir := t.TempDir()
+	c := Certs{dir: dir}
+	const host = "vigilo.example.ts.net"
+	if err := c.Ensure(host); err != nil {
+		t.Fatal(err)
+	}
+	cert, err := tls.LoadX509KeyPair(c.certPath(), c.keyPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	front, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer front.Close()
+
+	backendAddr := make(chan string, 1)
+	go func() {
+		for {
+			fc, err := front.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				addr := <-backendAddr
+				proxyTelemetryConn(fc, addr)
+			}()
+		}
+	}()
+
+	go func() {
+		time.Sleep(800 * time.Millisecond)
+		backend, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer backend.Close()
+		backendAddr <- backend.Addr().String()
+		bc, err := backend.Accept()
+		if err != nil {
+			return
+		}
+		defer bc.Close()
+		_, _ = io.Copy(bc, bc)
+	}()
+
+	caPEM, _ := os.ReadFile(filepath.Join(dir, "ca.crt"))
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(caPEM)
+	conn, err := tls.Dial("tcp", front.Addr().String(), &tls.Config{RootCAs: pool, ServerName: host})
+	if err != nil {
+		t.Fatalf("handshake con backend in ritardo: %v", err)
 	}
 	defer conn.Close()
 	if _, err := conn.Write([]byte("ping")); err != nil {

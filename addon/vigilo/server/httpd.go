@@ -99,6 +99,7 @@ func (a *App) requirePairing(h http.Handler) http.Handler {
 			writeJSON(w, 401, map[string]any{"ok": false, "error": "app non associata: inquadra di nuovo il QR code"})
 			return
 		}
+		a.store.NotePairedApp()
 		h.ServeHTTP(w, r)
 	})
 }
@@ -264,6 +265,7 @@ func (a *App) IngressHandler() http.Handler {
 			"key_paired":    s.KeyPaired,
 			"telemetry_exp": s.TelemetryExp,
 			"pair_url":      pairURL,
+			"paired_apps":   s.PairedApps,
 			"settings":      s.Settings,
 			"setup_message": setupMsg,
 			"checks":        a.Checks(ctx, r.URL.Query().Get("deep") == "1"),
@@ -372,7 +374,7 @@ func (a *App) IngressHandler() http.Handler {
 		a.writeSettings(w, r.Context())
 	})
 	mux.HandleFunc("POST /ui/pairing/reset", func(w http.ResponseWriter, r *http.Request) {
-		_ = a.store.Update(func(s *State) { s.PairingToken = randomToken(32) })
+		a.store.ResetPairing()
 		writeJSON(w, 200, map[string]any{"ok": true})
 	})
 	mux.HandleFunc("GET /ui/qr.png", func(w http.ResponseWriter, r *http.Request) {

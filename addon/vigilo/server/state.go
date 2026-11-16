@@ -52,6 +52,8 @@ type State struct {
 	VehicleName         string       `json:"vehicle_name"`
 	PartnerDomain       string       `json:"partner_domain"`
 	PairingToken        string       `json:"pairing_token"`
+	PairedApps          int          `json:"paired_apps"` // app che hanno usato il token (almeno una chiamata API riuscita)
+	LastAppAt           int64        `json:"last_app_at,omitempty"`
 	TelemetryExp        int64        `json:"telemetry_exp"`
 	TelemetryHost       string       `json:"telemetry_host"`
 	TelemetrySent       int64        `json:"telemetry_sent"`
@@ -124,6 +126,32 @@ func randomToken(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+// NotePairedApp registra che un'app ha usato con successo il token di abbinamento.
+// È idempotente e scrive su disco solo la prima volta, per non farlo a ogni polling.
+func (st *Store) NotePairedApp() {
+	st.mu.Lock()
+	already := st.s.PairedApps > 0
+	st.mu.Unlock()
+	if already {
+		return
+	}
+	_ = st.Update(func(s *State) {
+		if s.PairedApps == 0 {
+			s.PairedApps = 1
+		}
+		s.LastAppAt = time.Now().UnixMilli()
+	})
+}
+
+// ResetPairing invalida il token e azzera le app collegate (pulsante «Rigenera»).
+func (st *Store) ResetPairing() {
+	_ = st.Update(func(s *State) {
+		s.PairingToken = randomToken(32)
+		s.PairedApps = 0
+		s.LastAppAt = 0
+	})
 }
 
 func nowUnix() int64 { return time.Now().Unix() }

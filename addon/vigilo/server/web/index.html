@@ -27,7 +27,9 @@
   .ok{color:var(--ok)} .bad{color:var(--bad)}
   img.qr{background:#fff;border-radius:12px;padding:8px;width:220px;height:220px}
   .msg{color:var(--warn);font-size:13px;white-space:pre-wrap}
-  ul{margin:6px 0 6px 18px;padding:0;color:#d8d8dc} li{margin:2px 0}
+  ul,ol{margin:6px 0 6px 22px;padding:0;color:#d8d8dc} li{margin:4px 0}
+  a{color:#f2f2f2}
+  .foot{text-align:center;color:var(--mut);font-size:12px;margin:28px 0 8px}
   .ev{font-size:13px;padding:4px 0;color:#cfcfd4} .ev .t{color:var(--mut);margin-right:8px}
   .chips label{display:flex;gap:8px;align-items:center;color:var(--fg);font-size:14px;margin:4px 0} .chips input{width:auto}
 </style>
@@ -83,7 +85,13 @@
   </section>
 
   <section class="step" id="s7"><h2><span class="n">7</span>Collega l'app Vigilo</h2>
-    <p>Nell'app: <b>Impostazioni → Collega a Home Assistant → Inquadra QR</b>. Oppure inquadra il QR con la fotocamera del telefono.</p>
+    <ol>
+      <li>Installa l'app <b>Vigilo</b> sul telefono. Scarica l'ultima versione (APK) dalla pagina <a href="https://github.com/redeye-labs/Vigilo/releases/latest" target="_blank" rel="noopener">Releases</a> del repository.</li>
+      <li>Apri Vigilo, vai in <b>Impostazioni</b>, poi <b>Collega a Home Assistant</b>, poi <b>Inquadra QR</b>.</li>
+      <li>Inquadra questo QR.</li>
+    </ol>
+    <p class="mut">Non premere <b>Rigenera</b>: scollega le app già collegate.</p>
+    <div id="pairstatus"></div>
     <div id="pair"></div>
   </section>
 
@@ -95,6 +103,7 @@
 
   <section class="step"><h2>Ultimi eventi</h2><div id="events" class="mut">—</div></section>
   <p class="mut">Progetto open source non ufficiale, non affiliato a Tesla, Inc.</p>
+  <p class="foot">Crafted with ❤️ by Saverio</p>
 </main>
 <script>
 const $=id=>document.getElementById(id);
@@ -133,8 +142,21 @@ async function load(deep){
   const ck=(st.checks||[]);
   const c=id=>(ck.find(x=>x.id===id)||{}).ok;
   done('s5',c('config')&&c('car'));
-  done('s6',(st.settings?.notify_targets||[]).length>0);
-  $('pair').innerHTML=st.pair_url?`<img class="qr" src="ui/qr.png?t=pair&r=${Date.now()%100000}" alt="QR app"><div class="row"><button class="sec small" data-v="${esc(st.pair_url)}" onclick="copyText(this.dataset.v,this,null)">Copia il link di collegamento</button><button class="sec small" onclick="if(confirm('Scollegare tutte le app associate?'))api('ui/pairing/reset',{method:'POST'}).then(()=>load())">Rigenera (scollega le app)</button></div>`:'<p class="mut">Completa prima il passo 1.</p>';
+  const nPhones=(st.settings?.notify_targets||[]).length;
+  done('s6',nPhones>0);
+  const nApps=st.paired_apps||0;
+  done('s7',nApps>0);
+  $('pairstatus').innerHTML=nApps>0?`<p class="ok">✓ ${nApps} app collegat${nApps===1?'a':'e'}</p>`:'';
+  // Il QR non va ricostruito a ogni aggiornamento, altrimenti lampeggia.
+  if(st.pair_url){
+    if($('pair').dataset.url!==st.pair_url){
+      $('pair').dataset.url=st.pair_url;
+      $('pair').innerHTML=`<img class="qr" src="ui/qr.png?t=pair&r=${encodeURIComponent(st.pair_url.slice(-16))}" alt="QR app"><div class="row"><button class="sec small" data-v="${esc(st.pair_url)}" onclick="copyText(this.dataset.v,this,null)">Copia il link di collegamento</button><button class="sec small" onclick="if(confirm('Scollegare tutte le app associate?'))api('ui/pairing/reset',{method:'POST'}).then(()=>{$('pair').dataset.url='';load()})">Rigenera (scollega le app)</button></div>`;
+    }
+  }else if($('pair').dataset.url!==''){
+    $('pair').dataset.url='';
+    $('pair').innerHTML='<p class="mut">Completa prima il passo 1.</p>';
+  }
   $('checks').innerHTML=ck.map(x=>`<div><span class="i ${x.ok?'ok':'bad'}">${x.ok?'✓':'✗'}</span><span>${esc(x.label)} <span class="mut">${esc(x.detail||'')}</span></span></div>`).join('');
   $('setupmsg').textContent=st.setup_message||'';
   if(!settingsLoaded) loadSettings();
@@ -166,7 +188,7 @@ async function vehicles(){
 }
 async function sendTelemetry(){$('telmsg').textContent='Invio…';const r=await api('ui/telemetry',{method:'POST'});$('telmsg').textContent=r.message||r.error;load()}
 async function runSetup(){$('setupmsg').textContent='Configurazione in corso…';const r=await api('ui/run-setup',{method:'POST'});$('setupmsg').textContent=r.message||'Fatto';load(true)}
-load(); setInterval(()=>{ if(!document.hidden) load() },8000);
+load(); setInterval(()=>{ if(!document.hidden) load() },4000);
 </script>
 </body>
 </html>

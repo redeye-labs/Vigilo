@@ -53,9 +53,9 @@
 > or reports them as invalid even when they are correct. Retry or press **Update** again until they are saved,
 > then double-check they are unchanged.
 | Notifications | pick phones and throttle | Aware with throttle, Panic on the `alarm_stream` channel |
-| Android app | scan the pairing QR | 256-bit token pairing |
+| Android app | install the app from [Releases](https://github.com/redeye-labs/Vigilo/releases/latest), open Settings → Collega a Home Assistant → Inquadra QR, and scan this QR. Do not tap «Rigenera» if an app is already paired. | token pairing; the step turns green once the app is connected |
 
-4. Install `Vigilo-1.1.1.apk` from **Releases**, open the in-app **Guide**, scan the QR. Live checks turn green.
+4. Install the latest app from **Releases** (`Vigilo-1.1.2.apk`), open the in-app **Guide**, scan the QR. Live checks turn green.
 
 ### Blueprints (optional)
 

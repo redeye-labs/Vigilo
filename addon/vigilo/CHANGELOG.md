@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.4
+- Procedura guidata, passo 7: istruzioni numerate per installare l'app (link alla pagina Releases),
+  aprire Impostazioni → Collega a Home Assistant → Inquadra QR, e inquadrare il QR. Nota su «Rigenera».
+- Il passo 7 diventa verde quando almeno un'app si è collegata (es. «1 app collegata»); lo stato si
+  aggiorna da solo ogni pochi secondi, senza ricaricare la pagina.
+- All'avvio fleet-telemetry parte prima dell'apertura della porta pubblica 8443, e l'inoltro ritenta
+  il collegamento per qualche secondo: l'auto non riceve più "connection refused" nel primo minuto.
+- Firma in calce alla procedura guidata e alle Impostazioni dell'app.
+
+
 ## 1.0.3
 - Corretto: l'auto non riusciva a collegarsi alla telemetria. La porta pubblica 8443 accettava la
   connessione ma la chiudeva subito senza rispondere (l'inoltro "TCPForward" della serve config di

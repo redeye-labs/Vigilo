@@ -462,10 +462,9 @@ func checkPublicKey(ctx context.Context, host string, want []byte) (bool, string
 	return true, ""
 }
 
-// Loop: configurazione automatica ogni minuto all'inizio, poi controllo di salute giornaliero.
+// Loop: configurazione automatica; all'avvio ritenta ogni 5 secondi finché fleet-telemetry
+// è in ascolto, poi una volta al minuto, con controllo di salute giornaliero.
 func (a *App) Loop(ctx context.Context) {
-	tick := time.NewTicker(time.Minute)
-	defer tick.Stop()
 	lastHealth := time.Now().Add(-23 * time.Hour) // primo controllo dopo circa un'ora
 	for {
 		sctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
@@ -481,10 +480,14 @@ func (a *App) Loop(ctx context.Context) {
 			a.dailyHealth(sctx)
 		}
 		cancel()
+		wait := time.Minute
+		if !a.ft.Running() {
+			wait = 5 * time.Second
+		}
 		select {
 		case <-ctx.Done():
 			return
-		case <-tick.C:
+		case <-time.After(wait):
 		}
 	}
 }

@@ -59,7 +59,7 @@ Tesla deve raggiungere il tuo Home Assistant da internet per due cose: leggere l
 | 4. Chiave virtuale | apri il link/QR dal telefono con l'app Tesla e confermi | controlla l'associazione |
 | 5. Telemetria | niente (o «Invia di nuovo la configurazione») | crea CA e certificato server, firma e invia la configurazione, avvia il server fleet-telemetry |
 | 6. Notifiche | scegli i telefoni e gli avvisi | Aware (con pausa regolabile) e Panic (canale `alarm_stream`) |
-| 7. App | inquadri il QR con l'app Vigilo | abbinamento con token |
+| 7. App | installi l'app dalla pagina [Releases](https://github.com/redeye-labs/Vigilo/releases/latest), apri Impostazioni → Collega a Home Assistant → Inquadra QR e inquadri questo QR. Non usare «Rigenera» se l'app è già collegata. | abbinamento con token; il passo diventa verde quando l'app è collegata |
 
 Valori da inserire nel portale Tesla (li trovi già pronti nella procedura, con i pulsanti «Copia»):
 

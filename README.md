@@ -71,7 +71,7 @@ App Android Vigilo ◀──HTTPS + token di abbinamento────────
 | Chiave virtuale | apri il link/QR sul telefono con l'app Tesla e confermi | verifica l'associazione |
 | Telemetria | niente | crea CA e certificato, firma e invia la configurazione, avvia fleet-telemetry |
 | Notifiche | scegli i telefoni e la pausa tra due avvisi | Aware con pausa, Panic sul canale sveglia (`alarm_stream`) |
-| App Android | inquadri il QR di abbinamento | abbinamento con token a 256 bit |
+| App Android | installi l'app dalla pagina [Releases](https://github.com/redeye-labs/Vigilo/releases/latest), apri Impostazioni → Collega a Home Assistant → Inquadra QR e inquadri il QR. Non usare «Rigenera» se l'app è già collegata. | abbinamento con token; il passo diventa verde quando l'app è collegata |
 
 Valori per il portale Tesla (te li dà la procedura già pronti):
 
@@ -87,7 +87,7 @@ Valori per il portale Tesla (te li dà la procedura già pronti):
 
 ### 4. App Android
 
-1. Scarica `Vigilo-1.1.1.apk` dalla pagina **Releases** del repository e installala.
+1. Scarica l'ultima app dalla pagina **Releases** del repository (`Vigilo-1.1.2.apk`) e installala.
 2. Al primo avvio si apre la **Guida**: premi «Scansiona il QR» e inquadra il QR dell'ultimo passo.
 3. La guida mostra i **controlli dal vivo** del componente aggiuntivo: quando sono tutti spuntati hai finito.
 

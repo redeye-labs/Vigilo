@@ -121,19 +121,8 @@ func (t *Tailnet) openFunnel(ctx context.Context, handler http.Handler) error {
 	if err := t.clearServeTCP(ctx, lc, 8443); err != nil {
 		log.Printf("serve config 8443: %v", err)
 	}
-	if !t.telemetryOpen {
-		ln8443, err := t.srv.ListenFunnel("tcp", ":8443", tsnet.FunnelOnly())
-		if err != nil {
-			return fmt.Errorf("Funnel 8443: %w", err)
-		}
-		raw, ok := unwrapTLSListener(ln8443)
-		if !ok {
-			ln8443.Close()
-			return errors.New("Funnel 8443: impossibile ottenere il listener TCP grezzo")
-		}
-		t.telemetryOpen = true
-		go t.serveTelemetry(ctx, raw)
-	}
+	// La 443 si apre subito (chiave pubblica, login). La 8443 solo quando fleet-telemetry è in ascolto,
+	// così l'auto non riceve "connection refused" nel primo minuto di avvio.
 
 	// 443: HTTPS (certificato Let's Encrypt gestito da Tailscale). Si registra l'SNI di ogni client
 	// per poter spiegare eventuali handshake falliti nel registro.
@@ -154,7 +143,8 @@ func (t *Tailnet) openFunnel(ctx context.Context, handler http.Handler) error {
 	t.served = true
 	t.funnel = nil
 	t.mu.Unlock()
-	log.Printf("Funnel attivo su https://%s (443) e %s:8443", domain, domain)
+	log.Printf("Funnel attivo su https://%s (443); porta 8443 in attesa di fleet-telemetry", domain)
+	go t.openTelemetryFunnel(ctx, domain)
 	// Il certificato Let's Encrypt viene ottenuto alla prima connessione e può richiedere decine di
 	// secondi: lo chiediamo subito, così i primi client (es. Tesla che scarica la chiave) non vanno in timeout.
 	go func() {
@@ -251,6 +241,85 @@ func unwrapTLSListener(ln net.Listener) (net.Listener, bool) {
 	return inner, ok && inner != nil
 }
 
+// openTelemetryFunnel attende che fleet-telemetry sia in ascolto, poi apre il Funnel 8443.
+// Se dopo due minuti non è ancora pronto, apre comunque la porta: l'inoltro ritenta il collegamento.
+func (t *Tailnet) openTelemetryFunnel(ctx context.Context, domain string) {
+	t.mu.Lock()
+	already := t.telemetryOpen
+	t.mu.Unlock()
+	if already {
+		return
+	}
+	if err := waitTCP(ctx, t.telemetry, 2*time.Minute); err != nil {
+		log.Printf("telemetria: fleet-telemetry non ancora in ascolto su %s (%v); apro comunque la porta 8443", t.telemetry, err)
+	} else {
+		log.Printf("telemetria: fleet-telemetry in ascolto su %s, apro la porta pubblica 8443", t.telemetry)
+	}
+	for ctx.Err() == nil {
+		t.mu.Lock()
+		already = t.telemetryOpen
+		t.mu.Unlock()
+		if already {
+			return
+		}
+		ln8443, err := t.srv.ListenFunnel("tcp", ":8443", tsnet.FunnelOnly())
+		if err != nil {
+			log.Printf("Funnel 8443: %v; nuovo tentativo tra 10s", err)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(10 * time.Second):
+			}
+			continue
+		}
+		raw, ok := unwrapTLSListener(ln8443)
+		if !ok {
+			ln8443.Close()
+			log.Printf("Funnel 8443: impossibile ottenere il listener TCP grezzo; nuovo tentativo tra 10s")
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(10 * time.Second):
+			}
+			continue
+		}
+		t.mu.Lock()
+		t.telemetryOpen = true
+		t.mu.Unlock()
+		log.Printf("Funnel attivo su https://%s (443) e %s:8443", domain, domain)
+		t.serveTelemetry(ctx, raw)
+		return
+	}
+}
+
+// waitTCP attende che addr accetti connessioni TCP, o scade.
+func waitTCP(ctx context.Context, addr string, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	var last error
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		c, err := net.DialTimeout("tcp", addr, time.Second)
+		if err == nil {
+			c.Close()
+			return nil
+		}
+		last = err
+		if !time.Now().Before(deadline) {
+			if last == nil {
+				last = errors.New("timeout")
+			}
+			return last
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(400 * time.Millisecond):
+		}
+	}
+}
+
 // serveTelemetry inoltra ogni connessione Funnel della 8443 a fleet-telemetry senza toccare il TLS.
 func (t *Tailnet) serveTelemetry(ctx context.Context, ln net.Listener) {
 	go func() { <-ctx.Done(); ln.Close() }()
@@ -282,7 +351,7 @@ func proxyTelemetryConn(c net.Conn, backend string) {
 	if sni == "" {
 		sni = "nessuno"
 	}
-	b, err := net.DialTimeout("tcp", backend, 5*time.Second)
+	b, err := dialTelemetry(backend, 20*time.Second)
 	if err != nil {
 		log.Printf("telemetria (porta 8443): da %s (SNI %s) ma fleet-telemetry non risponde su %s: %v", src, sni, backend, err)
 		return
@@ -309,6 +378,36 @@ func proxyTelemetryConn(c net.Conn, backend string) {
 	<-done
 	log.Printf("telemetria (porta 8443): connessione da %s chiusa dopo %s (%d B ricevuti, %d B inviati)",
 		src, time.Since(start).Round(time.Second), up+int64(len(hello)), down)
+}
+
+// dialTelemetry ritenta il collegamento a fleet-telemetry per qualche secondo
+// (es. se il processo è appena stato avviato o sta ripartendo).
+func dialTelemetry(backend string, timeout time.Duration) (net.Conn, error) {
+	deadline := time.Now().Add(timeout)
+	var last error
+	for {
+		remain := time.Until(deadline)
+		if remain <= 0 {
+			if last == nil {
+				last = errors.New("timeout")
+			}
+			return nil, last
+		}
+		d := 2 * time.Second
+		if d > remain {
+			d = remain
+		}
+		c, err := net.DialTimeout("tcp", backend, d)
+		if err == nil {
+			return c, nil
+		}
+		last = err
+		sleep := 400 * time.Millisecond
+		if time.Now().Add(sleep).After(deadline) {
+			return nil, last
+		}
+		time.Sleep(sleep)
+	}
 }
 
 // peekSNI legge il ClientHello TLS e ne estrae l'SNI senza inviare nulla al client.

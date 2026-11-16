@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.redeyelabs.vigilo.api.Http
 import io.github.redeyelabs.vigilo.api.TeslaAuth
@@ -128,6 +129,13 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
         Text("Vigilo è un progetto open source indipendente, non affiliato a Tesla. Mappe © OpenStreetMap contributors.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
+        Text(
+            "Crafted with ❤️ by Saverio",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+        )
     }
 }
 
