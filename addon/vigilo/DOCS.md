@@ -100,6 +100,10 @@ Blueprint pronti (Aware e Panic): vedi il README del repository.
 - Su internet (Funnel) sono esposti solo: la chiave pubblica, la pagina di ritorno del login, l'API dell'app
   (protetta da token di abbinamento a 256 bit, rigenerabile) e la porta telemetria (mTLS, accetta solo le auto).
 
+## Licenze
+
+Vigilo è sotto licenza MIT. I componenti di terze parti (fleet-telemetry, vehicle-command, Tailscale, Paho e gli altri) sono elencati, con licenza e indirizzo, in [THIRD_PARTY_LICENSES.md](../../THIRD_PARTY_LICENSES.md). Nell'immagine si trovano in `/usr/share/licenses/vigilo`.
+
 ## Opzioni
 
 | Opzione | Default | Note |

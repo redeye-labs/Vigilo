@@ -55,7 +55,7 @@
 | Notifications | pick phones and throttle | Aware with throttle, Panic on the `alarm_stream` channel |
 | Android app | install the app from [Releases](https://github.com/redeye-labs/Vigilo/releases/latest), open Settings → Collega a Home Assistant → Inquadra QR, and scan this QR. Do not tap «Rigenera» if an app is already paired. | token pairing; the step turns green once the app is connected |
 
-4. Install the latest app from **Releases** (`Vigilo-1.1.2.apk`), open the in-app **Guide**, scan the QR. Live checks turn green.
+4. Install the latest app from **Releases** (`Vigilo-1.1.3.apk`), open the in-app **Guide**, scan the QR. Live checks turn green.
 
 ### Blueprints (optional)
 
@@ -93,8 +93,14 @@ key, OAuth callback, token-protected app API, mTLS telemetry port.
 - App: `./gradlew assembleRelease` (JDK 17+, Android SDK 36).
 - Add-on server: `cd addon/vigilo/server && go build .` (Go 1.27).
 
-Uses teslamotors/fleet-telemetry and teslamotors/vehicle-command (Apache 2.0), Tailscale tsnet (BSD-3),
-Eclipse Paho, osmdroid. Map data © OpenStreetMap contributors.
+## Credits and licenses
 
-*Tesla and Model 3 are trademarks of their respective owners. This project is not affiliated with, endorsed or
-supported by Tesla, Inc.*
+The full list of third-party components, with licenses and URLs, is in
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Among others: teslamotors/fleet-telemetry and
+teslamotors/vehicle-command (Apache 2.0), Tailscale tsnet (BSD-3-Clause), Eclipse Paho, osmdroid.
+Map data © OpenStreetMap contributors.
+
+## Trademarks
+
+Tesla, Model 3, Model Y, Model S, Model X and Sentry Mode are trademarks of Tesla, Inc.
+This project is not affiliated with, endorsed or supported by Tesla, Inc.

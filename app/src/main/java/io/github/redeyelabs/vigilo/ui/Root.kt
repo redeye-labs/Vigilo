@@ -43,6 +43,7 @@ enum class Screen(val key: String) {
     HISTORY("storico"),
     SETTINGS("impostazioni"),
     GUIDE("guida"),
+    LICENSES("licenze"),
 }
 
 @Composable
@@ -96,6 +97,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.HISTORY -> HistoryScreen(vm, onBack = goHome)
                     Screen.SETTINGS -> SettingsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.GUIDE -> GuideScreen(vm, onBack = { screen = if (loggedIn) Screen.HOME else Screen.SETTINGS })
+                    Screen.LICENSES -> LicensesScreen(onBack = { screen = Screen.SETTINGS })
                 }
                 if (busy && !progress.isNullOrBlank()) {
                     Surface(

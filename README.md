@@ -87,7 +87,7 @@ Valori per il portale Tesla (te li dà la procedura già pronti):
 
 ### 4. App Android
 
-1. Scarica l'ultima app dalla pagina **Releases** del repository (`Vigilo-1.1.2.apk`) e installala.
+1. Scarica l'ultima app dalla pagina **Releases** del repository (`Vigilo-1.1.3.apk`) e installala.
 2. Al primo avvio si apre la **Guida**: premi «Scansiona il QR» e inquadra il QR dell'ultimo passo.
 3. La guida mostra i **controlli dal vivo** del componente aggiuntivo: quando sono tutti spuntati hai finito.
 
@@ -162,12 +162,15 @@ controllo periodico, comandi tramite un proxy di firma tuo. È la modalità dell
 - App: `./gradlew assembleRelease` (JDK 17+, Android SDK 36) → `app/build/outputs/apk/release/`.
 - Server: `cd addon/vigilo/server && go build .` (Go 1.27). Test di integrazione facoltativo con un broker MQTT e il binario fleet-telemetry: vedi `integration_test.go`.
 
-## Crediti
+## Crediti e licenze
 
-Usa [teslamotors/fleet-telemetry](https://github.com/teslamotors/fleet-telemetry) e
-[teslamotors/vehicle-command](https://github.com/teslamotors/vehicle-command) (Apache 2.0), Tailscale `tsnet`
-(BSD-3), Eclipse Paho MQTT, osmdroid. Mappe © OpenStreetMap contributors. Foto auto facoltativa: Ethan Llamas,
-Wikimedia Commons, CC BY-SA 4.0.
+L'elenco completo dei componenti di terze parti, con licenza e indirizzo, è in
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Tra gli altri: [teslamotors/fleet-telemetry](https://github.com/teslamotors/fleet-telemetry)
+e [teslamotors/vehicle-command](https://github.com/teslamotors/vehicle-command) (Apache 2.0),
+Tailscale `tsnet` (BSD-3-Clause), Eclipse Paho MQTT, osmdroid. Mappe © OpenStreetMap contributors.
+Foto auto facoltativa: Ethan Llamas, Wikimedia Commons, CC BY-SA 4.0.
 
-*Tesla, Model 3 e Sentinella sono marchi dei rispettivi proprietari. Questo progetto non è affiliato, approvato
-o supportato da Tesla, Inc.*
+## Marchi
+
+Tesla, Model 3, Model Y, Model S, Model X e Sentinella (Sentry Mode) sono marchi di Tesla, Inc.
+Questo progetto non è affiliato, approvato o supportato da Tesla, Inc.

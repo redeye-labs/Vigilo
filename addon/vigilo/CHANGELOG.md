@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+- Licenze dei componenti di terze parti: elenco in THIRD_PARTY_LICENSES.md (e nell'immagine
+  in /usr/share/licenses/vigilo), con il testo NOTICE di Eclipse Paho e una copia della
+  licenza Apache 2.0. Nota sui marchi nei README.
+
+
 ## 1.0.4
 - Procedura guidata, passo 7: istruzioni numerate per installare l'app (link alla pagina Releases),
   aprire Impostazioni → Collega a Home Assistant → Inquadra QR, e inquadrare il QR. Nota su «Rigenera».

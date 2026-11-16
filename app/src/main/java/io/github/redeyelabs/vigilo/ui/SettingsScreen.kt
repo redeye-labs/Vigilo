@@ -128,6 +128,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
         }) { Text("Pagina Wikimedia Commons") }
         Text("Vigilo è un progetto open source indipendente, non affiliato a Tesla. Mappe © OpenStreetMap contributors.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = { onOpen(Screen.LICENSES) }) { Text("Licenze open source") }
         Spacer(Modifier.height(24.dp))
         Text(
             "Crafted with ❤️ by Saverio",
