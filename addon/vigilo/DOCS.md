@@ -67,6 +67,10 @@ Valori da inserire nel portale Tesla (li trovi già pronti nella procedura, con 
 - **Allowed Redirect URI**: `https://vigilo.<tuo-tailnet>.ts.net/callback`
 - **Scope**: Vehicle Information, Vehicle Location, Vehicle Commands, Vehicle Charging Management.
 
+> **Nota:** a volte il portale Tesla rifiuta Allowed Origin o Redirect URI al primo tentativo, o dice che
+> non sono validi anche se sono giusti. È un comportamento del loro sito: riprova o premi di nuovo
+> **Update** finché non risultano salvati, poi ricontrolla che siano rimasti identici.
+
 ## Costi
 
 La Fleet API è a pagamento oltre un credito mensile gratuito. La **telemetria in streaming** e

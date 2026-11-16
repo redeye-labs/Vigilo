@@ -282,6 +282,13 @@ func (a *App) Setup(ctx context.Context) {
 		return
 	}
 	if s.PartnerDomain != host && a.tailnet.Status().Funnel {
+		// Tesla scarica la chiave pubblica durante la registrazione: verifichiamo prima che sia raggiungibile.
+		// (Solo diagnostica: non blocca, perché da dentro la rete il Funnel potrebbe non essere raggiungibile.)
+		if ok, why := checkPublicKey(ctx, host, a.tesla.PublicKeyPEM()); !ok {
+			log.Printf("attenzione: chiave pubblica su https://%s/.well-known/... %s", host, why)
+		} else {
+			log.Printf("chiave pubblica raggiungibile su https://%s/.well-known/appspecific/com.tesla.3p.public-key.pem", host)
+		}
 		if err := a.tesla.RegisterPartner(ctx, host); err != nil {
 			a.setupMsg(err.Error())
 			return

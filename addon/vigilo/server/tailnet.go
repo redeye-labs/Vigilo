@@ -136,8 +136,26 @@ func (t *Tailnet) openFunnel(ctx context.Context, handler http.Handler) error {
 	t.funnel = nil
 	t.mu.Unlock()
 	log.Printf("Funnel attivo su https://%s (443) e %s:8443", domain, domain)
+	// Il certificato Let's Encrypt viene ottenuto alla prima connessione e può richiedere decine di
+	// secondi: lo chiediamo subito, così i primi client (es. Tesla che scarica la chiave) non vanno in timeout.
 	go func() {
-		s := &http.Server{Handler: handler, ReadHeaderTimeout: 15 * time.Second}
+		cctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+		defer cancel()
+		start := time.Now()
+		if _, _, err := lc.CertPair(cctx, domain); err != nil {
+			log.Printf("certificato HTTPS per %s: %v", domain, err)
+			return
+		}
+		log.Printf("certificato HTTPS pronto per %s (%s)", domain, time.Since(start).Round(time.Second))
+	}()
+	go func() {
+		s := &http.Server{
+			Handler: handler,
+			// Il timeout più breve vale anche per l'handshake TLS: 60 s lascia tempo al certificato.
+			ReadHeaderTimeout: 60 * time.Second,
+			IdleTimeout:       2 * time.Minute,
+			ErrorLog:          log.New(tlsNoiseFilter{}, "", 0),
+		}
 		if err := s.Serve(ln); err != nil && !errors.Is(err, net.ErrClosed) {
 			t.setErr(fmt.Errorf("server pubblico: %w", err))
 			t.mu.Lock()
@@ -146,6 +164,24 @@ func (t *Tailnet) openFunnel(ctx context.Context, handler http.Handler) error {
 		}
 	}()
 	return nil
+}
+
+// tlsNoiseFilter riassume gli errori di handshake TLS (client che chiudono, scanner, timeout) in una riga
+// più chiara; gli altri messaggi del server HTTP passano invariati.
+type tlsNoiseFilter struct{}
+
+func (tlsNoiseFilter) Write(p []byte) (int, error) {
+	m := strings.TrimSpace(string(p))
+	if strings.Contains(m, "TLS handshake error") {
+		reason := "interrotto"
+		if strings.Contains(m, "timeout") {
+			reason = "timeout"
+		}
+		log.Printf("HTTPS pubblico: handshake TLS %s (di solito un client lento o uno scanner; innocuo se poi i controlli sono verdi)", reason)
+		return len(p), nil
+	}
+	log.Print(m)
+	return len(p), nil
 }
 
 func (t *Tailnet) setErr(err error) {

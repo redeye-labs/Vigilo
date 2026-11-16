@@ -20,12 +20,15 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/teslamotors/vehicle-command/pkg/protocol"
 	"github.com/teslamotors/vehicle-command/pkg/proxy"
+	"github.com/teslamotors/vehicle-command/pkg/sign"
 )
 
 const (
@@ -298,6 +301,7 @@ func (t *Tesla) call(ctx context.Context, method, path string, body any) (map[st
 		(method == "POST" && strings.HasSuffix(path, "/fleet_telemetry_config"))
 	var code int
 	var respBody []byte
+	target := "proxy"
 	if viaProxy {
 		// Comandi firmati e firma della configurazione: proxy ufficiale Tesla, nello stesso processo.
 		req := httptest.NewRequest(method, "http://vigilo.local"+path, rd).WithContext(ctx)
@@ -307,13 +311,8 @@ func (t *Tesla) call(ctx context.Context, method, path string, body any) (map[st
 		t.px.ServeHTTP(rec, req)
 		code, respBody = rec.Code, rec.Body.Bytes()
 	} else {
-		host := t.store.Get().FleetHost
-		if host == "" {
-			host = fleetHostFromToken(tok)
-		}
-		if host == "" {
-			host = regionHosts["eu"]
-		}
+		host := t.fleetHost(tok)
+		target = host
 		req, err := http.NewRequestWithContext(ctx, method, "https://"+host+path, rd)
 		if err != nil {
 			return nil, err
@@ -334,17 +333,58 @@ func (t *Tesla) call(ctx context.Context, method, path string, body any) (map[st
 	if code >= 300 {
 		rc := code
 		msg := describeStatus(rc)
+		detail := ""
 		if out != nil {
 			if e, _ := out["error"].(string); e != "" {
-				msg += ": " + e
+				detail = e
+			}
+			if d, _ := out["error_description"].(string); d != "" {
+				detail = strings.TrimSpace(detail + " " + d)
 			}
 		}
+		if detail == "" {
+			detail = strings.TrimSpace(string(respBody))
+		}
+		detail = sanitizeForLog(detail, 200)
+		if detail != "" {
+			msg += ": " + detail
+		}
+		// Registro: metodo, host e percorso (VIN mascherato), stato e risposta ripulita. Mai i token.
+		log.Printf("Fleet API %s %s%s -> HTTP %d %s", method, target, maskVINs(path), code, sanitizeForLog(string(respBody), 300))
 		return out, &APIError{Code: rc, Msg: msg}
 	}
 	if out == nil {
 		out = map[string]any{}
 	}
 	return out, nil
+}
+
+// fleetHost: server Fleet API della regione dell'account (salvato, dal token, o Europa).
+func (t *Tesla) fleetHost(tok string) string {
+	host := t.store.Get().FleetHost
+	if host == "" {
+		host = fleetHostFromToken(tok)
+	}
+	if host == "" {
+		host = regionHosts["eu"]
+	}
+	return host
+}
+
+var (
+	vinRe = regexp.MustCompile(`\b[A-HJ-NPR-Z0-9]{13}([0-9]{4})\b`)
+	jwtRe = regexp.MustCompile(`eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*`)
+)
+
+// maskVINs sostituisce i VIN con ***1234.
+func maskVINs(s string) string { return vinRe.ReplaceAllString(s, "***$1") }
+
+// sanitizeForLog toglie token/JWS, maschera i VIN, compatta e tronca.
+func sanitizeForLog(s string, n int) string {
+	s = jwtRe.ReplaceAllString(s, "<token>")
+	s = maskVINs(s)
+	s = strings.Join(strings.Fields(s), " ")
+	return truncate(s, n)
 }
 
 func describeStatus(code int) string {
@@ -357,6 +397,8 @@ func describeStatus(code int) string {
 		return "auto addormentata o non raggiungibile"
 	case 412:
 		return "dominio non registrato o chiave non associata"
+	case 404:
+		return "auto o risorsa non trovata da Tesla"
 	case 421:
 		return "regione Tesla errata"
 	case 429:
@@ -564,6 +606,7 @@ func (t *Tesla) RegisterPartner(ctx context.Context, domain string) error {
 		_ = json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&tr)
 		resp.Body.Close()
 		if tr.AccessToken == "" {
+			log.Printf("token partner per %s non ottenuto: %s", host, sanitizeForLog(tr.Error, 200))
 			errs = append(errs, fmt.Sprintf("token partner (%s): %s", host, tr.Error))
 			continue
 		}
@@ -579,9 +622,11 @@ func (t *Tesla) RegisterPartner(ctx context.Context, domain string) error {
 		body, _ := io.ReadAll(io.LimitReader(resp2.Body, 1<<16))
 		resp2.Body.Close()
 		if resp2.StatusCode >= 300 {
-			errs = append(errs, fmt.Sprintf("%s: %d %s", host, resp2.StatusCode, truncate(string(body), 200)))
+			log.Printf("registrazione dominio %s su %s: HTTP %d %s", domain, host, resp2.StatusCode, sanitizeForLog(string(body), 300))
+			errs = append(errs, fmt.Sprintf("%s: %d %s", host, resp2.StatusCode, sanitizeForLog(string(body), 200)))
 			continue
 		}
+		log.Printf("registrazione dominio %s su %s: OK", domain, host)
 		okAny = true
 	}
 	if !okAny {
@@ -648,18 +693,29 @@ var telemetryFields = map[string]any{
 // alla prossima connessione, quindi NON serve svegliarla.
 func (t *Tesla) SendTelemetryConfig(ctx context.Context, vin, host string, port int, caPEM string) (string, error) {
 	exp := time.Now().Add(364 * 24 * time.Hour).Unix()
-	body := map[string]any{
-		"vins": []string{vin},
-		"config": map[string]any{
-			"hostname":    host,
-			"port":        port,
-			"ca":          caPEM,
-			"exp":         exp,
-			"alert_types": []string{"service"},
-			"fields":      telemetryFields,
-		},
+	config := jwt.MapClaims{
+		"hostname":    host,
+		"port":        port,
+		"ca":          caPEM,
+		"exp":         exp,
+		"alert_types": []string{"service"},
+		"fields":      telemetryFields,
 	}
-	out, err := t.call(ctx, "POST", "/api/1/vehicles/fleet_telemetry_config", body)
+	// Firma locale (Schnorr/P-256, identica al proxy ufficiale e a tesla-jws) e invio diretto a
+	// /api/1/vehicles/fleet_telemetry_config_jws sullo stesso server regionale usato per le altre chiamate.
+	jws, err := sign.SignMessageForFleet(t.key, "TelemetryClient", config)
+	if err != nil {
+		return "", fmt.Errorf("firma della configurazione: %w", err)
+	}
+	body := map[string]any{"vins": []string{vin}, "token": jws}
+	out, err := t.call(ctx, "POST", "/api/1/vehicles/fleet_telemetry_config_jws", body)
+	var ae *APIError
+	if errors.As(err, &ae) && ae.Code == 404 {
+		// Diagnosi: l'auto è nell'elenco di questo account/regione?
+		if diag := t.diagnoseVehicle(ctx, vin); diag != "" {
+			return "", fmt.Errorf("%s (%s)", err.Error(), diag)
+		}
+	}
 	if err != nil {
 		return "", err
 	}
@@ -685,6 +741,27 @@ func (t *Tesla) SendTelemetryConfig(ctx context.Context, vin, host string, port 
 		s.TelemetrySent = nowUnix()
 	})
 	return "Configurazione inviata: l'auto la riceve alla prossima connessione.", nil
+}
+
+// diagnoseVehicle spiega un 404: auto assente da questo account o dalla regione del server.
+func (t *Tesla) diagnoseVehicle(ctx context.Context, vin string) string {
+	tok, err := t.Token(ctx)
+	if err != nil {
+		return ""
+	}
+	host := t.fleetHost(tok)
+	vs, err := t.Vehicles(ctx)
+	if err != nil {
+		return "elenco auto non leggibile: " + err.Error()
+	}
+	for _, v := range vs {
+		if v.VIN == vin {
+			log.Printf("diagnosi 404: auto %s presente su %s (%d auto nell'account)", maskVINs(vin), host, len(vs))
+			return "l'auto è nell'account su " + host + ": riprova tra qualche minuto o rifai l'abbinamento della chiave"
+		}
+	}
+	log.Printf("diagnosi 404: auto %s NON presente su %s (%d auto nell'account)", maskVINs(vin), host, len(vs))
+	return fmt.Sprintf("l'auto non risulta nell'account Tesla collegato su %s (%d auto trovate): rifai \"Accedi con Tesla\" con l'account proprietario dell'auto", host, len(vs))
 }
 
 func describeSkip(k string) string {

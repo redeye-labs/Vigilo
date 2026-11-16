@@ -16,7 +16,7 @@
   .done .n{background:var(--ok);border-color:var(--ok);color:#000}
   p{margin:6px 0;color:#d8d8dc} .mut{color:var(--mut);font-size:13px}
   .kv{display:flex;gap:8px;align-items:center;background:#0f0f11;border-radius:12px;padding:8px 10px;margin:6px 0}
-  .kv b{min-width:170px;font-weight:500;color:var(--mut);font-size:13px} .kv code{flex:1;word-break:break-all;font-size:13px}
+  .kv b{min-width:170px;font-weight:500;color:var(--mut);font-size:13px} .kv code{flex:1;word-break:break-all;font-size:13px;user-select:all;-webkit-user-select:all;cursor:text}
   button,.btn{background:#f2f2f2;color:#000;border:0;border-radius:12px;padding:9px 14px;font-weight:600;cursor:pointer;font-size:14px;text-decoration:none;display:inline-block}
   button.sec,.btn.sec{background:transparent;color:var(--fg);border:1px solid #555}
   button.small{padding:5px 10px;font-size:12px}
@@ -47,6 +47,7 @@
     <div id="portal"></div>
     <ul class="mut">
       <li>Tipo: <b>Fleet API</b>. Scope da spuntare: <b>Vehicle Information</b>, <b>Vehicle Location</b>, <b>Vehicle Commands</b>, <b>Vehicle Charging Management</b>.</li>
+      <li>Se il portale Tesla <b>rifiuta</b> Allowed Origin o Redirect URI o dice che non sono validi, è un problema del loro sito: riprova, o premi di nuovo <b>Update</b>, finché non risultano salvati. Ricontrolla poi che siano rimasti uguali a quelli qui sopra.</li>
       <li>Imposta un <b>limite di spesa</b> nella sezione Billing (anche 0 €): Tesla regala 10 $ al mese e oltre il limite si ferma, senza addebiti.</li>
     </ul>
     <label>Client ID</label><input id="cid" autocomplete="off">
@@ -99,7 +100,12 @@
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(path,opt={}){const r=await fetch(path,{headers:{'Content-Type':'application/json'},...opt});let j={};try{j=await r.json()}catch(e){}if(!r.ok&&!j.error)j.error='errore '+r.status;return j}
-function kv(label,val){return `<div class="kv"><b>${esc(label)}</b><code>${esc(val)}</code><button class="small sec" onclick="navigator.clipboard.writeText('${esc(val)}');this.textContent='Copiato'">Copia</button></div>`}
+function kv(label,val){return `<div class="kv"><b>${esc(label)}</b><code>${esc(val)}</code><button class="small sec" data-v="${esc(val)}" onclick="copyText(this.dataset.v,this,this.previousElementSibling)">Copia</button></div>`}
+// Copia: nel riquadro di Home Assistant (iframe Ingress) navigator.clipboard spesso non è permesso,
+// quindi si prova anche con execCommand e, se tutto fallisce, si seleziona il testo da copiare a mano.
+function selectEl(el){if(!el)return;const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r)}
+function legacyCopy(t){const ta=document.createElement('textarea');ta.value=t;ta.setAttribute('readonly','');ta.style.cssText='position:fixed;top:0;left:0;opacity:0;';document.body.appendChild(ta);ta.focus();ta.select();ta.setSelectionRange(0,t.length);let ok=false;try{ok=document.execCommand('copy')}catch(e){}document.body.removeChild(ta);return ok}
+async function copyText(t,btn,el){let ok=false;try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);ok=true}}catch(e){}if(!ok)ok=legacyCopy(t);const old=btn?btn.textContent:'';if(ok){if(btn)btn.textContent='Copiato ✓'}else{selectEl(el);if(btn)btn.textContent='Selezionato: copia a mano'}if(btn)setTimeout(()=>btn.textContent=old,2500)}
 function done(id,ok){$(id).classList.toggle('done',!!ok)}
 let st=null, settingsLoaded=false;
 async function load(deep){
@@ -128,7 +134,7 @@ async function load(deep){
   const c=id=>(ck.find(x=>x.id===id)||{}).ok;
   done('s5',c('config')&&c('car'));
   done('s6',(st.settings?.notify_targets||[]).length>0);
-  $('pair').innerHTML=st.pair_url?`<img class="qr" src="ui/qr.png?t=pair&r=${Date.now()%100000}" alt="QR app"><div class="row"><button class="sec small" onclick="navigator.clipboard.writeText('${esc(st.pair_url)}');this.textContent='Copiato'">Copia il link di collegamento</button><button class="sec small" onclick="if(confirm('Scollegare tutte le app associate?'))api('ui/pairing/reset',{method:'POST'}).then(()=>load())">Rigenera (scollega le app)</button></div>`:'<p class="mut">Completa prima il passo 1.</p>';
+  $('pair').innerHTML=st.pair_url?`<img class="qr" src="ui/qr.png?t=pair&r=${Date.now()%100000}" alt="QR app"><div class="row"><button class="sec small" data-v="${esc(st.pair_url)}" onclick="copyText(this.dataset.v,this,null)">Copia il link di collegamento</button><button class="sec small" onclick="if(confirm('Scollegare tutte le app associate?'))api('ui/pairing/reset',{method:'POST'}).then(()=>load())">Rigenera (scollega le app)</button></div>`:'<p class="mut">Completa prima il passo 1.</p>';
   $('checks').innerHTML=ck.map(x=>`<div><span class="i ${x.ok?'ok':'bad'}">${x.ok?'✓':'✗'}</span><span>${esc(x.label)} <span class="mut">${esc(x.detail||'')}</span></span></div>`).join('');
   $('setupmsg').textContent=st.setup_message||'';
   if(!settingsLoaded) loadSettings();

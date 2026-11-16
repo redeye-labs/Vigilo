@@ -48,6 +48,10 @@
 | Tesla login | sign in, pick region (EU/NA) and car | key pair, public key at `/.well-known/appspecific/com.tesla.3p.public-key.pem`, partner registration |
 | Virtual key | open the link/QR on your phone with the Tesla app | checks pairing |
 | Telemetry | nothing | CA + server cert, signed config sent, fleet-telemetry started |
+
+> **Note:** the Tesla developer portal sometimes rejects the Allowed Origin / Redirect URI on the first try,
+> or reports them as invalid even when they are correct. Retry or press **Update** again until they are saved,
+> then double-check they are unchanged.
 | Notifications | pick phones and throttle | Aware with throttle, Panic on the `alarm_stream` channel |
 | Android app | scan the pairing QR | 256-bit token pairing |
 
