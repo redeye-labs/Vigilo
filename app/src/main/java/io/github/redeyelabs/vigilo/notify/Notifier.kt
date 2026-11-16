@@ -13,7 +13,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
 import io.github.redeyelabs.vigilo.MainActivity
 import io.github.redeyelabs.vigilo.R
 import io.github.redeyelabs.vigilo.data.Prefs
@@ -117,8 +116,9 @@ object Notifier {
         NotificationManagerCompat.from(ctx).notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), builder.build())
     }
 
-    fun serviceNotification(ctx: Context, text: String, batteryPercent: Int? = null) =
+    fun serviceNotification(ctx: Context, text: String) =
         NotificationCompat.Builder(ctx, CH_SERVICE)
+            .setSmallIcon(R.drawable.ic_stat_vigilo)
             .setContentTitle("Vigilo sta sorvegliando l'auto")
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -129,10 +129,5 @@ object Notifier {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(openAppIntent(ctx, requestCode = 1))
-            .apply {
-                val pct = batteryPercent?.takeIf { it in 0..100 }
-                if (pct != null) setSmallIcon(IconCompat.createWithBitmap(ServiceStatus.batteryIcon(pct)))
-                else setSmallIcon(R.drawable.ic_stat_vigilo)
-            }
             .build()
 }

@@ -70,7 +70,7 @@ class MonitorService : Service() {
         if (!force && text == lastText && battery == lastBattery) return
         lastText = text
         lastBattery = battery
-        val n = Notifier.serviceNotification(this, text, battery)
+        val n = Notifier.serviceNotification(this, text)
         if (foreground) {
             if (Build.VERSION.SDK_INT >= 34) startForeground(Notifier.SERVICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else startForeground(Notifier.SERVICE_ID, n)
