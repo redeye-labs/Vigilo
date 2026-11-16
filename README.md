@@ -136,33 +136,41 @@ mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tu
 
 ### Windows 10 / 11
 
-1. Scarica **[Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat)**.
-   Se il browser ti avvisa che il file non viene scaricato spesso, scegli «Mantieni».
-2. Apri il file con **doppio clic**. Se compare la schermata blu «Windows ha protetto il PC», premi
-   **«Ulteriori informazioni»** e poi **«Esegui comunque»**.
-   Se l'installatore deve aggiornare WSL o installare Docker Desktop, ti chiede conferma. Se poi serve un
-   riavvio del PC, te lo dice: dopo il riavvio riapri il file e riprende da dove si era fermato.
-3. Quando ti chiede il **nome**, premi **Invio**: resta `vigilo-docker`. Se hai già Vigilo su Home Assistant,
+1. Scarica **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe)**.
+2. Aprilo con **doppio clic**. Se compare la schermata blu «Windows ha protetto il PC», premi
+   **«Ulteriori informazioni»** e poi **«Esegui comunque»**: il file non ha ancora una firma digitale.
+   Premi **Avanti** e poi **Fine**. Non servono permessi di amministratore.
+3. Si apre una finestra blu che fa il resto. Se deve aggiornare WSL o installare Docker Desktop, prima ti
+   chiede conferma. Se poi serve un riavvio del PC, te lo dice: dopo il riavvio apri dal menu Start
+   **«Vigilo – Aggiorna»** e riprende da dove si era fermato.
+4. Quando ti chiede il **nome**, premi **Invio**: resta `vigilo-docker`. Se hai già Vigilo su Home Assistant,
    lascia `vigilo-docker` o scegli un nome diverso da quello che usi lì.
-4. **Aspetta.** La prima volta servono 5–15 minuti, perché scarica e prepara tutto. Le volte successive basta
-   meno di un minuto.
-5. Alla fine il browser si apre da solo su **http://localhost:8099**.
+5. **Aspetta qualche minuto.** La prima volta scarica circa 70 MB.
+6. Alla fine il browser si apre da solo su **http://localhost:8099**.
    - Utente: **`vigilo`**
    - Password: è già copiata negli appunti, quindi incollala con **Ctrl+V**. È salvata anche nel file
      `%USERPROFILE%\Vigilo\standalone\data\ui_password`.
-6. Segui i **7 passi** della pagina, gli stessi del componente aggiuntivo. Al passo 7 inquadra il QR da
+7. Segui i **7 passi** della pagina, gli stessi del componente aggiuntivo. Al passo 7 inquadra il QR da
    dentro Vigilo (Impostazioni → Collega a Home Assistant → Inquadra QR), poi attiva **«Notifiche allarme
    anche dall'app»**.
 
-**Alternativa senza scaricare il file:** premi **Win + R**, incolla questa riga e premi Invio. Poi segui i
-passi da 3 a 6.
+Nel menu Start trovi **«Vigilo – Apri pagina»** e **«Vigilo – Aggiorna»**. «Aggiorna» scarica le ultime
+correzioni e conserva dati e impostazioni. Per disinstallare: **Impostazioni → App → App installate →
+Vigilo (Docker) → Disinstalla**. Prima di cancellare i dati ti chiede conferma; se non confermi, restano.
+
+**Seconda possibilità: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat).** Scaricalo e aprilo con doppio
+clic. Se il browser avvisa che il file non viene scaricato spesso, scegli «Mantieni». Poi segui i passi da
+4 a 7.
+
+**Terza possibilità, senza scaricare niente:** premi **Win + R**, incolla questa riga e premi Invio. Poi
+segui i passi da 4 a 7.
 
 ```
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
 ```
 
-**Aggiornare:** riapri `Vigilo-Installer.bat`. Dati e impostazioni restano.
-**Disinstallare:** clic destro su `%USERPROFILE%\Vigilo\standalone\uninstall-windows.ps1` → «Esegui con PowerShell».
+Senza l'`.exe`: per aggiornare riapri il `.bat`; per disinstallare fai clic destro su
+`%USERPROFILE%\Vigilo\standalone\uninstall-windows.ps1` → «Esegui con PowerShell».
 
 ### Linux, NAS, Raspberry Pi
 
@@ -172,7 +180,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/red
    ```
 2. Se Docker manca, l'installatore ti chiede se vuoi installarlo. Rispondi di sì.
 3. Quando ti chiede il **nome**, premi **Invio**: resta `vigilo-docker`.
-4. **Aspetta** 5–15 minuti la prima volta.
+4. **Aspetta qualche minuto** la prima volta (scarica circa 70 MB).
 5. Alla fine compaiono l'indirizzo, per esempio `http://192.168.x.x:8099`, e il comando per leggere la
    password (`sudo cat ~/vigilo/standalone/data/ui_password`). Apri l'indirizzo dal browser di un computer di
    casa. Utente: **`vigilo`**.
@@ -198,7 +206,7 @@ da password e gli avvisi li manda l'app Vigilo, con ntfy come opzione gratuita. 
    ```
    Le voci di `.env` sono tutte facoltative. Se hai già Vigilo su Home Assistant nello stesso tailnet, scrivi
    `VIGILO_TS_HOSTNAME=vigilo-docker`.
-2. Avvia Vigilo con `docker compose up -d --build` (la prima volta servono 5–15 minuti). Poi controlla con
+2. Avvia Vigilo con `docker compose up -d --build` (compila dal sorgente: 5–15 minuti). Poi controlla con
    `docker compose ps` che risulti `healthy`.
 3. Leggi la password con `sudo cat data/ui_password`. In alternativa, impostala tu con `VIGILO_UI_PASSWORD`
    nel file `.env`.

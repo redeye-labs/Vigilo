@@ -10,11 +10,21 @@ attiva solo in questo container.
 
 ## Installazione automatica
 
-- Windows: doppio clic su [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat) (copia di `install-windows.bat`) (aggiorna WSL anche quando `wsl --update` non c'è o il suo
+- Windows: [`Vigilo-Setup.exe`](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe) (NSIS, sorgente in `windows-setup/`, senza permessi di
+  amministratore, menu Start e voce in «App installate») oppure [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat)
+  (copia di `install-windows.bat`). Entrambi lanciano `install-windows.ps1`, che aggiorna WSL anche quando `wsl --update` non c'è o il suo
   download fallisce con «Errore nel supporto per il canale sicuro»: scarica l'ultimo `.msi` da
   github.com/microsoft/WSL con TLS 1.2 e lo installa con `msiexec /passive`; se serve un riavvio lo dice e
-  dopo il riavvio si rilancia). Disinstallazione: `uninstall-windows.ps1`.
+  dopo il riavvio si rilancia. Disinstallazione: «App installate» (exe) o `uninstall-windows.ps1`.
 - Linux/NAS: `curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash` (disinstallazione: `install.sh --uninstall`).
+
+**Immagine già pronta.** Gli installatori non compilano: scaricano dalla pre-release `docker-preview-1`
+l'immagine `vigilo-standalone-<amd64|arm64>.tar.gz` (su Windows con Windows stesso, non dalla rete di
+Docker/WSL, dove alcuni antivirus che ispezionano HTTPS rovinano i download con «tls: bad record MAC»), ne
+controllano dimensione e sha256 e la caricano con `docker load` come `ghcr.io/redeye-labs/vigilo-standalone:preview`.
+Se non riescono provano `docker compose pull` e, come ultima risorsa, compilano dal sorgente; ogni passo
+riprova da solo fino a 3–4 volte. `VIGILO_BUILD=1` forza la compilazione, `VIGILO_IMAGE` cambia immagine,
+`VIGILO_RELEASE_TAG` cambia pre-release.
 
 Istruzioni complete nel README principale, sezione «Installazione senza Home Assistant (Docker)».
 
@@ -91,7 +101,16 @@ Vigilo su Home Assistant continua a funzionare se segui queste regole:
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 -f standalone/Dockerfile -t vigilo-standalone .
 ```
-Esegui il comando dalla radice del repository. `standalone/ghcr-workflow.yml` è un workflow pronto che fa
+Esegui il comando dalla radice del repository. Le immagini della pre-release si creano così (una per
+architettura, poi `gh release upload docker-preview-1 vigilo-standalone-*.tar.gz --clobber`):
+```bash
+I=ghcr.io/redeye-labs/vigilo-standalone
+for a in amd64 arm64; do
+  docker build --platform linux/$a -f standalone/Dockerfile -t $I:preview .
+  docker save --platform linux/$a $I:preview | gzip -9 > vigilo-standalone-$a.tar.gz
+done
+```
+`standalone/ghcr-workflow.yml` è un workflow pronto che fa
 lo stesso su GHCR e parte solo a mano. Per usarlo va copiato in `.github/workflows/` dal sito GitHub.
 
 ---
@@ -103,10 +122,12 @@ Docker container. The add-on does not change: standalone mode only turns on in t
 
 > **Preview:** not yet tested with a real car. See "Try it without touching Home Assistant" below.
 
-**Automatic install:** Windows: double-click [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat) (a copy of `install-windows.bat`) (it updates WSL even when `wsl --update`
+**Automatic install:** Windows: [`Vigilo-Setup.exe`](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe) (NSIS, source in `windows-setup/`, no admin
+rights, Start menu and Apps & Features entry) or [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat) (a copy of
+`install-windows.bat`). Both run `install-windows.ps1`, which updates WSL even when `wsl --update`
 is missing or its download fails with a secure-channel error, by fetching the latest `.msi` from
 github.com/microsoft/WSL over TLS 1.2 and installing it with `msiexec /passive`; it tells you when a reboot is
-needed). Uninstall: `uninstall-windows.ps1`. Linux/NAS: `curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash`
+needed. Uninstall: Apps & Features (exe) or `uninstall-windows.ps1`. Linux/NAS: `curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash`
 (uninstall: `install.sh --uninstall`).
 
 **What runs inside:**

@@ -25,7 +25,7 @@ function Uninstall-Vigilo {
     }
     Write-Host 'Vigilo - disinstallazione (versione Docker). Vigilo su Home Assistant non viene toccato.' -ForegroundColor White
     $a = Read-Host '    Fermare e rimuovere il container Vigilo? [s/N]'
-    if ($a -notmatch "^(s|si|s$([char]0x00EC)|y|yes)`$") { Write-Host '    Nessuna modifica.'; return }
+    if ($a -notmatch "^(s|si|s$([char]0x00EC)|y|yes)`$") { Write-Host '    Nessuna modifica.'; $script:ExitCode = 2; return }
 
     if ((Invoke-Quiet $docker @('info')).Code -ne 0) {
         throw "Docker non $([char]0x00E8) in funzione: apri Docker Desktop, aspetta $([char]0x00AB)Engine running$([char]0x00BB) e rilancia."
@@ -37,9 +37,11 @@ function Uninstall-Vigilo {
         else { Write-Host "    !   compose down: $($r.Out.Trim())" -ForegroundColor Yellow }
     }
     $null = Invoke-Quiet $docker @('rm', '-f', 'vigilo')
-    if ((Invoke-Quiet $docker @('image', 'rm', 'vigilo-standalone:local')).Code -eq 0) {
-        Write-Host '    OK  immagine rimossa' -ForegroundColor Green
+    $removed = $false
+    foreach ($img in @('ghcr.io/redeye-labs/vigilo-standalone:preview', 'vigilo-standalone:local')) {
+        if ((Invoke-Quiet $docker @('image', 'rm', $img)).Code -eq 0) { $removed = $true }
     }
+    if ($removed) { Write-Host '    OK  immagine rimossa' -ForegroundColor Green }
 
     if (Test-Path $dir) {
         Write-Host "    !   In $sa\data ci sono la chiave virtuale, i token Tesla e lo stato di Tailscale." -ForegroundColor Yellow
@@ -57,5 +59,8 @@ function Uninstall-Vigilo {
     Write-Host '    - developer.tesla.com: elimina la seconda app; sull''auto togli la sua chiave (Comandi > Blocchi).'
 }
 
-try { Uninstall-Vigilo } catch { Write-Host ('ERRORE: ' + $_.Exception.Message) -ForegroundColor Red }
+# Codice di uscita (usato dal programma di disinstallazione): 0 fatto, 1 errore, 2 annullato.
+$script:ExitCode = 0
+try { Uninstall-Vigilo } catch { Write-Host ('ERRORE: ' + $_.Exception.Message) -ForegroundColor Red; $script:ExitCode = 1 }
 if ($env:VIGILO_NO_PAUSE -ne '1') { $null = Read-Host "`nPremi Invio per chiudere" }
+exit $script:ExitCode

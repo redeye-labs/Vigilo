@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag dell'immagine (es. 0.1.0-test)"
+        description: "Tag dell'immagine (preview = quella usata dagli installatori)"
         required: true
-        default: "test"
+        default: "preview"
 
 permissions:
   contents: read

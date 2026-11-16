@@ -95,31 +95,39 @@ a Raspberry Pi 4/5. An installer does almost everything for you.
 
 ### Windows 10 / 11
 
-1. Download **[Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat)**.
-   If your browser warns that the file isn't commonly downloaded, choose "Keep".
+1. Download **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe)**.
 2. **Double-click** it. If a blue "Windows protected your PC" screen appears, click **"More info"**, then
-   **"Run anyway"**. The installer asks before updating WSL or installing Docker Desktop. If the PC then
-   needs a reboot, it tells you: open the file again afterwards and it picks up where it left off.
-3. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`. If you already run Vigilo on
+   **"Run anyway"**: the file isn't digitally signed yet. Click **Next**, then **Finish**. No administrator
+   rights needed.
+3. A blue window does the rest. It asks before updating WSL or installing Docker Desktop. If the PC then
+   needs a reboot, it tells you: afterwards open **"Vigilo – Aggiorna"** from the Start menu and it picks up
+   where it left off.
+4. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`. If you already run Vigilo on
    Home Assistant, keep `vigilo-docker` or pick another name that's different from the one you use there.
-4. **Wait.** The first run takes 5–15 minutes while it downloads and builds everything. Later runs take
-   less than a minute.
-5. Your browser then opens **http://localhost:8099** by itself.
+5. **Wait a few minutes.** The first run downloads about 70 MB.
+6. Your browser then opens **http://localhost:8099** by itself.
    - User: **`vigilo`**
    - Password: it's already on the clipboard, so paste it with **Ctrl+V**. It's also saved in
      `%USERPROFILE%\Vigilo\standalone\data\ui_password`.
-6. Follow the **7 steps** on the page, the same as the add-on. At step 7, scan the QR from inside Vigilo
+7. Follow the **7 steps** on the page, the same as the add-on. At step 7, scan the QR from inside Vigilo
    (Settings → Collega a Home Assistant → Inquadra QR), then turn on **"Notifiche allarme anche dall'app"**.
 
-**Alternative without downloading the file:** press **Win + R**, paste this line and press Enter. Then
-follow steps 3–6.
+The Start menu has **"Vigilo – Apri pagina"** (open page) and **"Vigilo – Aggiorna"** (update: gets the
+latest fixes and keeps your data and settings). To uninstall: **Settings → Apps → Installed apps →
+Vigilo (Docker) → Uninstall**. It asks before deleting your data; if you don't confirm, the data stays.
+
+**Second option: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat).** Download it and double-click it. If
+your browser warns that the file isn't commonly downloaded, choose "Keep". Then follow steps 4–7.
+
+**Third option, nothing to download:** press **Win + R**, paste this line and press Enter. Then follow
+steps 4–7.
 
 ```
 powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
 ```
 
-**Update:** open `Vigilo-Installer.bat` again. Your data and settings are kept.
-**Uninstall:** right-click `%USERPROFILE%\Vigilo\standalone\uninstall-windows.ps1` → "Run with PowerShell".
+Without the `.exe`: to update, open the `.bat` again; to uninstall, right-click
+`%USERPROFILE%\Vigilo\standalone\uninstall-windows.ps1` → "Run with PowerShell".
 
 ### Linux, NAS, Raspberry Pi
 
@@ -129,7 +137,7 @@ powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/red
    ```
 2. If Docker is missing, the installer asks whether to install it. Say yes.
 3. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`.
-4. **Wait** 5–15 minutes the first time.
+4. **Wait a few minutes** the first time (it downloads about 70 MB).
 5. At the end it prints the address, for example `http://192.168.x.x:8099`, and the command that shows the
    password (`sudo cat ~/vigilo/standalone/data/ui_password`). Open the address from a browser on your home
    network. User: **`vigilo`**.
@@ -156,7 +164,7 @@ Compose v2.
    ```
    Everything in `.env` is optional. If the add-on already runs in the same tailnet, set
    `VIGILO_TS_HOSTNAME=vigilo-docker`.
-2. Start it with `docker compose up -d --build` (the first run takes 5–15 minutes). Then check that
+2. Start it with `docker compose up -d --build` (builds from source: 5–15 minutes). Then check that
    `docker compose ps` shows `healthy`.
 3. Read the password with `sudo cat data/ui_password`, or set your own with `VIGILO_UI_PASSWORD` in `.env`.
 4. Open `http://<server-address>:8099` (user `vigilo`) and follow the 7 steps. At step 1, use "Genera link
