@@ -326,6 +326,31 @@ func (a *App) setMQTTErr(e string) {
 	a.mu.Unlock()
 }
 
+// clearSetupMsgIf cancella l'ultimo messaggio di configurazione se soddisfa la condizione.
+func (a *App) clearSetupMsgIf(match func(string) bool) {
+	a.mu.Lock()
+	if a.lastSetupMsg != "" && match(a.lastSetupMsg) {
+		a.lastSetupMsg = ""
+	}
+	a.mu.Unlock()
+}
+
+// currentSetupMsg restituisce l'ultimo messaggio di configurazione, ma lo considera superato (e lo cancella)
+// quando i controlli dicono che chiave, configurazione e dati dall'auto sono tutti a posto.
+func (a *App) currentSetupMsg(checks []Check) string {
+	ok := map[string]bool{}
+	for _, c := range checks {
+		ok[c.ID] = c.OK
+	}
+	if ok["key"] && ok["config"] && ok["car"] {
+		a.clearSetupMsgIf(func(string) bool { return true })
+		return ""
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.lastSetupMsg
+}
+
 func (a *App) setupMsg(m string) {
 	a.mu.Lock()
 	changed := a.lastSetupMsg != m
@@ -346,6 +371,10 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 	}
 	ts, err := a.tesla.TelemetryConfig(ctx, s.VIN)
 	if err == nil {
+		// Chiave ora associata: l'eventuale errore "chiave non associata" di un tentativo precedente è superato.
+		if ts.KeyPaired != nil && *ts.KeyPaired {
+			a.clearSetupMsgIf(func(m string) bool { return strings.Contains(m, describeSkip("missing_key")) })
+		}
 		_ = a.store.Update(func(st *State) {
 			if ts.KeyPaired != nil {
 				st.KeyPaired = ts.KeyPaired
@@ -359,6 +388,7 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 	need := force || err != nil || ts.Missing || ts.Hostname != host ||
 		(ts.Exp > 0 && time.Until(time.Unix(ts.Exp, 0)) < 30*24*time.Hour)
 	if !need {
+		a.setupMsg("") // configurazione presente sull'auto: un errore precedente non vale più
 		return "Configurazione già presente sull'auto.", nil
 	}
 	ca, cerr := a.certs.CAPEM()
@@ -370,6 +400,7 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 		a.setupMsg(serr.Error())
 		return "", serr
 	}
+	a.setupMsg("")
 	a.events.Add(EvSetup, "Configurazione inviata all'auto", "Valida per 364 giorni, si rinnova da sola.")
 	return msg, nil
 }

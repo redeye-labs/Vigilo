@@ -250,9 +250,8 @@ func (a *App) ingressMux() *http.ServeMux {
 		if host != "" {
 			pairURL = pairingLink(host, s.PairingToken)
 		}
-		a.mu.Lock()
-		setupMsg := a.lastSetupMsg
-		a.mu.Unlock()
+		checks := a.Checks(ctx, r.URL.Query().Get("deep") == "1")
+		setupMsg := a.currentSetupMsg(checks)
 		writeJSON(w, 200, map[string]any{
 			"version":   a.version,
 			"tailscale": ts,
@@ -288,7 +287,7 @@ func (a *App) ingressMux() *http.ServeMux {
 			"paired_apps":   s.PairedApps,
 			"settings":      s.Settings,
 			"setup_message": setupMsg,
-			"checks":        a.Checks(ctx, r.URL.Query().Get("deep") == "1"),
+			"checks":        checks,
 			"vehicle":       s.Vehicle,
 			"pubkey_fp":     a.tesla.PublicKeyFingerprint(),
 		})
@@ -359,9 +358,7 @@ func (a *App) ingressMux() *http.ServeMux {
 		defer cancel()
 		_ = a.store.Update(func(s *State) { s.PartnerDomain = "" })
 		a.Setup(ctx)
-		a.mu.Lock()
-		m := a.lastSetupMsg
-		a.mu.Unlock()
+		m := a.currentSetupMsg(a.Checks(ctx, false))
 		writeJSON(w, 200, map[string]any{"ok": true, "message": m})
 	})
 	mux.HandleFunc("POST /ui/telemetry", func(w http.ResponseWriter, r *http.Request) {
