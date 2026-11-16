@@ -26,6 +26,9 @@
   .checks div{display:flex;gap:10px;padding:5px 0;align-items:baseline} .checks .i{width:18px;text-align:center}
   .ok{color:var(--ok)} .bad{color:var(--bad)}
   img.qr{background:#fff;border-radius:12px;padding:8px;width:220px;height:220px}
+  .qrs{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;margin:12px 0 8px}
+  .qrbox{flex:1;min-width:220px;max-width:280px}
+  .qrbox h3{font-size:15px;margin:0 0 4px;font-weight:600}
   .msg{color:var(--warn);font-size:13px;white-space:pre-wrap}
   ul,ol{margin:6px 0 6px 22px;padding:0;color:#d8d8dc} li{margin:4px 0}
   a{color:#f2f2f2}
@@ -85,14 +88,21 @@
   </section>
 
   <section class="step" id="s7"><h2><span class="n">7</span>Collega l'app Vigilo</h2>
-    <ol>
-      <li>Installa l'app <b>Vigilo</b> sul telefono. Scarica l'ultima versione (APK) dalla pagina <a href="https://github.com/redeye-labs/Vigilo/releases/latest" target="_blank" rel="noopener">Releases</a> del repository.</li>
-      <li>Apri Vigilo, vai in <b>Impostazioni</b>, poi <b>Collega a Home Assistant</b>, poi <b>Inquadra QR</b>.</li>
-      <li>Inquadra questo QR.</li>
-    </ol>
+    <div class="qrs">
+      <div class="qrbox">
+        <h3>1. Scarica l'app</h3>
+        <p class="mut">Inquadra questo QR con la <b>fotocamera normale</b> del telefono, poi apri il link e installa l'app.</p>
+        <img class="qr" src="ui/qr.png?t=apk" alt="QR per scaricare Vigilo">
+        <p><a href="https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk" target="_blank" rel="noopener">Scarica Vigilo.apk</a></p>
+      </div>
+      <div class="qrbox">
+        <h3>2. Collega l'app</h3>
+        <p class="mut">Da inquadrare <b>dentro Vigilo</b>: Impostazioni, Collega a Home Assistant, Inquadra QR (non con la fotocamera normale).</p>
+        <div id="pair"></div>
+      </div>
+    </div>
     <p class="mut">Non premere <b>Rigenera</b>: scollega le app già collegate.</p>
     <div id="pairstatus"></div>
-    <div id="pair"></div>
   </section>
 
   <section class="step"><h2>Controlli</h2>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+- Passo 7: due QR affiancati. Il primo, «Scarica l'app», si inquadra con la fotocamera del telefono
+  e apre il download stabile (Vigilo.apk). Il secondo, «Collega l'app», si inquadra da dentro Vigilo
+  (Impostazioni → Collega a Home Assistant → Inquadra QR), non con la fotocamera normale.
+
+
 ## 1.0.5
 - Licenze dei componenti di terze parti: elenco in THIRD_PARTY_LICENSES.md (e nell'immagine
   in /usr/share/licenses/vigilo), con il testo NOTICE di Eclipse Paho e una copia della

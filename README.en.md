@@ -57,7 +57,7 @@
 
 **Download Vigilo only from the official repository** [github.com/redeye-labs/Vigilo](https://github.com/redeye-labs/Vigilo).
 
-4. Install the latest app from **Releases** (`Vigilo-1.2.0.apk`), open the in-app **Guide**, scan the QR. Live checks turn green.
+4. Install the latest app from **Releases**, or open [this link](https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk) on the phone (the wizard also has a “Scarica l'app” QR for the normal camera). Then open the in-app **Guide** and scan the pairing QR from inside Vigilo. Live checks turn green.
 
 Starting with **1.2.0** the APK is signed with a new key. If you already have 1.1.x (or earlier), **uninstall it first**, then install 1.2.0 and pair again by scanning the QR.
 
@@ -117,6 +117,9 @@ key, OAuth callback, token-protected app API, mTLS telemetry port.
   build fails with a clear error; there is no fallback to the debug key.
 
 - Add-on server: `cd addon/vigilo/server && go build .` (Go 1.27).
+
+Every app release on GitHub must attach **two** APK files: `Vigilo-x.y.z.apk` (versioned name) and **`Vigilo.apk`** (same file, stable name). The latter is what the download QR and
+`https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk` use.
 
 ## Credits and licenses
 

@@ -384,6 +384,8 @@ func (a *App) IngressHandler() http.Handler {
 			text = pairingLink(a.tailnet.Host(), a.store.Get().PairingToken)
 		case "key":
 			text = "https://tesla.com/_ak/" + a.tailnet.Host()
+		case "apk":
+			text = apkDownloadURL
 		default:
 			http.Error(w, "qr sconosciuto", 400)
 			return
@@ -423,6 +425,9 @@ func onlyIngress(h http.Handler) http.Handler {
 		h.ServeHTTP(w, r)
 	})
 }
+
+// URL stabile dell'ultima APK (ogni release deve includere anche l'asset "Vigilo.apk").
+const apkDownloadURL = "https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk"
 
 func pairingLink(host, token string) string {
 	return "vigilo://pair?url=" + url.QueryEscape("https://"+host) + "&token=" + url.QueryEscape(token)

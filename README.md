@@ -71,7 +71,7 @@ App Android Vigilo ◀──HTTPS + token di abbinamento────────
 | Chiave virtuale | apri il link/QR sul telefono con l'app Tesla e confermi | verifica l'associazione |
 | Telemetria | niente | crea CA e certificato, firma e invia la configurazione, avvia fleet-telemetry |
 | Notifiche | scegli i telefoni e la pausa tra due avvisi | Aware con pausa, Panic sul canale sveglia (`alarm_stream`) |
-| App Android | installi l'app dalla pagina [Releases](https://github.com/redeye-labs/Vigilo/releases/latest), apri Impostazioni → Collega a Home Assistant → Inquadra QR e inquadri il QR. Non usare «Rigenera» se l'app è già collegata. | abbinamento con token; il passo diventa verde quando l'app è collegata |
+| App Android | inquadri il QR «Scarica l'app» con la fotocamera del telefono (o [scarichi l'APK](https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk)), poi inquadri il QR «Collega l'app» da dentro Vigilo (Impostazioni → Collega a Home Assistant → Inquadra QR). Non usare «Rigenera» se l'app è già collegata. | abbinamento con token; il passo diventa verde quando l'app è collegata |
 
 Valori per il portale Tesla (te li dà la procedura già pronti):
 
@@ -89,7 +89,7 @@ Valori per il portale Tesla (te li dà la procedura già pronti):
 
 **Scarica Vigilo solo dal repository ufficiale** [github.com/redeye-labs/Vigilo](https://github.com/redeye-labs/Vigilo).
 
-1. Scarica l'ultima app dalla pagina **Releases** del repository (`Vigilo-1.2.0.apk`) e installala.
+1. Scarica l'ultima app dalla pagina **Releases** oppure, dal telefono, apri [questo link](https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk) (o inquadra il QR «Scarica l'app» nella procedura guidata) e installala.
 2. Al primo avvio si apre la **Guida**: premi «Scansiona il QR» e inquadra il QR dell'ultimo passo.
 3. La guida mostra i **controlli dal vivo** del componente aggiuntivo: quando sono tutti spuntati hai finito.
 
@@ -187,6 +187,9 @@ controllo periodico, comandi tramite un proxy di firma tuo. È la modalità dell
   fallisce con un errore chiaro: non c'è alcun fallback alla chiave debug.
 
 - Server: `cd addon/vigilo/server && go build .` (Go 1.27). Test di integrazione facoltativo con un broker MQTT e il binario fleet-telemetry: vedi `integration_test.go`.
+
+A ogni release dell'app, nella pagina GitHub Releases, allega **due** file APK: `Vigilo-x.y.z.apk` (versione nel nome) e anche **`Vigilo.apk`** (stesso file, nome fisso). Il secondo è quello usato dal QR e dal link stabile
+`https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk`.
 
 ## Crediti e licenze
 
