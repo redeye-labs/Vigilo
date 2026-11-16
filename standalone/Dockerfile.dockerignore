@@ -1,0 +1,6 @@
+# Solo ciò che serve all'immagine (BuildKit legge questo file accanto al Dockerfile).
+*
+!addon/vigilo/server/
+!addon/vigilo/THIRD_PARTY_LICENSES.md
+!addon/vigilo/licenses/
+addon/vigilo/server/**/*_test.go

@@ -21,6 +21,8 @@ type App struct {
 	tesla      *Tesla
 	tailnet    *Tailnet
 	ha         *HA
+	standalone bool         // Docker senza Home Assistant (vedi standalone.go)
+	broker     *LocalBroker // broker MQTT interno, solo in modalità standalone
 	mqttManual *MQTTService // broker dalle opzioni (facoltativo)
 	certs      Certs
 	ft         *FleetTelemetry
@@ -142,7 +144,9 @@ func (a *App) onSentry(prev, now string) {
 	s := a.store.Get()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
-	_ = a.ha.FireEvent(ctx, "vigilo_sentry", map[string]any{"state": now, "previous": prev})
+	if !a.standalone {
+		_ = a.ha.FireEvent(ctx, "vigilo_sentry", map[string]any{"state": now, "previous": prev})
+	}
 	hm := time.Now().Format("15:04")
 	switch now {
 	case "Aware":
@@ -188,6 +192,10 @@ func (a *App) onSentry(prev, now string) {
 }
 
 func (a *App) notifyAll(ctx context.Context, targets []string, title, msg string, data map[string]any) {
+	if a.standalone {
+		a.notifyStandalone(ctx, title, msg, data)
+		return
+	}
 	for _, t := range targets {
 		if err := a.ha.Notify(ctx, t, title, msg, data); err != nil {
 			log.Printf("notifica a %s non riuscita: %v", t, err)
@@ -254,6 +262,9 @@ func (a *App) Refresh(ctx context.Context) error {
 func (a *App) mqttService(ctx context.Context) (*MQTTService, error) {
 	if a.mqttManual != nil {
 		return a.mqttManual, nil
+	}
+	if a.standalone {
+		return a.broker.Ensure(ctx)
 	}
 	return a.ha.MQTT(ctx)
 }
@@ -508,9 +519,14 @@ func (a *App) dailyHealth(ctx context.Context) {
 		return
 	}
 	msg := "Controllo giornaliero: " + strings.Join(problems, "; ") + ". Apri Vigilo in Home Assistant per i dettagli."
+	if a.standalone {
+		msg = "Controllo giornaliero: " + strings.Join(problems, "; ") + ". Apri la pagina di Vigilo per i dettagli."
+	}
 	a.events.Add(EvProblem, "Vigilo: qualcosa non va", msg)
 	s := a.store.Get()
-	_ = a.ha.PersistentNotification(ctx, "vigilo_health", "Vigilo: qualcosa non va", msg)
+	if !a.standalone {
+		_ = a.ha.PersistentNotification(ctx, "vigilo_health", "Vigilo: qualcosa non va", msg)
+	}
 	if s.Settings.NotifyProblems {
 		a.notifyAll(ctx, s.Settings.NotifyTargets, "Vigilo: qualcosa non va", msg, map[string]any{"tag": "vigilo-salute"})
 	}

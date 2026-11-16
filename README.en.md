@@ -76,6 +76,59 @@ In **1.3.0**, Settings (when the app is paired with Home Assistant) has **Notifi
 
 The add-on already sends notifications itself; use the blueprints only if you prefer HA automations (and turn the add-on's off). The Aware blueprint now has an optional “Suona come una sveglia” input (off by default) to use the `alarm_stream` channel. Re-import the blueprint from Settings → Automations & scenes → Blueprints (or the button above); existing automations keep the previous behaviour until you enable the new option.
 
+## Install without Home Assistant (Docker)
+
+> **Preview.** The Docker version lives on the `standalone-docker` branch and has not yet been tested with a
+> real car. The Home Assistant add-on is still the recommended setup.
+
+The same server as the add-on also runs in a Docker container on any always-on machine: a mini PC, a NAS,
+a 64-bit Raspberry Pi 4/5 or a VPS. It works on amd64 and arm64. Without Home Assistant:
+
+- car data goes through an **internal MQTT broker** that is only reachable inside the container;
+- the wizard opens in a browser at `http://<server>:8099` and is **password-protected**;
+- alerts come from the **Vigilo app**, with "Notifiche allarme anche dall'app". You can also add free
+  **ntfy** for instant push. No Firebase needed.
+
+**Requirements:** Docker with Compose v2.24 or later, a Tailscale account with HTTPS and Funnel (as above),
+an app on the Tesla developer portal, and the Vigilo Android app 1.3 or later.
+
+1. Get the project and prepare the configuration:
+   ```bash
+   git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git
+   cd Vigilo/standalone
+   cp .env.example .env
+   nano .env
+   ```
+   Everything in `.env` is optional. If the Home Assistant add-on already runs in the same tailnet, set
+   `VIGILO_TS_HOSTNAME=vigilo-docker` so the two nodes don't clash.
+2. Start Vigilo:
+   ```bash
+   docker compose up -d --build
+   ```
+   The first build takes 5–15 minutes. Then check it started with `docker compose ps`: it should show
+   `healthy`.
+3. Read the wizard password:
+   ```bash
+   sudo cat data/ui_password
+   ```
+   Vigilo creates it on first start. To choose your own, set `VIGILO_UI_PASSWORD` in `.env`.
+4. Open `http://<server-address>:8099` from a browser on your home network. User: `vigilo`.
+5. Follow the same 7 steps as the add-on:
+   - **Step 1, Tailscale:** click "Genera link di accesso" and approve the node. Alternatively, put a
+     `TS_AUTHKEY` in `.env` before starting.
+   - **Step 6, notifications:** the Home Assistant phone list is gone. Instead it shows instructions for
+     the app and optional ntfy fields.
+   - **Step 7:** scan the QR from inside Vigilo (Settings → Collega a Home Assistant → Inquadra QR). Then,
+     in Settings, enable **"Notifiche allarme anche dall'app"**.
+
+To update: `git pull && docker compose up -d --build`. Keys, tokens and pairing stay in `standalone/data`.
+Back that folder up and never share it.
+
+> **Do not forward port 8099 on your router.** Use it only from your home network or over Tailscale. Tesla
+> and the app go through the Funnel, not through this port.
+
+Details, variables, ntfy and troubleshooting: [standalone/README.md](standalone/README.md).
+
 ## Costs
 
 Fleet API is pay-per-use with a monthly free credit. Vigilo does **no paid polling** and **never wakes the car**
@@ -97,7 +150,7 @@ the old Render service, delete the old Tesla developer app, remove the old virtu
 ## Security
 
 Secrets (client secret, tokens, private key, pairing token) live only in the add-on's `/data` (0600) or encrypted
-on the phone (Android Keystore) and are never logged. The config UI is Ingress-only. Exposed via Funnel: public
+on the phone (Android Keystore) and are never logged. The config UI is Ingress-only (Docker version: port 8099 with a password; never expose it to the internet). Exposed via Funnel: public
 key, OAuth callback, token-protected app API, mTLS telemetry port.
 
 ## Build

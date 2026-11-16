@@ -1,4 +1,4 @@
-// Vigilo – componente aggiuntivo per Home Assistant.
+// Vigilo – componente aggiuntivo per Home Assistant (o container Docker autonomo: -mode standalone).
 // Un solo processo: Tailscale (tsnet + Funnel), login Tesla, chiave virtuale, proxy comandi ufficiale,
 // firma e invio della configurazione Fleet Telemetry, server fleet-telemetry (binario Tesla), entità MQTT,
 // notifiche e API per l'app Android.
@@ -49,9 +49,26 @@ func main() {
 	dataDir := flag.String("data", "/data", "cartella dati persistente")
 	ingress := flag.String("ingress", ":8099", "indirizzo per l'interfaccia Ingress")
 	ftBin := flag.String("fleet-telemetry", "/usr/bin/fleet-telemetry", "binario fleet-telemetry")
+	mode := flag.String("mode", "", "ha (componente aggiuntivo, predefinito) o standalone (Docker senza Home Assistant); anche VIGILO_MODE")
+	mosqBin := flag.String("mosquitto", "/usr/sbin/mosquitto", "binario mosquitto (broker interno, solo standalone)")
+	health := flag.String("healthcheck", "", "controlla l'URL indicato ed esce (per HEALTHCHECK di Docker)")
 	flag.Parse()
+	if *health != "" {
+		os.Exit(healthcheck(*health))
+	}
+	if *mode == "" {
+		*mode = os.Getenv("VIGILO_MODE")
+	}
+	standalone := *mode == modeStandalone
+	if *mode != "" && *mode != modeHA && !standalone {
+		log.Fatalf("modalità sconosciuta %q: usa ha o standalone", *mode)
+	}
 	log.SetFlags(log.LstdFlags)
-	log.Printf("Vigilo %s", version)
+	if standalone {
+		log.Printf("Vigilo %s (standalone, senza Home Assistant)", version)
+	} else {
+		log.Printf("Vigilo %s", version)
+	}
 
 	opts := Options{TailscaleHostname: "vigilo"}
 	if b, err := os.ReadFile(filepath.Join(*dataDir, "options.json")); err == nil {
@@ -59,6 +76,19 @@ func main() {
 	}
 	if opts.TailscaleHostname == "" {
 		opts.TailscaleHostname = "vigilo"
+	}
+	var uiPassword string
+	if standalone {
+		applyStandaloneEnv(&opts)
+		if err := os.MkdirAll(*dataDir, 0o700); err != nil {
+			log.Fatalf("cartella dati: %v", err)
+		}
+		pw, src, err := loadUIPassword(*dataDir)
+		if err != nil {
+			log.Fatalf("password interfaccia: %v", err)
+		}
+		uiPassword = pw
+		log.Printf("interfaccia protetta: utente %q, password da %s", uiUser, src)
 	}
 
 	store, err := NewStore(*dataDir)
@@ -78,8 +108,14 @@ func main() {
 		mqttManual: opts.manualMQTT(),
 		certs:      Certs{dir: filepath.Join(*dataDir, "tls")},
 		version:    version,
+		standalone: standalone,
 	}
-	if src := app.ha.Source(); src != "" {
+	if standalone {
+		app.broker = &LocalBroker{bin: *mosqBin, port: localBrokerPort}
+		if app.mqttManual == nil {
+			log.Printf("MQTT: broker interno (mosquitto su 127.0.0.1:%d)", localBrokerPort)
+		}
+	} else if src := app.ha.Source(); src != "" {
 		log.Printf("Supervisor: token trovato (%s)", src)
 	} else {
 		log.Printf("Supervisor: token NON trovato; MQTT automatico, notifiche ed eventi non funzioneranno")
@@ -90,9 +126,14 @@ func main() {
 	app.ft = &FleetTelemetry{bin: *ftBin, dir: filepath.Join(*dataDir, "fleet-telemetry"), certs: app.certs}
 	app.bus = &Bus{app: app}
 	if store.Get().Region == "" {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		r := regionForCountry(app.ha.Country(ctx))
-		cancel()
+		var r string
+		if standalone {
+			r = standaloneRegion()
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			r = regionForCountry(app.ha.Country(ctx))
+			cancel()
+		}
 		_ = store.Update(func(s *State) { s.Region = r })
 	}
 
@@ -102,7 +143,11 @@ func main() {
 	go app.tailnet.Run(ctx, app.PublicHandler())
 	go app.Loop(ctx)
 
-	srv := &http.Server{Addr: *ingress, Handler: app.IngressHandler(), ReadHeaderTimeout: 15 * time.Second}
+	handler := app.IngressHandler()
+	if standalone {
+		handler = app.StandaloneHandler(uiPassword)
+	}
+	srv := &http.Server{Addr: *ingress, Handler: handler, ReadHeaderTimeout: 15 * time.Second}
 	go func() {
 		<-ctx.Done()
 		sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

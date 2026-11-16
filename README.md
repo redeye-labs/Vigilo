@@ -117,6 +117,60 @@ Il componente aggiuntivo invia già le notifiche da solo. Se preferisci gestirle
 [![Importa: Sentinella Panic](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fredeye-labs%2FVigilo%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fvigilo%2Fsentinella_panic.yaml)
 **Panic** – allarme: canale `alarm_stream` (suona come una sveglia anche in «Non disturbare»).
 
+## Installazione senza Home Assistant (Docker)
+
+> **In prova.** La versione Docker è sul ramo `standalone-docker` e non è ancora stata provata con un'auto vera.
+> Il componente aggiuntivo per Home Assistant resta la versione consigliata.
+
+Lo stesso server del componente aggiuntivo gira anche in un container Docker su qualsiasi computer sempre
+acceso: un mini PC, un NAS, un Raspberry Pi 4/5 a 64 bit o un VPS. Funziona su amd64 e arm64. Senza Home
+Assistant:
+
+- i dati dall'auto passano da un **broker MQTT interno**, visibile solo dentro il container;
+- la procedura guidata si apre nel browser su `http://<server>:8099` ed è **protetta da password**;
+- gli avvisi li manda l'**app Vigilo**, con «Notifiche allarme anche dall'app». Come opzione puoi usare anche
+  **ntfy**, gratuito, che dà avvisi istantanei. Firebase non serve.
+
+**Cosa serve:** Docker con Compose v2.24 o successivo, un account Tailscale con HTTPS e Funnel (come
+sopra), un'app sul portale sviluppatori Tesla e l'app Android Vigilo 1.3 o successiva.
+
+1. Scarica il progetto e prepara la configurazione:
+   ```bash
+   git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git
+   cd Vigilo/standalone
+   cp .env.example .env
+   nano .env
+   ```
+   In `.env` sono tutte voci facoltative. Se hai già Vigilo su Home Assistant nello stesso tailnet, scrivi
+   `VIGILO_TS_HOSTNAME=vigilo-docker`, così i due nodi non si scontrano.
+2. Avvia Vigilo:
+   ```bash
+   docker compose up -d --build
+   ```
+   La prima compilazione richiede 5–15 minuti. Poi verifica che sia partito con `docker compose ps`:
+   deve risultare `healthy`.
+3. Leggi la password della pagina:
+   ```bash
+   sudo cat data/ui_password
+   ```
+   Vigilo la crea al primo avvio. Se preferisci sceglierla tu, mettila in `VIGILO_UI_PASSWORD` nel file `.env`.
+4. Apri `http://<indirizzo-del-server>:8099` dal browser di un computer di casa. Utente: `vigilo`.
+5. Segui i 7 passi, gli stessi del componente aggiuntivo:
+   - **Passo 1, Tailscale:** premi «Genera link di accesso» e autorizza il nodo. In alternativa, metti
+     una chiave `TS_AUTHKEY` nel file `.env` prima dell'avvio.
+   - **Passo 6, notifiche:** non ci sono più i telefoni di Home Assistant. Ci sono le istruzioni per l'app e
+     i campi facoltativi per ntfy.
+   - **Passo 7:** inquadra il QR da dentro Vigilo (Impostazioni → Collega a Home Assistant → Inquadra QR).
+     Poi, in Impostazioni, attiva **«Notifiche allarme anche dall'app»**.
+
+Aggiornare: `git pull && docker compose up -d --build`. Chiavi, token e abbinamenti restano in
+`standalone/data`: fanne una copia di riserva e non condividerla con nessuno.
+
+> **Non aprire la porta 8099 sul router.** Raggiungila solo dalla rete di casa o da Tailscale. Tesla e l'app
+> passano dal Funnel, non da questa porta.
+
+Dettagli, variabili, ntfy e soluzione dei problemi: [standalone/README.md](standalone/README.md).
+
 ## Costi
 
 La Fleet API di Tesla è a consumo, con un credito mensile gratuito. Vigilo **non fa letture periodiche a
@@ -151,7 +205,8 @@ configurato a mano + automazioni copiate):
 
 - Client Secret, token, chiave privata e token di abbinamento restano **solo** in `/data` del componente
   aggiuntivo (0600) o cifrati sul telefono (Android Keystore). Mai nei log.
-- La pagina di configurazione è raggiungibile solo dall'Ingress di Home Assistant.
+- La pagina di configurazione è raggiungibile solo dall'Ingress di Home Assistant (nella versione Docker:
+  dalla porta 8099 con password, da non esporre su internet).
 - Su internet sono esposti solo: chiave pubblica, ritorno del login, API dell'app (token a 256 bit,
   rigenerabile) e porta telemetria (mTLS).
 
@@ -167,6 +222,7 @@ controllo periodico, comandi tramite un proxy di firma tuo. È la modalità dell
 | `repository.yaml`, `addon/vigilo/` | componente aggiuntivo Home Assistant (server Go + fleet-telemetry ufficiale) |
 | `app/` | app Android (Kotlin, Jetpack Compose) |
 | `blueprints/` | blueprint Aware e Panic |
+| `standalone/` | versione Docker senza Home Assistant (Dockerfile, docker-compose.yml) |
 | `tools/ha-cleanup-old-setup.sh` | pulizia della vecchia installazione |
 | `docs/` | icona e screenshot |
 

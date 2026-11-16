@@ -63,6 +63,8 @@ type State struct {
 	LastProblemNotified int64        `json:"last_problem_notified"`
 	Settings            Settings     `json:"settings"`
 	Vehicle             VehicleState `json:"vehicle"`
+	// Solo modalità standalone (nil, e quindi assente dal file, nel componente aggiuntivo).
+	Ntfy *NtfyConfig `json:"ntfy,omitempty"`
 }
 
 type Store struct {
@@ -99,6 +101,10 @@ func (st *Store) Get() State {
 	defer st.mu.Unlock()
 	c := st.s
 	c.Settings.NotifyTargets = append([]string(nil), st.s.Settings.NotifyTargets...)
+	if st.s.Ntfy != nil {
+		n := *st.s.Ntfy
+		c.Ntfy = &n
+	}
 	return c
 }
 

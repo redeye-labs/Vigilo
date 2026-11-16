@@ -68,6 +68,9 @@ func securityHeaders(h http.Handler) http.Handler {
 func (a *App) handleCallback(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	title, msg := "Accesso a Tesla completato", "Torna alla pagina di Vigilo in Home Assistant: il resto si configura da solo."
+	if a.standalone {
+		msg = "Torna alla pagina di Vigilo: il resto si configura da solo."
+	}
 	if e := q.Get("error"); e != "" {
 		title, msg = "Accesso annullato", e+" "+q.Get("error_description")
 	} else {
@@ -201,8 +204,19 @@ func (a *App) saveSettings(in Settings) {
 func (a *App) writeSettings(w http.ResponseWriter, ctx context.Context) {
 	c, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	avail, err := a.ha.NotifyServices(c)
-	out := map[string]any{"ok": true, "settings": a.store.Get().Settings, "available_targets": avail}
+	var avail []string
+	var err error
+	settings := a.store.Get().Settings
+	if a.standalone {
+		// Senza Home Assistant non ci sono servizi notify: liste vuote (mai null) per l'app.
+		avail = []string{}
+		if settings.NotifyTargets == nil {
+			settings.NotifyTargets = []string{}
+		}
+	} else {
+		avail, err = a.ha.NotifyServices(c)
+	}
+	out := map[string]any{"ok": true, "settings": settings, "available_targets": avail}
 	if err != nil {
 		out["targets_error"] = err.Error()
 	}
@@ -213,6 +227,12 @@ func (a *App) writeSettings(w http.ResponseWriter, ctx context.Context) {
 
 // IngressHandler accetta solo il proxy Ingress di Home Assistant (172.30.32.2), che verifica già il login.
 func (a *App) IngressHandler() http.Handler {
+	return onlyIngress(securityHeaders(a.ingressMux()))
+}
+
+// ingressMux: le rotte della procedura guidata, condivise con la modalità standalone (che le protegge
+// con una password invece che con l'Ingress).
+func (a *App) ingressMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		b, _ := webFS.ReadFile("web/index.html")
@@ -411,7 +431,7 @@ func (a *App) IngressHandler() http.Handler {
 	})
 	// L'interfaccia può usare anche i comandi.
 	mux.Handle("/api/v1/", a.apiMux())
-	return onlyIngress(securityHeaders(mux))
+	return mux
 }
 
 func onlyIngress(h http.Handler) http.Handler {
