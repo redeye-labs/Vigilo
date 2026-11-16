@@ -1,0 +1,72 @@
+blueprint:
+  name: "Vigilo – Sentinella: qualcuno vicino all'auto"
+  description: >-
+    Avvisa quando la Sentinella passa in stato **Aware** (qualcuno si è fermato vicino all'auto).
+    Usa il sensore creato dal componente aggiuntivo Vigilo (sensor.vigilo_sentinella).
+    Nota: il componente aggiuntivo può già inviare le notifiche da solo (pagina Vigilo, passo 6):
+    usa questo blueprint solo se preferisci gestirle tu, per non riceverle doppie.
+  domain: automation
+  source_url: https://github.com/redeye-labs/Vigilo/blob/main/blueprints/automation/vigilo/sentinella_aware.yaml
+  input:
+    sentry_sensor:
+      name: Sensore Sentinella
+      default: sensor.vigilo_sentinella
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+    notify_devices:
+      name: Telefoni da avvisare
+      description: Dispositivi con l'app Home Assistant (anche più di uno).
+      selector:
+        device:
+          multiple: true
+          filter:
+            - integration: mobile_app
+    throttle:
+      name: Pausa tra due avvisi
+      description: Dopo un avviso, i nuovi rilevamenti vengono ignorati per questo tempo.
+      default: 120
+      selector:
+        number:
+          min: 0
+          max: 3600
+          step: 10
+          unit_of_measurement: s
+    title:
+      name: Titolo
+      default: "Sentinella: attenzione"
+      selector:
+        text: {}
+mode: single
+max_exceeded: silent
+triggers:
+  - trigger: state
+    entity_id: !input sentry_sensor
+    to: "Aware"
+conditions:
+  - condition: template
+    value_template: "{{ trigger.from_state is not none and trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+variables:
+  devices: !input notify_devices
+  title: !input title
+  throttle: !input throttle
+actions:
+  - repeat:
+      for_each: "{{ devices }}"
+      sequence:
+        - action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+          continue_on_error: true
+          data:
+            title: "{{ title }}"
+            message: "Qualcuno si è fermato vicino all'auto ({{ now().strftime('%H:%M') }})."
+            data:
+              channel: Sentinella
+              importance: high
+              priority: high
+              ttl: 0
+              tag: vigilo-sentinella
+              notification_icon: mdi:shield-car
+              color: "#E53935"
+  - delay:
+      seconds: "{{ throttle | int(120) }}"

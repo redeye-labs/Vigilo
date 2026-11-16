@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vigilo</string>
+    <string name="widget_name">Vigilo – stato auto</string>
+    <string name="widget_desc">Batteria e stato Sentinella della tua auto</string>
+    <string name="channel_alarm">Allarmi Sentinella</string>
+    <string name="channel_alarm_desc">Eventi sospetti rilevati mentre la Sentinella è attiva</string>
+    <string name="channel_status">Avvisi auto</string>
+    <string name="channel_status_desc">Auto aperta, finestrino aperto, ricarica, batteria bassa</string>
+    <string name="channel_service">Monitoraggio attivo</string>
+    <string name="channel_service_desc">Notifica fissa del monitoraggio in primo piano</string>
+</resources>

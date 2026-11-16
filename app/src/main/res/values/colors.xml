@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vigilo_bg">#FF171717</color>
+    <color name="vigilo_primary">#FFFFFFFF</color>
+    <color name="vigilo_icon_bg">#FF0B0B0C</color>
+    <color name="vigilo_icon_fg">#FFFFFFFF</color>
+</resources>

@@ -1,0 +1,61 @@
+blueprint:
+  name: "Vigilo – Sentinella: ALLARME"
+  description: >-
+    Avvisa quando l'allarme della Sentinella suona (stato **Panic**). Usa il canale
+    **alarm_stream** dell'app Home Assistant per Android: suona con il volume della sveglia
+    anche con "Non disturbare". Usa il sensore del componente aggiuntivo Vigilo.
+    Nota: il componente aggiuntivo può già inviare le notifiche da solo: scegli uno dei due modi.
+  domain: automation
+  source_url: https://github.com/redeye-labs/Vigilo/blob/main/blueprints/automation/vigilo/sentinella_panic.yaml
+  input:
+    sentry_sensor:
+      name: Sensore Sentinella
+      default: sensor.vigilo_sentinella
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+    notify_devices:
+      name: Telefoni da avvisare
+      selector:
+        device:
+          multiple: true
+          filter:
+            - integration: mobile_app
+    alarm_stream:
+      name: Suona come una sveglia (Android)
+      default: true
+      selector:
+        boolean: {}
+mode: single
+max_exceeded: silent
+triggers:
+  - trigger: state
+    entity_id: !input sentry_sensor
+    to: "Panic"
+conditions:
+  - condition: template
+    value_template: "{{ trigger.from_state is not none and trigger.from_state.state not in ['unknown', 'unavailable'] }}"
+variables:
+  devices: !input notify_devices
+  alarm: !input alarm_stream
+actions:
+  - repeat:
+      for_each: "{{ devices }}"
+      sequence:
+        - action: "notify.mobile_app_{{ device_attr(repeat.item, 'name') | slugify }}"
+          continue_on_error: true
+          data:
+            title: "🚨 ALLARME auto"
+            message: "L'allarme Sentinella sta suonando ({{ now().strftime('%H:%M') }})."
+            data:
+              channel: "{{ 'alarm_stream' if alarm else 'Sentinella' }}"
+              importance: high
+              priority: high
+              ttl: 0
+              tag: vigilo-allarme
+              sticky: "true"
+              notification_icon: mdi:alarm-light
+              color: "#E53935"
+  - delay:
+      seconds: 30

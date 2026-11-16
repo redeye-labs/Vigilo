@@ -1,0 +1,10 @@
+configuration:
+  tailscale_hostname:
+    name: Tailscale node name
+    description: >-
+      Name of the Vigilo node in your tailnet (e.g. "vigilo" → vigilo.tailXXXX.ts.net).
+      Changing it changes the public address (Tesla portal and key pairing must be redone).
+  tailscale_authkey:
+    name: Tailscale auth key (optional)
+    description: >-
+      Leave empty to log in with the link shown on the Vigilo page, or paste an auth key from the Tailscale admin console.

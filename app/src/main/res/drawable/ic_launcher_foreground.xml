@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icona originale di Vigilo: punto rosso luminoso (come la Sentinella attiva) con anello bianco sottile.
+     Non deriva da asset Tesla. Stessa geometria di docs/brand/make_icon.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M54.00,54.00 m-27.00,0 a27.00,27.00 0,1 1,54.00,0 a27.00,27.00 0,1 1,-54.00,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="54" android:gradientRadius="27">
+                <item android:offset="0" android:color="#CCFF453A" />
+                <item android:offset="0.5" android:color="#80FF453A" />
+                <item android:offset="0.75" android:color="#26FF453A" />
+                <item android:offset="1" android:color="#00FF453A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54.00,54.00 m-15.00,0 a15.00,15.00 0,1 1,30.00,0 a15.00,15.00 0,1 1,-30.00,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="54" android:centerY="54" android:gradientRadius="15">
+                <item android:offset="0" android:color="#FFFF6A5F" />
+                <item android:offset="0.7" android:color="#FFFF453A" />
+                <item android:offset="1" android:color="#FFE8332A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M54.00,54.00 m-30.10,0 a30.10,30.10 0,1 1,60.20,0 a30.10,30.10 0,1 1,-60.20,0 Z M54.00,54.00 m-27.90,0 a27.90,27.90 0,1 1,55.80,0 a27.90,27.90 0,1 1,-55.80,0 Z" />
+</vector>

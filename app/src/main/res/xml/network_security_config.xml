@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      Modalità Home Assistant: tutto in HTTPS (Tailscale Funnel, certificato pubblico).
+      Modalità diretta (legacy): il file di configurazione può stare su Home Assistant in HTTP
+      su un indirizzo scelto dall'utente, quindi il traffico in chiaro resta consentito.
+      Le chiamate a Tesla sono sempre HTTPS.
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

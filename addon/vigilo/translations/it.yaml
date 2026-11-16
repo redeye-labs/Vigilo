@@ -1,0 +1,11 @@
+configuration:
+  tailscale_hostname:
+    name: Nome del nodo Tailscale
+    description: >-
+      Nome con cui Vigilo compare nel tuo tailnet (es. "vigilo" → vigilo.tailXXXX.ts.net).
+      Cambiandolo cambia l'indirizzo pubblico: andrebbero aggiornati il portale Tesla e la chiave sull'auto.
+  tailscale_authkey:
+    name: Chiave di accesso Tailscale (facoltativa)
+    description: >-
+      Lascia vuoto per accedere con il link mostrato nella pagina di Vigilo.
+      In alternativa incolla una auth key creata nella console Tailscale.
