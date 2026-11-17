@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.7
+- Azioni automatiche sul server: quando la Sentinella rileva qualcuno (Aware) e/o scatta l'allarme
+  (Panic), Vigilo può far lampeggiare i fari e/o suonare il clacson. Pausa minima tra due reazioni e
+  fascia oraria facoltativa. Spente finché non le attivi dall'app (Azioni automatiche). Ogni azione
+  finisce nello Storico.
+- Programma Sentinella sul server: le regole «accendi/spegni alle…» ora le esegue Vigilo, anche con il
+  telefono spento o senza rete. Se un comando non riesce riprova (fino a 3 volte in 10 minuti) e lo
+  registra nello Storico.
+- Nuove chiamate per l'app (/api/v1/actions e /api/v1/schedules), separate dalle impostazioni: le app
+  più vecchie continuano a funzionare e non cancellano queste scelte. Configurazione esistente invariata.
+- Lo stesso server gira anche senza Home Assistant, come contenitore Docker (cartella standalone/).
+
+
 ## 1.0.6
 - Passo 7: due QR affiancati. Il primo, «Scarica l'app», si inquadra con la fotocamera del telefono
   e apre il download stabile (Vigilo.apk). Il secondo, «Collega l'app», si inquadra da dentro Vigilo

@@ -175,6 +175,41 @@ func (a *App) apiMux() http.Handler {
 		a.saveSettings(in)
 		a.writeSettings(w, r.Context())
 	})
+	mux.HandleFunc("GET /api/v1/actions", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"ok": true, "actions": a.store.Get().AutoActions.normalized()})
+	})
+	mux.HandleFunc("PUT /api/v1/actions", func(w http.ResponseWriter, r *http.Request) {
+		var in AutoActions
+		if err := readJSON(r, &in); err != nil {
+			errJSON(w, 400, err)
+			return
+		}
+		in = in.normalized()
+		if in.TZ != "" {
+			if _, err := time.LoadLocation(in.TZ); err != nil {
+				in.TZ = ""
+			}
+		}
+		_ = a.store.Update(func(s *State) { s.AutoActions = in })
+		writeJSON(w, 200, map[string]any{"ok": true, "actions": in})
+	})
+	mux.HandleFunc("GET /api/v1/schedules", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, 200, map[string]any{"ok": true, "schedules": schedulesOut(a.store.Get().Schedules)})
+	})
+	mux.HandleFunc("PUT /api/v1/schedules", func(w http.ResponseWriter, r *http.Request) {
+		var in Schedules
+		if err := readJSON(r, &in); err != nil {
+			errJSON(w, 400, err)
+			return
+		}
+		out, err := in.normalized()
+		if err != nil {
+			errJSON(w, 400, err)
+			return
+		}
+		_ = a.store.Update(func(s *State) { s.Schedules = out })
+		writeJSON(w, 200, map[string]any{"ok": true, "schedules": schedulesOut(out)})
+	})
 	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 		defer cancel()
@@ -453,3 +488,11 @@ func pairingLink(host, token string) string {
 type errString string
 
 func (e errString) Error() string { return string(e) }
+
+// schedulesOut: mai "rules": null nel JSON, l'app si aspetta una lista.
+func schedulesOut(s Schedules) Schedules {
+	if s.Rules == nil {
+		s.Rules = []ScheduleRule{}
+	}
+	return s
+}

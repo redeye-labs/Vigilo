@@ -62,6 +62,8 @@ type State struct {
 	LastHealthOK        int64        `json:"last_health_ok"`
 	LastProblemNotified int64        `json:"last_problem_notified"`
 	Settings            Settings     `json:"settings"`
+	AutoActions         AutoActions  `json:"auto_actions"`
+	Schedules           Schedules    `json:"schedules"`
 	Vehicle             VehicleState `json:"vehicle"`
 	// Solo modalità standalone (nil, e quindi assente dal file, nel componente aggiuntivo).
 	Ntfy *NtfyConfig `json:"ntfy,omitempty"`
@@ -80,6 +82,7 @@ func defaultSettings() Settings {
 func NewStore(dir string) (*Store, error) {
 	st := &Store{path: filepath.Join(dir, "state.json")}
 	st.s.Settings = defaultSettings()
+	st.s.AutoActions = defaultAutoActions()
 	if b, err := os.ReadFile(st.path); err == nil {
 		if err := json.Unmarshal(b, &st.s); err != nil {
 			return nil, err
@@ -101,6 +104,7 @@ func (st *Store) Get() State {
 	defer st.mu.Unlock()
 	c := st.s
 	c.Settings.NotifyTargets = append([]string(nil), st.s.Settings.NotifyTargets...)
+	c.Schedules.Rules = append([]ScheduleRule(nil), st.s.Schedules.Rules...)
 	if st.s.Ntfy != nil {
 		n := *st.s.Ntfy
 		c.Ntfy = &n
@@ -173,14 +177,15 @@ type Event struct {
 }
 
 const (
-	EvAware   = "SENTRY_AWARE"
-	EvPanic   = "SENTRY_PANIC"
-	EvSentry  = "SENTRY_CHANGE"
-	EvCommand = "COMMAND"
-	EvConnect = "TELEMETRY"
-	EvProblem = "ERROR"
-	EvSetup   = "SETUP"
-	maxEvents = 1000
+	EvAware    = "SENTRY_AWARE"
+	EvPanic    = "SENTRY_PANIC"
+	EvSentry   = "SENTRY_CHANGE"
+	EvCommand  = "COMMAND"
+	EvConnect  = "TELEMETRY"
+	EvProblem  = "ERROR"
+	EvSetup    = "SETUP"
+	EvSchedule = "SCHEDULE"
+	maxEvents  = 1000
 )
 
 type EventLog struct {

@@ -142,6 +142,7 @@ func main() {
 
 	go app.tailnet.Run(ctx, app.PublicHandler())
 	go app.Loop(ctx)
+	go app.ScheduleLoop(ctx)
 
 	handler := app.IngressHandler()
 	if standalone {

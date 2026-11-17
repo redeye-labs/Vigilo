@@ -30,6 +30,7 @@ type App struct {
 	version    string
 
 	mu            sync.Mutex
+	auto          automation
 	lastAwareSent time.Time
 	lastPanicSent time.Time
 	lastSetupMsg  string
@@ -151,6 +152,7 @@ func (a *App) onSentry(prev, now string) {
 	switch now {
 	case "Aware":
 		a.events.Add(EvAware, "Qualcuno vicino all'auto", "Sentinella in allerta alle "+hm+".")
+		a.autoReact(now)
 		a.mu.Lock()
 		throttle := time.Duration(s.Settings.AwareThrottleSec) * time.Second
 		send := s.Settings.NotifyAware && time.Since(a.lastAwareSent) >= throttle
@@ -167,6 +169,7 @@ func (a *App) onSentry(prev, now string) {
 		}
 	case "Panic":
 		a.events.Add(EvPanic, "ALLARME", "L'allarme della Sentinella sta suonando ("+hm+").")
+		a.autoReact(now)
 		a.mu.Lock()
 		send := s.Settings.NotifyPanic && time.Since(a.lastPanicSent) >= 30*time.Second
 		if send {
@@ -206,6 +209,11 @@ func (a *App) notifyAll(ctx context.Context, targets []string, title, msg string
 // ---------- comandi ----------
 
 func (a *App) RunCommand(ctx context.Context, name, source string) (string, error) {
+	return a.runCommandAs(ctx, name, source, EvCommand)
+}
+
+// runCommandAs invia il comando e lo registra nello storico con il tipo indicato.
+func (a *App) runCommandAs(ctx context.Context, name, source, evType string) (string, error) {
 	s := a.store.Get()
 	if s.VIN == "" {
 		return "", errors.New("nessuna auto selezionata")
@@ -215,7 +223,7 @@ func (a *App) RunCommand(ctx context.Context, name, source string) (string, erro
 		a.events.Add(EvProblem, "Comando non riuscito", err.Error())
 		return "", err
 	}
-	a.events.Add(EvCommand, msg, "Da "+source+".")
+	a.events.Add(evType, msg, "Da "+source+".")
 	switch name {
 	case "sentry_on":
 		_ = a.store.Update(func(s *State) {
