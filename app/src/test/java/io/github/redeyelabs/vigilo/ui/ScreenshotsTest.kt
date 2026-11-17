@@ -53,8 +53,7 @@ class ScreenshotsTest {
                     last24 = last24,
                     alerts24 = sentryAlertCount(last24),
                     buckets = hourlyEventBuckets(last24, now),
-                    notificationsSubtitle = notificationsSubtitle(true, true, true, true),
-                    actionsSubtitle = actionsSubtitle(false, false),
+                    notificationsSubtitle = NOTIFICATIONS_SUBTITLE,
                     onRefresh = {},
                     onPullRefresh = {},
                     onToggleSentry = {},
@@ -69,23 +68,10 @@ class ScreenshotsTest {
         paparazzi.snapshot(name = "notifiche") {
             PhoneShell {
                 NotificationsScreenContent(
-                    url = "http://homeassistant.local/local/vigilo/signed-config.jws",
-                    onUrlChange = {},
-                    expEpochSeconds = 1_826_274_221L,
-                    autoRenew = true,
-                    onAutoRenewChange = {},
-                    busy = false,
-                    progress = null,
-                    status = null,
-                    onActivate = {},
-                    onCheckStatus = {},
+                    paired = false,
+                    settings = null,
+                    onChange = {},
                     onBack = {},
-                    alertUnlocked = true,
-                    unlockedMinutes = 10,
-                    alertWindows = true,
-                    alertChargeComplete = true,
-                    alertLowBattery = true,
-                    lowBatteryPct = 20,
                 )
             }
         }

@@ -158,8 +158,10 @@ object Notifier {
         val k = if (alarm) (kind?.takeIf { it != AlertKind.INFO } ?: AlertKind.AWARE) else AlertKind.INFO
         val actual = SoundPlan.channelFor(k, Prefs.get(ctx).alarmBypassSilent)
         val content = openAppIntent(ctx, "storico", requestCode = 1001)
+        val car = Prefs.get(ctx).displayVehicleName()
         val builder = NotificationCompat.Builder(ctx, actual)
             .setSmallIcon(R.drawable.ic_stat_vigilo)
+            .setSubText(car.ifBlank { null })
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
@@ -187,7 +189,7 @@ object Notifier {
     fun serviceNotification(ctx: Context, text: String) =
         NotificationCompat.Builder(ctx, CH_SERVICE)
             .setSmallIcon(R.drawable.ic_stat_vigilo)
-            .setContentTitle("Vigilo sta sorvegliando l'auto")
+            .setContentTitle(Prefs.get(ctx).displayVehicleName().let { if (it.isBlank()) "Vigilo sta sorvegliando l'auto" else "Vigilo sorveglia $it" })
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setOngoing(true)

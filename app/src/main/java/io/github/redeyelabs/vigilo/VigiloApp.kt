@@ -1,6 +1,7 @@
 package io.github.redeyelabs.vigilo
 
 import android.app.Application
+import io.github.redeyelabs.vigilo.data.Prefs
 import io.github.redeyelabs.vigilo.notify.Notifier
 import io.github.redeyelabs.vigilo.work.Scheduler
 import org.osmdroid.config.Configuration
@@ -14,8 +15,8 @@ class VigiloApp : Application() {
             osmdroidBasePath = filesDir.resolve("osmdroid")
             osmdroidTileCache = cacheDir.resolve("osmdroid-tiles")
         }
+        Prefs.get(this).purgeDirectModeOnce()
         Scheduler.applyPolling(this)
-        Scheduler.applyTelemetryRenew(this)
     }
 }
 

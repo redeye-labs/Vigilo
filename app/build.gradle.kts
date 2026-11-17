@@ -48,10 +48,8 @@ android {
         applicationId = "io.github.redeyelabs.vigilo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
-        versionName = "1.3.4"
-        // Schema del redirect OAuth: vigilo://oauth/callback
-        manifestPlaceholders["oauthScheme"] = "vigilo"
+        versionCode = 26
+        versionName = "1.3.5"
     }
 
     signingConfigs {
@@ -131,6 +129,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
     implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.exifinterface:exifinterface:1.4.1")
 
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
@@ -138,7 +137,6 @@ dependencies {
 
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("androidx.security:security-crypto:1.1.0")
-    implementation("androidx.browser:browser:1.9.0")
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
 

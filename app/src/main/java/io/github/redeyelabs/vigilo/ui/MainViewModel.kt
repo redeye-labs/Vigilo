@@ -4,12 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.redeyelabs.vigilo.api.Backend
-import io.github.redeyelabs.vigilo.api.FleetTelemetrySupport
 import io.github.redeyelabs.vigilo.api.Snapshot
-import io.github.redeyelabs.vigilo.api.TeslaApi
 import io.github.redeyelabs.vigilo.api.VehicleCommandSupport
-import io.github.redeyelabs.vigilo.api.TeslaAuth
-import io.github.redeyelabs.vigilo.api.VehicleInfo
 import io.github.redeyelabs.vigilo.data.AppDatabase
 import io.github.redeyelabs.vigilo.data.EventEntity
 import io.github.redeyelabs.vigilo.data.Prefs
@@ -17,9 +13,6 @@ import io.github.redeyelabs.vigilo.data.ScheduleEntity
 import io.github.redeyelabs.vigilo.work.Monitor
 import io.github.redeyelabs.vigilo.work.Scheduler
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,17 +29,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val progressText = MutableStateFlow<String?>(null)
     val pendingAction = MutableStateFlow<String?>(null)
     val pullRefreshing = MutableStateFlow(false)
-    val autoRefreshSeconds = MutableStateFlow(prefs.autoRefreshSeconds)
     val loggedIn = MutableStateFlow(prefs.isLoggedIn)
-    val vehicles = MutableStateFlow<List<VehicleInfo>>(emptyList())
-    val proxyFingerprint = MutableStateFlow(prefs.proxyCertSha256)
-    val proxyUrl = MutableStateFlow(prefs.proxyUrl)
-    val telemetryJwsUrl = MutableStateFlow(prefs.telemetryJwsUrl.ifBlank { FleetTelemetrySupport.defaultJwsUrl(prefs.proxyUrl) })
-    val telemetryExp = MutableStateFlow(prefs.telemetryJwsExp.takeIf { it > 0 })
-    val telemetryAutoRenew = MutableStateFlow(prefs.telemetryAutoRenew)
-    val telemetryBusy = MutableStateFlow(false)
-    val telemetryMessage = MutableStateFlow<String?>(null)
-    val telemetryProgress = MutableStateFlow<String?>(null)
 
 
     val events: StateFlow<List<EventEntity>> =
@@ -58,7 +41,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private var homeVisible = false
     private var appForeground = false
-    private var homeRefreshJob: Job? = null
     private var lastRefreshAt = 0L
 
     fun onAppResume() {
@@ -66,40 +48,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Riporta su il servizio se il sistema l'ha fermato (idempotente se è già attivo).
         Scheduler.applyIntensive(getApplication())
         refreshSilent()
-        syncHomeRefreshLoop()
     }
 
     fun onAppPause() {
         appForeground = false
-        syncHomeRefreshLoop()
     }
 
     fun onHomeVisible(visible: Boolean) {
         val appeared = visible && !homeVisible
         homeVisible = visible
         if (appeared && appForeground) refreshSilent()
-        syncHomeRefreshLoop()
-    }
-
-    fun setAutoRefreshSeconds(seconds: Int) {
-        prefs.autoRefreshSeconds = seconds
-        autoRefreshSeconds.value = prefs.autoRefreshSeconds
-        syncHomeRefreshLoop()
-    }
-
-    private fun syncHomeRefreshLoop() {
-        homeRefreshJob?.cancel()
-        homeRefreshJob = null
-        val interval = autoRefreshSeconds.value
-        val run = homeVisible && appForeground && interval > 0 && prefs.isLoggedIn && prefs.vin.isNotBlank()
-        if (!run) return
-        homeRefreshJob = viewModelScope.launch(Dispatchers.IO) {
-            while (isActive) {
-                delay(interval * 1000L)
-                if (pendingAction.value != null) continue
-                refreshSilent(skipIfRecent = false)
-            }
-        }
     }
 
     /** Lettura silenziosa: se l'auto dorme interroga solo lo stato, senza svegliarla. */
@@ -143,71 +101,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun toggleLock() {
         val locked = snapshot.value?.locked == true
-        if (locked) command("Sblocco auto", "lock", backend = "unlock") { a, v -> a.unlock(v) }
-        else command("Chiusura auto", "lock", backend = "lock") { a, v -> a.lock(v) }
+        if (locked) command("lock", backend = "unlock") else command("lock", backend = "lock")
     }
 
-    fun handleCallback(code: String, state: String?) = io {
-        runCatching { TeslaAuth.exchangeCode(prefs, code, state) }
-            .onSuccess { loggedIn.value = true; toast("Collegato a Tesla ✔"); loadVehicles() }
-            .onFailure { toast(it.message ?: "Login non riuscito") }
-    }
-
-    fun loadVehicles() = io {
-        runCatching { TeslaApi(prefs).listVehicles() }
-            .onSuccess {
-                vehicles.value = it
-                if (prefs.vin.isBlank() && it.size == 1) selectVehicle(it.first())
-            }
-            .onFailure { toast(it.message ?: "Errore elenco veicoli") }
-    }
-
-    fun selectVehicle(v: VehicleInfo) {
-        prefs.vin = v.vin; prefs.vehicleName = v.name
-        toast("Veicolo selezionato: ${v.name}")
-    }
-
-    fun logout() { prefs.logout(); loggedIn.value = prefs.isLoggedIn; snapshot.value = null }
-
-    fun verifyProxy(rawUrl: String) = io {
-        runCatching { TeslaApi(prefs).verifyProxy(rawUrl) }
-            .onSuccess {
-                proxyUrl.value = prefs.proxyUrl
-                proxyFingerprint.value = prefs.proxyCertSha256
-                toast(it)
-            }
-            .onFailure { toast(it.message ?: "Verifica del proxy non riuscita") }
-    }
-
-    fun resetProxyCertificate() {
-        prefs.proxyCertSha256 = ""
-        proxyFingerprint.value = ""
-        toast("Certificato proxy reimpostato. Premi «Collega proxy» per associarne uno nuovo.")
-    }
-
-    fun commitProxyUrl(rawUrl: String) {
-        val previous = prefs.proxyUrl
-        prefs.proxyUrl = rawUrl
-        proxyUrl.value = prefs.proxyUrl
-        proxyFingerprint.value = prefs.proxyCertSha256
-        if (prefs.telemetryJwsUrl.isBlank()) {
-            telemetryJwsUrl.value = FleetTelemetrySupport.defaultJwsUrl(prefs.proxyUrl)
-        }
-        if (previous != prefs.proxyUrl && previous.isNotBlank()) {
-            toast("Indirizzo aggiornato. Il certificato precedente è stato cancellato: premi «Collega proxy».")
-        }
-    }
-
-    fun command(
-        label: String,
-        action: String? = null,
-        backend: String? = null,
-        block: suspend (TeslaApi, String) -> String,
-    ) = io {
+    /** Comando tramite il server Vigilo; [action] serve all'interfaccia per mostrare l'attesa. */
+    fun command(action: String?, backend: String) = io {
         pendingAction.value = action
         progressText.value = null
         try {
-            Monitor.manualCommand(getApplication(), label, onProgress = { progressText.value = it }, backendCommand = backend, block = block)
+            Monitor.manualCommand(getApplication(), onProgress = { progressText.value = it }, backendCommand = backend)
                 .onSuccess {
                     toast(it)
                     runCatching { Monitor.runOnce(getApplication(), force = true).getOrThrow() }
@@ -225,11 +127,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setSentry(on: Boolean) {
         prefs.expectedSentryChangeUntil = System.currentTimeMillis() + 30 * 60_000L
-        command(
-            if (on) "Attiva Sentinella" else "Disattiva Sentinella",
-            action = "sentry",
-            backend = if (on) "sentry_on" else "sentry_off",
-        ) { api, vin -> api.setSentry(vin, on) }
+        command(action = "sentry", backend = if (on) "sentry_on" else "sentry_off")
     }
 
     fun clearHistory() = io { db.events().clear() }
@@ -246,70 +144,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun applyMonitoring() {
         Scheduler.applyPolling(getApplication())
         Scheduler.applyIntensive(getApplication(), restartLoop = true)
-    }
-
-
-    fun commitTelemetryJwsUrl(raw: String) {
-        val url = raw.trim()
-        prefs.telemetryJwsUrl = url
-        // Si salva esattamente quello che l'utente scrive o incolla: niente ripristino del valore
-        // predefinito mentre il campo è vuoto (era la causa del "torna all'indirizzo di default").
-        telemetryJwsUrl.value = url
-    }
-
-    fun setTelemetryAutoRenew(on: Boolean) {
-        prefs.telemetryAutoRenew = on
-        telemetryAutoRenew.value = on
-        Scheduler.applyTelemetryRenew(getApplication())
-    }
-
-    fun refreshTelemetryExpiry() {
-        val url = telemetryJwsUrl.value.ifBlank { FleetTelemetrySupport.defaultJwsUrl(prefs.proxyUrl) }
-        if (url.isBlank()) return
-        viewModelScope.launch(Dispatchers.IO) {
-            runCatching { TeslaApi(prefs).fetchSignedConfigJws(url) }
-                .onSuccess { telemetryExp.value = prefs.telemetryJwsExp.takeIf { e -> e > 0 } }
-        }
-    }
-
-    fun activateSentryAlerts() = io {
-        val url = telemetryJwsUrl.value.ifBlank { FleetTelemetrySupport.defaultJwsUrl(prefs.proxyUrl) }
-        commitTelemetryJwsUrl(url)
-        telemetryBusy.value = true
-        telemetryProgress.value = null
-        telemetryMessage.value = null
-        try {
-            val api = TeslaApi(prefs).also { it.onProgress = { telemetryProgress.value = it } }
-            val msg = api.enableSentryAlerts(prefs.vin, url)
-            telemetryExp.value = prefs.telemetryJwsExp.takeIf { it > 0 }
-            telemetryMessage.value = msg
-            toast(msg)
-        } catch (e: Exception) {
-            val msg = e.message ?: "Attivazione non riuscita"
-            telemetryMessage.value = msg
-            toast(msg)
-        } finally {
-            telemetryBusy.value = false
-            telemetryProgress.value = null
-        }
-    }
-
-    fun checkTelemetryStatus() = io {
-        if (prefs.vin.isBlank()) {
-            telemetryMessage.value = "Seleziona un veicolo in Impostazioni."
-            return@io
-        }
-        telemetryBusy.value = true
-        telemetryProgress.value = "Controllo dello stato…"
-        try {
-            val msg = TeslaApi(prefs).telemetryStatusMessage(prefs.vin)
-            telemetryMessage.value = msg
-        } catch (e: Exception) {
-            telemetryMessage.value = e.message ?: "Controllo non riuscito"
-        } finally {
-            telemetryBusy.value = false
-            telemetryProgress.value = null
-        }
     }
 
     // ---------------- Home Assistant (componente aggiuntivo) ----------------
@@ -340,7 +174,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 backendUrl.value = prefs.backendUrl
                 loggedIn.value = true
                 snapshot.value = Backend.toSnapshot(st)
-                Scheduler.applyTelemetryRenew(getApplication())
+                Scheduler.applyPolling(getApplication())
                 Scheduler.applyIntensive(getApplication())
                 toast(if (st.vin.isBlank()) "Collegato a Vigilo ✔ Scegli l'auto nella pagina di configurazione di Vigilo." else "Collegato a Vigilo ✔")
                 runCatching { Monitor.syncBackendEvents(getApplication()) }

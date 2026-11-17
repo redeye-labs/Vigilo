@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -66,7 +65,7 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
         if (loggedIn && vm.prefs.vin.isNotBlank() && s == null) vm.refresh()
     }
 
-    val name = s?.name ?: vm.prefs.vehicleName.ifBlank { "Vigilo" }
+    val name = vm.prefs.displayVehicleName(s?.name).ifBlank { "Vigilo" }
     val ready = loggedIn && vm.prefs.vin.isNotBlank()
     val last24 = remember(events, now) { eventsInLast24h(events, now) }
     val alerts24 = sentryAlertCount(last24)
@@ -82,13 +81,7 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
         last24 = last24,
         alerts24 = alerts24,
         buckets = buckets,
-        notificationsSubtitle = notificationsSubtitle(
-            vm.prefs.alertUnlocked,
-            vm.prefs.alertWindows,
-            vm.prefs.alertChargeComplete,
-            vm.prefs.alertLowBattery,
-        ),
-        actionsSubtitle = actionsSubtitle(vm.prefs.autoFlash, vm.prefs.autoHonk),
+        notificationsSubtitle = NOTIFICATIONS_SUBTITLE,
         onRefresh = { if (ready) vm.refresh() },
         onPullRefresh = { vm.pullRefresh() },
         onToggleSentry = { vm.setSentry(s?.sentry != true) },
@@ -110,7 +103,6 @@ fun StatusScreenContent(
     alerts24: Int,
     buckets: IntArray,
     notificationsSubtitle: String,
-    actionsSubtitle: String?,
     onRefresh: () -> Unit,
     onPullRefresh: () -> Unit,
     onToggleSentry: () -> Unit,
@@ -144,10 +136,13 @@ fun StatusScreenContent(
             if (!ready) {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Per iniziare, apri Impostazioni e collega il tuo account Tesla.",
+                    "Per iniziare, apri la Guida e collega l'app al tuo server Vigilo (Home Assistant o Docker).",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                androidx.compose.material3.Button(onClick = { onOpen(Screen.GUIDE) }, modifier = Modifier.padding(top = 8.dp)) {
+                    Text("Apri la guida")
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -179,12 +174,6 @@ fun StatusScreenContent(
                 Icons.Filled.Schedule,
                 "Programmazione Sentinella",
                 onClick = { onOpen(Screen.SCHEDULE) },
-            )
-            MenuRow(
-                Icons.Filled.FlashOn,
-                "Azioni automatiche",
-                subtitle = actionsSubtitle,
-                onClick = { onOpen(Screen.ACTIONS) },
             )
             MenuRow(
                 Icons.Filled.Tune,
@@ -401,18 +390,8 @@ private fun commandSubtitle(s: Snapshot?): String? = when (s?.locked) {
     null -> null
 }
 
-fun notificationsSubtitle(unlocked: Boolean, windows: Boolean, charge: Boolean, low: Boolean): String {
-    val n = listOf(unlocked, windows, charge, low).count { it }
-    return if (n == 0) "Tutti gli avvisi sono spenti" else "$n avvisi attivi"
-}
-
-fun actionsSubtitle(autoFlash: Boolean, autoHonk: Boolean): String? {
-    val parts = buildList {
-        if (autoFlash) add("fari")
-        if (autoHonk) add("clacson")
-    }
-    return if (parts.isEmpty()) "Nessuna azione automatica" else "Reazione: ${parts.joinToString(" e ")}"
-}
+/** Gli avvisi Sentinella li gestisce il server Vigilo. */
+const val NOTIFICATIONS_SUBTITLE = "Avvisi Sentinella dal server Vigilo"
 
 fun chargingLabel(s: String?) = when (s) {
     "Charging" -> "in corso"; "Complete" -> "completata"; "Disconnected" -> "cavo scollegato"

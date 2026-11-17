@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import io.github.redeyelabs.vigilo.R
+import io.github.redeyelabs.vigilo.data.Prefs
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 
 /**
  * Silhouette laterale originale di un'auto compatta elettrica, disegnata per Vigilo.
@@ -114,11 +117,20 @@ val VigiloCarSide: ImageVector by lazy {
 @Composable
 fun HeroCar(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val version = Prefs.get(context).carPhotoVersion
+    val custom = remember(version) { if (version != 0L) CarPhoto.load(context) else null }
     val photoId = remember {
         context.resources.getIdentifier("car_highland", "drawable", context.packageName)
     }
     Box(modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-        if (photoId != 0) {
+        if (custom != null) {
+            Image(
+                bitmap = custom,
+                contentDescription = "Auto",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)),
+            )
+        } else if (photoId != 0) {
             Image(
                 painter = painterResource(photoId),
                 contentDescription = "Auto",

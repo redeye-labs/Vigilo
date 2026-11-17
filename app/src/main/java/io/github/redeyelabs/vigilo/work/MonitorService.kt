@@ -18,10 +18,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Servizio in primo piano con due usi:
- * - monitoraggio intensivo (modalità diretta): legge lo stato ogni N minuti;
- * - notifiche allarme dall'app (modalità Home Assistant): interroga gli eventi dell'add-on
- *   ogni [BACKEND_ALARM_POLL_MS], così un Aware/Panic può fare suonare Vigilo anche a schermo spento.
+ * Servizio in primo piano per le notifiche allarme dall'app: interroga gli eventi del server Vigilo
+ * ogni [BACKEND_ALARM_POLL_MS], così un Aware/Panic può fare suonare Vigilo anche a schermo spento.
  *
  * Mostra una notifica fissa e silenziosa con batteria, autonomia e stato della Sentinella.
  */
@@ -48,8 +46,7 @@ class MonitorService : Service() {
         loop = scope.launch {
             while (isActive) {
                 val p = Prefs.get(this@MonitorService)
-                val pollAlarms = Scheduler.shouldPollBackendAlarms(p)
-                if (!p.intensiveEnabled && !pollAlarms) { stopSelf(); break }
+                if (!Scheduler.shouldPollBackendAlarms(p)) { stopSelf(); break }
                 // runOnce in modalità backend aggiorna anche lo snapshot (batteria, km, Sentinella)
                 // e importa gli eventi nuovi per le notifiche allarme.
                 val r = Monitor.runOnce(this@MonitorService)
@@ -59,8 +56,7 @@ class MonitorService : Service() {
                 } else if (lastText == null) {
                     postService(ServiceStatus.FALLBACK_TEXT, null)
                 }
-                val wait = if (pollAlarms) BACKEND_ALARM_POLL_MS else p.intensiveMinutes * 60_000L
-                delay(wait)
+                delay(BACKEND_ALARM_POLL_MS)
             }
         }
         return START_STICKY

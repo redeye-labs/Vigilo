@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 enum class Screen(val key: String) {
     HOME("auto"),
     NOTIFICATIONS("notifiche"),
-    ACTIONS("azioni"),
     COMMANDS("comandi"),
     MAP("mappa"),
     CHARGE("ricarica"),
@@ -58,6 +57,10 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(msg) { msg?.let { snack.showSnackbar(it); vm.message.value = null } }
     val goHome = { screen = Screen.HOME }
+    // Senza server Vigilo l'app non può mostrare l'auto: si apre la guida di abbinamento.
+    LaunchedEffect(loggedIn) {
+        if (!loggedIn && screen != Screen.GUIDE && screen != Screen.SETTINGS && screen != Screen.LICENSES) screen = Screen.GUIDE
+    }
     DisposableEffect(screen) {
         vm.onHomeVisible(screen == Screen.HOME)
         onDispose { vm.onHomeVisible(false) }
@@ -89,7 +92,6 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                 when (screen) {
                     Screen.HOME -> StatusScreen(vm, onOpen = { screen = it })
                     Screen.NOTIFICATIONS -> NotificationsScreen(vm, onBack = goHome)
-                    Screen.ACTIONS -> ActionsScreen(vm, onBack = goHome)
                     Screen.COMMANDS -> CommandsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.MAP -> MapScreen(vm, onBack = goHome)
                     Screen.CHARGE -> ChargeScreen(vm, onBack = goHome)

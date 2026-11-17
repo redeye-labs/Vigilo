@@ -41,21 +41,11 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
     }
 
-    /** Abbinamento Home Assistant (vigilo://pair) o ritorno dal login Tesla: vigilo://oauth/callback?code=...&state=... (inoltrato dal companion web). */
+    /** Abbinamento con il server Vigilo: vigilo://pair?url=...&token=... */
     private fun handleIntent(intent: Intent?) {
         val data = intent?.data ?: return
         if (data.scheme == "vigilo" && data.host == "pair") {
             vm.pairBackend(data.toString())
-            intent.data = null
-            return
-        }
-        if (data.scheme == "vigilo" && data.host == "oauth") {
-            val err = data.getQueryParameter("error")
-            val code = data.getQueryParameter("code")
-            when {
-                err != null -> vm.toast("Login Tesla annullato: $err")
-                code != null -> vm.handleCallback(code, data.getQueryParameter("state"))
-            }
             intent.data = null
         }
     }

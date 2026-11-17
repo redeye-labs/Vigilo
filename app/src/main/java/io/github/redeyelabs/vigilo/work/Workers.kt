@@ -1,9 +1,6 @@
 package io.github.redeyelabs.vigilo.work
 
 import android.content.BroadcastReceiver
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
-import android.os.BatteryManager
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
@@ -19,8 +16,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import io.github.redeyelabs.vigilo.api.Backend
-import io.github.redeyelabs.vigilo.api.FleetTelemetrySupport
-import io.github.redeyelabs.vigilo.api.TeslaApi
 import io.github.redeyelabs.vigilo.api.VehicleCommandSupport
 import io.github.redeyelabs.vigilo.data.AppDatabase
 import io.github.redeyelabs.vigilo.data.EventEntity
@@ -35,7 +30,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
-/** Controllo periodico (minimo 15 minuti, limite di Android). */
+/** Sincronizzazione periodica con il server Vigilo (stato e storico; minimo 15 minuti, limite di Android). */
 class PollWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         Monitor.runOnce(applicationContext)
@@ -55,8 +50,8 @@ class ScheduleWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
         val what = if (rule.enableSentry) "Attivazione" else "Disattivazione"
         val res = runCatching {
             p.expectedSentryChangeUntil = System.currentTimeMillis() + 30 * 60_000L
-            if (p.backendMode) Backend(p).command(if (rule.enableSentry) "sentry_on" else "sentry_off")
-            else TeslaApi(p).setSentry(p.vin, rule.enableSentry)
+            check(p.backendMode) { "App non collegata al server Vigilo" }
+            Backend(p).command(if (rule.enableSentry) "sentry_on" else "sentry_off")
         }
         if (res.isSuccess) {
             db.events().insert(EventEntity(type = EventType.SCHEDULE, title = "$what Sentinella programmata", message = "Eseguita alle %02d:%02d".format(rule.hour, rule.minute)))
@@ -73,52 +68,6 @@ class ScheduleWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(c
 }
 
 
-/** Rinnovo quotidiano della configurazione avvisi Sentinella (best effort, in carica o su Wi-Fi). */
-class TelemetryRenewWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
-    override suspend fun doWork(): Result {
-        val p = Prefs.get(applicationContext)
-        if (!p.telemetryAutoRenew) return Result.success()
-        // Con Home Assistant il rinnovo lo fa il componente aggiuntivo.
-        if (p.backendMode) return Result.success()
-        if (!p.isLoggedIn || p.vin.isBlank() || p.lastEnrolledJwsHash.isBlank()) return Result.success()
-        if (!chargingOrWifi(applicationContext)) {
-            return if (runAttemptCount < 3) Result.retry() else Result.success()
-        }
-        val url = p.telemetryJwsUrl.ifBlank { FleetTelemetrySupport.defaultJwsUrl(p.proxyUrl) }
-        if (url.isBlank()) return Result.success()
-        return try {
-            val api = TeslaApi(p)
-            val msg = api.autoRenewSentryAlerts(p.vin, url)
-            if (!msg.isNullOrBlank()) {
-                Notifier.show(
-                    applicationContext,
-                    Notifier.CH_STATUS,
-                    "Avvisi Sentinella",
-                    msg,
-                )
-            }
-            Result.success()
-        } catch (e: Exception) {
-            val text = e.message ?: "Rinnovo non riuscito"
-            Notifier.show(applicationContext, Notifier.CH_STATUS, "Rinnovo avvisi Sentinella non riuscito", text)
-            if (runAttemptCount < 2) Result.retry() else Result.success()
-        }
-    }
-
-    companion object {
-        fun chargingOrWifi(ctx: Context): Boolean {
-            val charging = ctx.getSystemService(BatteryManager::class.java)?.isCharging == true
-            val cm = ctx.getSystemService(ConnectivityManager::class.java)
-            val network = cm?.activeNetwork
-            val caps = network?.let { cm.getNetworkCapabilities(it) }
-            val wifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
-                caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true ||
-                (cm != null && !cm.isActiveNetworkMetered)
-            return FleetTelemetrySupport.shouldRunRenewNow(charging, wifi)
-        }
-    }
-}
-
 object Scheduler {
     private const val POLL = "vigilo_poll"
     private const val TEL_RENEW = "vigilo_telemetry_renew"
@@ -128,32 +77,22 @@ object Scheduler {
     fun applyPolling(ctx: Context) {
         val p = Prefs.get(ctx)
         val wm = WorkManager.getInstance(ctx)
-        if (!p.pollingEnabled) { wm.cancelUniqueWork(POLL); return }
-        val req = PeriodicWorkRequestBuilder<PollWorker>(p.pollMinutes.toLong(), TimeUnit.MINUTES)
+        // Il rinnovo della configurazione dell'auto lo fa il server: via il vecchio lavoro della modalità diretta.
+        wm.cancelUniqueWork(TEL_RENEW)
+        if (!p.backendMode) { wm.cancelUniqueWork(POLL); return }
+        val req = PeriodicWorkRequestBuilder<PollWorker>(15, TimeUnit.MINUTES)
             .setConstraints(net)
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 1, TimeUnit.MINUTES)
             .build()
         wm.enqueueUniquePeriodicWork(POLL, ExistingPeriodicWorkPolicy.UPDATE, req)
     }
 
-
-    fun applyTelemetryRenew(ctx: Context) {
-        val p = Prefs.get(ctx)
-        val wm = WorkManager.getInstance(ctx)
-        if (!p.telemetryAutoRenew) { wm.cancelUniqueWork(TEL_RENEW); return }
-        val req = PeriodicWorkRequestBuilder<TelemetryRenewWorker>(1, TimeUnit.DAYS)
-            .setConstraints(net)
-            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 2, TimeUnit.HOURS)
-            .build()
-        wm.enqueueUniquePeriodicWork(TEL_RENEW, ExistingPeriodicWorkPolicy.UPDATE, req)
-    }
-
     /** True se l'app deve interrogare gli eventi dell'add-on per notificare gli allarmi da sola. */
     fun shouldPollBackendAlarms(p: Prefs): Boolean = p.backendMode && p.notifyAlarmsFromApp
 
-    fun shouldRunService(p: Prefs): Boolean = p.intensiveEnabled || shouldPollBackendAlarms(p)
+    fun shouldRunService(p: Prefs): Boolean = shouldPollBackendAlarms(p)
 
-    /** Avvia il servizio in primo piano per il monitoraggio intensivo e/o le notifiche allarme dall'app. */
+    /** Avvia il servizio in primo piano per le notifiche allarme dall'app. */
     fun applyIntensive(ctx: Context, restartLoop: Boolean = false) {
         val p = Prefs.get(ctx)
         val i = Intent(ctx, MonitorService::class.java).putExtra(MonitorService.EXTRA_RESTART_LOOP, restartLoop)
@@ -218,7 +157,6 @@ class BootReceiver : BroadcastReceiver() {
         Thread {
             try {
                 Scheduler.applyPolling(context)
-                Scheduler.applyTelemetryRenew(context)
                 runBlocking { Scheduler.rescheduleAll(context) }
                 Scheduler.applyIntensive(context)
             } finally {

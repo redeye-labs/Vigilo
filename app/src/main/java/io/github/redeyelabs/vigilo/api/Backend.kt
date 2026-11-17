@@ -158,7 +158,7 @@ class Backend(private val baseUrl: String, private val token: String) {
             return Pairing(url, token)
         }
 
-        /** Converte lo stato dell'add-on nello stesso modello usato dalla modalità diretta. */
+        /** Converte lo stato del server nel modello [Snapshot] usato dall'interfaccia. */
         fun toSnapshot(s: Status, now: Long = System.currentTimeMillis()): Snapshot {
             val v = s.vehicle
             val sentryOn = when (v.sentry) {

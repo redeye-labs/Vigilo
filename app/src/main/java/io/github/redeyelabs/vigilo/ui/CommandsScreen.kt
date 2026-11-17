@@ -38,7 +38,8 @@ import java.util.Locale
 fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit = {}) {
     val s by vm.snapshot.collectAsState()
     val pending by vm.pendingAction.collectAsState()
-    val ready = vm.loggedIn.value && vm.prefs.vin.isNotBlank()
+    val loggedIn by vm.loggedIn.collectAsState()
+    val ready = loggedIn && vm.prefs.vin.isNotBlank()
     val busyOther = pending != null
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
         ScreenHeader("Comandi", "Ogni comando può svegliare l'auto se dorme.", onBack = onBack)
@@ -50,8 +51,8 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             enabled = ready && (!busyOther || pending == "lock"),
             busy = pending == "lock",
             onCheckedChange = { wantLocked ->
-                if (wantLocked && s?.locked != true) vm.command("Chiusura auto", "lock", backend = "lock") { a, v -> a.lock(v) }
-                else if (!wantLocked && s?.locked != false) vm.command("Sblocco auto", "lock", backend = "unlock") { a, v -> a.unlock(v) }
+                if (wantLocked && s?.locked != true) vm.command("lock", backend = "lock")
+                else if (!wantLocked && s?.locked != false) vm.command("lock", backend = "unlock")
             },
             leading = {
                 Icon(
@@ -76,14 +77,14 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             title = "Lampeggia",
             enabled = ready && (!busyOther || pending == "flash"),
             busy = pending == "flash",
-            onClick = { vm.command("Lampeggio fari", "flash", backend = "flash") { a, v -> a.flash(v) } },
+            onClick = { vm.command("flash", backend = "flash") },
         )
         ActionRow(
             icon = { Icon(Icons.Filled.Campaign, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
             title = "Clacson",
             enabled = ready && (!busyOther || pending == "honk"),
             busy = pending == "honk",
-            onClick = { vm.command("Clacson", "honk", backend = "honk") { a, v -> a.honk(v) } },
+            onClick = { vm.command("honk", backend = "honk") },
         )
 
         Spacer(Modifier.height(20.dp))
@@ -105,7 +106,7 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             if (s?.locationScopeMissing == true) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Posizione non disponibile: nel portale Tesla abilita lo scope Vehicle Location, poi esci e rifai Accedi con Tesla.",
+                    "Posizione non disponibile: nel portale Tesla abilita lo scope Vehicle Location, poi rifai il login Tesla nella pagina di configurazione di Vigilo.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall,
                 )

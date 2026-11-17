@@ -78,7 +78,7 @@ Licenses read from each module's LICENSE file in the Go module cache, matching
 
 | Component | Version | License | Source |
 |---|---|---|---|
-| AndroidX (Compose, Material 3, Activity, Lifecycle, Core, Room, WorkManager, Security Crypto, Browser, Glance, Fragment) | as in `app/build.gradle.kts` | Apache-2.0 | https://developer.android.com/jetpack |
+| AndroidX (Compose, Material 3, Activity, Lifecycle, Core, Room, WorkManager, Security Crypto, ExifInterface, Glance, Fragment) | as in `app/build.gradle.kts` | Apache-2.0 | https://developer.android.com/jetpack |
 | Kotlin, kotlinx-coroutines, kotlinx-serialization-json | as in `app/build.gradle.kts` | Apache-2.0 | https://github.com/JetBrains/kotlin, https://github.com/Kotlin/kotlinx.coroutines, https://github.com/Kotlin/kotlinx.serialization |
 | osmdroid | 6.1.20 | Apache-2.0 | https://github.com/osmdroid/osmdroid |
 | OpenStreetMap data and standard tile layer (`TileSourceFactory.MAPNIK`) | — | ODbL 1.0; © OpenStreetMap contributors | https://www.openstreetmap.org/copyright |

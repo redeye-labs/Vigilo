@@ -100,11 +100,11 @@ Impronta SHA-256 del certificato di firma ufficiale:
 
 `61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
 
-Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.4.apk`
+Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.5.apk`
 
 Nella **1.3.0**, in Impostazioni (con l'app abbinata a Home Assistant) puoi attivare **Notifiche allarme anche dall'app** (spenta di default): gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. L'opzione **Suona anche in silenzioso** (accesa insieme alla prima) usa il volume della sveglia.
 
-Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono.
+Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono. Dalla **1.3.5** l'app funziona solo con un server Vigilo (componente aggiuntivo di Home Assistant o versione Docker): la vecchia modalità diretta è stata tolta e i suoi dati (token, client secret) vengono cancellati dal telefono all'aggiornamento. In Impostazioni puoi scegliere il nome dell'auto e una tua foto, e ogni gruppo di impostazioni ha il suo riquadro.
 
 <img src="docs/screens/guida-abbinamento.png" width="230" alt="Abbinamento">
 
@@ -156,11 +156,6 @@ configurato a mano + automazioni copiate):
 - La pagina di configurazione è raggiungibile solo dall'Ingress di Home Assistant.
 - Su internet sono esposti solo: chiave pubblica, ritorno del login, API dell'app (token a 256 bit,
   rigenerabile) e porta telemetria (mTLS).
-
-## Modalità diretta (avanzata)
-
-L'app può ancora funzionare senza Home Assistant (Impostazioni › Modalità diretta): login Tesla dal telefono,
-controllo periodico, comandi tramite un proxy di firma tuo. È la modalità della 1.0, mantenuta come ripiego.
 
 ## Struttura del repository
 

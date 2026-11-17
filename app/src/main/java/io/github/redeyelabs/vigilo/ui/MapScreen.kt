@@ -64,7 +64,7 @@ fun MapScreen(vm: MainViewModel, onBack: (() -> Unit)? = null) {
             ScreenHeader("Posizione", "Posizione dell'auto in tempo reale.", onBack = onBack)
             VigiloCard {
                 val msg = if (s?.locationScopeMissing == true)
-                    "La mappa ha bisogno dello scope \"Vehicle Location\": abilitalo nel portale sviluppatori Tesla (app Personal Sentry Notifier), poi in Vigilo vai su Impostazioni → Esci e rifai \"Accedi con Tesla\" accettando la posizione."
+                    "La mappa ha bisogno dello scope \"Vehicle Location\": abilitalo nel portale sviluppatori Tesla, poi rifai il login Tesla nella pagina di configurazione di Vigilo accettando la posizione."
                 else "Posizione non disponibile. Aggiorna lo stato con l'auto online."
                 Text(msg, style = MaterialTheme.typography.bodyLarge)
             }

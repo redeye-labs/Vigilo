@@ -39,7 +39,7 @@ class VigiloWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val s = Monitor.lastSnapshot(Prefs.get(context))
-        val name = Prefs.get(context).vehicleName.ifBlank { "La mia Tesla" }
+        val name = Prefs.get(context).displayVehicleName().ifBlank { "La mia Tesla" }
         provideContent {
             val white = ColorProvider(Color.White)
             val muted = ColorProvider(Color(0xFF8E8E93))

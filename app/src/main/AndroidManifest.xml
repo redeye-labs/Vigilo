@@ -31,14 +31,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Redirect OAuth Tesla: vigilo://oauth/callback?code=... -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="${oauthScheme}" android:host="oauth" />
-            </intent-filter>
-            <!-- Abbinamento con il componente aggiuntivo Home Assistant: vigilo://pair?url=...&token=... -->
+            <!-- Abbinamento con il server Vigilo: vigilo://pair?url=...&token=... -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
