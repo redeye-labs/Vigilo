@@ -10,15 +10,15 @@ attiva solo in questo container.
 
 ## Installazione automatica
 
-- Windows: [`Vigilo-Setup.exe`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Setup.exe) (NSIS, sorgente in `windows-setup/`, senza permessi di
-  amministratore, menu Start e voce in «App installate») oppure [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Installer.bat)
+- Windows: [`Vigilo-Setup.exe`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Setup.exe) (NSIS, sorgente in `windows-setup/`, senza permessi di
+  amministratore, menu Start e voce in «App installate») oppure [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Installer.bat)
   (copia di `install-windows.bat`). Entrambi lanciano `install-windows.ps1`, che aggiorna WSL anche quando `wsl --update` non c'è o il suo
   download fallisce con «Errore nel supporto per il canale sicuro»: scarica l'ultimo `.msi` da
   github.com/microsoft/WSL con TLS 1.2 e lo installa con `msiexec /passive`; se serve un riavvio lo dice e
   dopo il riavvio si rilancia. Disinstallazione: «App installate» (exe) o `uninstall-windows.ps1`.
 - Linux/NAS: `curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install.sh | bash` (disinstallazione: `install.sh --uninstall`).
 
-**Immagine già pronta.** Gli installatori non compilano: scaricano dalla release `docker-v1.0.7`
+**Immagine già pronta.** Gli installatori non compilano: scaricano dalla release `docker-v1.0.8`
 l'immagine `vigilo-standalone-<amd64|arm64>.tar.gz` (su Windows con Windows stesso, non dalla rete di
 Docker/WSL, dove alcuni antivirus che ispezionano HTTPS rovinano i download con «tls: bad record MAC»), ne
 controllano dimensione e sha256 e la caricano con `docker load` come `ghcr.io/redeye-labs/vigilo-standalone:latest`.
@@ -102,7 +102,7 @@ Vigilo su Home Assistant continua a funzionare se segui queste regole:
 docker buildx build --platform linux/amd64,linux/arm64 -f standalone/Dockerfile -t vigilo-standalone .
 ```
 Esegui il comando dalla radice del repository. Le immagini della release si creano così (una per
-architettura, poi `gh release upload docker-v1.0.7 vigilo-standalone-*.tar.gz --clobber`):
+architettura, poi `gh release upload docker-v1.0.8 vigilo-standalone-*.tar.gz --clobber`):
 ```bash
 I=ghcr.io/redeye-labs/vigilo-standalone
 for a in amd64 arm64; do
@@ -122,8 +122,8 @@ Docker container. The add-on does not change: standalone mode only turns on in t
 
 > If you already run Vigilo on Home Assistant, see "Try it without touching Home Assistant" below.
 
-**Automatic install:** Windows: [`Vigilo-Setup.exe`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Setup.exe) (NSIS, source in `windows-setup/`, no admin
-rights, Start menu and Apps & Features entry) or [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Installer.bat) (a copy of
+**Automatic install:** Windows: [`Vigilo-Setup.exe`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Setup.exe) (NSIS, source in `windows-setup/`, no admin
+rights, Start menu and Apps & Features entry) or [`Vigilo-Installer.bat`](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Installer.bat) (a copy of
 `install-windows.bat`). Both run `install-windows.ps1`, which updates WSL even when `wsl --update`
 is missing or its download fails with a secure-channel error, by fetching the latest `.msi` from
 github.com/microsoft/WSL over TLS 1.2 and installing it with `msiexec /passive`; it tells you when a reboot is

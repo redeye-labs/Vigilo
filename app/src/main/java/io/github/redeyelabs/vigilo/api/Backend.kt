@@ -29,6 +29,11 @@ class Backend(private val baseUrl: String, private val token: String) {
         @SerialName("windows_open") val windowsOpen: Boolean? = null,
         val battery: Double? = null,
         @SerialName("range_km") val rangeKm: Double? = null,
+        @SerialName("inside_temp") val insideTemp: Double? = null,
+        @SerialName("outside_temp") val outsideTemp: Double? = null,
+        @SerialName("odometer_km") val odometerKm: Double? = null,
+        @SerialName("trunk_open") val trunkOpen: Boolean? = null,
+        @SerialName("frunk_open") val frunkOpen: Boolean? = null,
         val charging: String = "",
         val lat: Double? = null,
         val lon: Double? = null,
@@ -233,6 +238,11 @@ class Backend(private val baseUrl: String, private val token: String) {
                 shiftState = v.gear.ifBlank { null },
                 doorsOpen = v.doorsOpen,
                 windowsOpen = v.windowsOpen,
+                trunkOpen = v.trunkOpen,
+                frunkOpen = v.frunkOpen,
+                insideTemp = v.insideTemp,
+                outsideTemp = v.outsideTemp,
+                odometerKm = v.odometerKm,
                 telemetryConnected = v.telemetryConnected,
             )
         }

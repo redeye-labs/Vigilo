@@ -274,7 +274,7 @@ function Invoke-WithRetry([scriptblock]$Action, [int]$Tries, [string]$What) {
 # che con alcuni antivirus rovina i download: "tls: bad record MAC") e la carica in Docker.
 # Restituisce $true se l'immagine e' pronta (anche se era gia' aggiornata).
 function Get-ImageFromRelease([string]$Image, [string]$MarkerFile) {
-    $tag = if ($env:VIGILO_RELEASE_TAG) { $env:VIGILO_RELEASE_TAG } else { 'docker-v1.0.7' }
+    $tag = if ($env:VIGILO_RELEASE_TAG) { $env:VIGILO_RELEASE_TAG } else { 'docker-v1.0.8' }
     $arch = (Invoke-Quiet $script:Docker @('version', '-f', '{{.Server.Arch}}')).Out.Trim()
     if ($arch -notin @('amd64', 'arm64')) { $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' } }
     try {

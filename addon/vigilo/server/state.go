@@ -28,6 +28,11 @@ type VehicleState struct {
 	WindowsOpen   *bool    `json:"windows_open"`
 	Battery       *float64 `json:"battery"`
 	RangeKm       *float64 `json:"range_km"`
+	InsideTemp    *float64 `json:"inside_temp"`  // °C, da climate_state (stessa lettura, nessuna chiamata in più)
+	OutsideTemp   *float64 `json:"outside_temp"` // °C
+	OdometerKm    *float64 `json:"odometer_km"`
+	TrunkOpen     *bool    `json:"trunk_open"`
+	FrunkOpen     *bool    `json:"frunk_open"`
 	Charging      string   `json:"charging"`
 	Lat           *float64 `json:"lat"`
 	Lon           *float64 `json:"lon"`

@@ -40,4 +40,24 @@ class BackendPairingTest {
         assertFalse(off.sentry!!)
         assertEquals("asleep", off.connectionState)
     }
+
+    @Test
+    fun mapsClimateOdometerTrunkFromServerJson() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val st = json.decodeFromString(
+            Backend.Status.serializer(),
+            """{"ok":true,"vehicle":{"sentry":"Armed","inside_temp":21.5,"outside_temp":7.2,"odometer_km":16093.4,"trunk_open":true,"frunk_open":false,"nuovo":1}}""",
+        )
+        val s = Backend.toSnapshot(st)
+        assertEquals(21.5, s.insideTemp!!, 0.0)
+        assertEquals(7.2, s.outsideTemp!!, 0.0)
+        assertEquals(16093.4, s.odometerKm!!, 0.0)
+        assertTrue(s.trunkOpen!!)
+        assertFalse(s.frunkOpen!!)
+        // Server più vecchio (senza i nuovi campi): restano vuoti, nessun errore.
+        val old = Backend.toSnapshot(json.decodeFromString(Backend.Status.serializer(), """{"ok":true,"vehicle":{"sentry":"Off"}}"""))
+        assertNull(old.insideTemp)
+        assertNull(old.odometerKm)
+        assertNull(old.trunkOpen)
+    }
 }

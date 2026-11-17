@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.8
+- Temperatura interna ed esterna, contachilometri e stato di bagagliaio/frunk: ora li legge anche il
+  server, nella stessa lettura dei dati dell'auto che già faceva (nessuna chiamata in più, l'auto non
+  viene mai svegliata). Con l'auto addormentata restano gli ultimi valori noti. Servono all'app 1.3.7
+  per la schermata Comandi.
+- Home Assistant: nuovi sensori Temperatura interna, Temperatura esterna e Contachilometri (MQTT).
+
 ## 1.0.7
 - Azioni automatiche sul server: quando la Sentinella rileva qualcuno (Aware) e/o scatta l'allarme
   (Panic), Vigilo può far lampeggiare i fari e/o suonare il clacson. Pausa minima tra due reazioni e

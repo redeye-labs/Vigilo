@@ -515,7 +515,8 @@ func (t *Tesla) VehicleData(ctx context.Context, vin string, v *VehicleState) er
 	if !v.Online {
 		return nil
 	}
-	ep := url.QueryEscape("charge_state;drive_state;location_data;vehicle_state")
+	// Una sola lettura (stesso costo): climate_state aggiunge solo le temperature.
+	ep := url.QueryEscape("charge_state;climate_state;drive_state;location_data;vehicle_state")
 	out, err := t.call(ctx, "GET", "/api/1/vehicles/"+vin+"/vehicle_data?endpoints="+ep, nil)
 	if err != nil {
 		return err
@@ -524,6 +525,25 @@ func (t *Tesla) VehicleData(ctx context.Context, vin string, v *VehicleState) er
 	cs, _ := r["charge_state"].(map[string]any)
 	ds, _ := r["drive_state"].(map[string]any)
 	vs, _ := r["vehicle_state"].(map[string]any)
+	cl, _ := r["climate_state"].(map[string]any)
+	if f, ok := num(cl["inside_temp"]); ok {
+		v.InsideTemp = &f
+	}
+	if f, ok := num(cl["outside_temp"]); ok {
+		v.OutsideTemp = &f
+	}
+	if m, ok := num(vs["odometer"]); ok && m > 0 {
+		km := m * 1.609344
+		v.OdometerKm = &km
+	}
+	if n, ok := num(vs["rt"]); ok {
+		open := n != 0
+		v.TrunkOpen = &open
+	}
+	if n, ok := num(vs["ft"]); ok {
+		open := n != 0
+		v.FrunkOpen = &open
+	}
 	if b, ok := num(cs["battery_level"]); ok {
 		v.Battery = &b
 	}

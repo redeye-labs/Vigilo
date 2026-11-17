@@ -189,7 +189,7 @@ retry() {
   return 1
 }
 IMAGE="${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:latest}"
-RELTAG="${VIGILO_RELEASE_TAG:-docker-v1.0.7}"
+RELTAG="${VIGILO_RELEASE_TAG:-docker-v1.0.8}"
 MARKER="$DIR/standalone/.image-release"
 # Immagine già pronta dalla release su GitHub (file .tar.gz, verificato con sha256), poi "docker load".
 image_from_release() {

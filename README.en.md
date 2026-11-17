@@ -84,7 +84,7 @@ Verify with: `apksigner verify --print-certs Vigilo-1.3.6.apk`
 
 In **1.3.0**, Settings (when the app is paired with Home Assistant) has **Notifiche allarme anche dall'app** (off by default): Aware and Panic alerts also come from Vigilo, with a 15–20 second delay. **Suona anche in silenzioso** (on when the first option is on) uses the alarm volume.
 
-Starting with **1.3.1** the persistent notification (when that option is on) shows battery, range and Sentry state, e.g. “🔋 78% · 412 km · Sentinella attiva”, and updates quietly, without sound. From **1.3.2** the status-bar icon is again the Sentinella symbol. From **1.3.3** each alert has its own sound: a siren for alarms, a double beep when someone is near the car, a soft tone for notices and problems. Settings › Suoni has a «Prova suono» (test sound) button for each. From **1.3.4** the in-app alarm service restarts by itself after an app update or a phone reboot. From **1.3.5** the app works only with a Vigilo server (Home Assistant add-on or Docker version): the old direct mode is gone and its data (tokens, client secret) is wiped from the phone on update. Settings let you pick the car's name and your own photo, and each settings group has its own panel. From **1.3.6** **automatic actions** are back (flash and/or honk when Sentry detects someone or the alarm goes off, with a minimum pause and optional time window; off by default) and the **Sentry schedule** has a new screen. Both run on the Vigilo server (1.0.7+), even with the phone off; with an older server the schedule stays on the phone until you update.
+Starting with **1.3.1** the persistent notification (when that option is on) shows battery, range and Sentry state, e.g. “🔋 78% · 412 km · Sentinella attiva”, and updates quietly, without sound. From **1.3.2** the status-bar icon is again the Sentinella symbol. From **1.3.3** each alert has its own sound: a siren for alarms, a double beep when someone is near the car, a soft tone for notices and problems. Settings › Suoni has a «Prova suono» (test sound) button for each. From **1.3.4** the in-app alarm service restarts by itself after an app update or a phone reboot. From **1.3.5** the app works only with a Vigilo server (Home Assistant add-on or Docker version): the old direct mode is gone and its data (tokens, client secret) is wiped from the phone on update. Settings let you pick the car's name and your own photo, and each settings group has its own panel. From **1.3.6** **automatic actions** are back (flash and/or honk when Sentry detects someone or the alarm goes off, with a minimum pause and optional time window; off by default) and the **Sentry schedule** has a new screen. Both run on the Vigilo server (1.0.7+), even with the phone off; with an older server the schedule stays on the phone until you update. From **1.3.7** the Comandi screen again shows inside/outside temperature, odometer and trunk/frunk (needs server 1.0.8).
 
 ### Blueprints (optional)
 
@@ -96,7 +96,7 @@ The add-on already sends notifications itself; use the blueprints only if you pr
 ## Install without Home Assistant (Docker)
 
 > If you already run Home Assistant, the add-on above is the simplest path. The Windows files and the
-> prebuilt image are in the [Docker 1.0.7](https://github.com/redeye-labs/Vigilo/releases/tag/docker-v1.0.7) release.
+> prebuilt image are in the [Docker 1.0.8](https://github.com/redeye-labs/Vigilo/releases/tag/docker-v1.0.8) release.
 
 Vigilo can also run without Home Assistant, on any machine that stays on: a Windows PC, a mini PC, a NAS or
 a Raspberry Pi 4/5. An installer does almost everything for you.
@@ -112,7 +112,7 @@ a Raspberry Pi 4/5. An installer does almost everything for you.
 
 ### Windows 10 / 11
 
-1. Download **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Setup.exe)**.
+1. Download **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Setup.exe)**.
 2. **Double-click** it. If a blue "Windows protected your PC" screen appears, click **"More info"**, then
    **"Run anyway"**: the file isn't digitally signed yet. Click **Next**, then **Finish**. No administrator
    rights needed.
@@ -135,7 +135,7 @@ The Start menu has **"Vigilo – Apri pagina"** (open page), **"Vigilo – Mostr
 and **"Vigilo – Aggiorna"** (update: gets the latest fixes and keeps your data and settings). To uninstall: **Settings → Apps → Installed apps →
 Vigilo (Docker) → Uninstall**. It asks before deleting your data; if you don't confirm, the data stays.
 
-**Second option: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Installer.bat).** Download it and double-click it. If
+**Second option: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Installer.bat).** Download it and double-click it. If
 your browser warns that the file isn't commonly downloaded, choose "Keep". Then follow steps 4–7.
 
 **Third option, nothing to download:** press **Win + R**, paste this line and press Enter. Then follow

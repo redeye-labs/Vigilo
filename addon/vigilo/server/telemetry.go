@@ -339,6 +339,9 @@ func (b *Bus) Announce() {
 		"device_class": "connectivity", "entity_category": "diagnostic"})
 	ent("sensor", "batteria", map[string]any{"name": "Batteria", "state_topic": st + "/battery", "unit_of_measurement": "%", "device_class": "battery", "state_class": "measurement"})
 	ent("sensor", "autonomia", map[string]any{"name": "Autonomia", "state_topic": st + "/range", "unit_of_measurement": "km", "device_class": "distance", "icon": "mdi:map-marker-distance"})
+	ent("sensor", "temperatura_interna", map[string]any{"name": "Temperatura interna", "state_topic": st + "/inside_temp", "unit_of_measurement": "°C", "device_class": "temperature", "state_class": "measurement"})
+	ent("sensor", "temperatura_esterna", map[string]any{"name": "Temperatura esterna", "state_topic": st + "/outside_temp", "unit_of_measurement": "°C", "device_class": "temperature", "state_class": "measurement"})
+	ent("sensor", "contachilometri", map[string]any{"name": "Contachilometri", "state_topic": st + "/odometer", "unit_of_measurement": "km", "device_class": "distance", "state_class": "total_increasing", "icon": "mdi:counter"})
 	ent("device_tracker", "posizione", map[string]any{"name": "Posizione", "json_attributes_topic": st + "/location", "source_type": "gps"})
 	b.publish("vigilo/status", true, "online")
 	b.PublishState()
@@ -384,6 +387,15 @@ func (b *Bus) PublishState() {
 	}
 	if v.RangeKm != nil {
 		b.publish(st+"/range", true, fmt.Sprintf("%.0f", *v.RangeKm))
+	}
+	if v.InsideTemp != nil {
+		b.publish(st+"/inside_temp", true, fmt.Sprintf("%.1f", *v.InsideTemp))
+	}
+	if v.OutsideTemp != nil {
+		b.publish(st+"/outside_temp", true, fmt.Sprintf("%.1f", *v.OutsideTemp))
+	}
+	if v.OdometerKm != nil {
+		b.publish(st+"/odometer", true, fmt.Sprintf("%.0f", *v.OdometerKm))
 	}
 	if v.Lat != nil && v.Lon != nil {
 		b.publish(st+"/location", true, map[string]any{"latitude": *v.Lat, "longitude": *v.Lon, "gps_accuracy": 10})

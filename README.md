@@ -119,7 +119,7 @@ Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.6.apk`
 
 Nella **1.3.0**, in Impostazioni (con l'app abbinata a Home Assistant) puoi attivare **Notifiche allarme anche dall'app** (spenta di default): gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. L'opzione **Suona anche in silenzioso** (accesa insieme alla prima) usa il volume della sveglia.
 
-Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono. Dalla **1.3.5** l'app funziona solo con un server Vigilo (componente aggiuntivo di Home Assistant o versione Docker): la vecchia modalità diretta è stata tolta e i suoi dati (token, client secret) vengono cancellati dal telefono all'aggiornamento. In Impostazioni puoi scegliere il nome dell'auto e una tua foto, e ogni gruppo di impostazioni ha il suo riquadro. Dalla **1.3.6** tornano le **Azioni automatiche** (fari e/o clacson quando la Sentinella rileva qualcuno o scatta l'allarme, con pausa minima e fascia oraria facoltativa; spente di default) e il **Programma Sentinella** ha una schermata nuova. Tutte e due le esegue il server Vigilo (dalla 1.0.7), anche a telefono spento: con un server più vecchio il programma resta sul telefono finché non aggiorni.
+Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono. Dalla **1.3.5** l'app funziona solo con un server Vigilo (componente aggiuntivo di Home Assistant o versione Docker): la vecchia modalità diretta è stata tolta e i suoi dati (token, client secret) vengono cancellati dal telefono all'aggiornamento. In Impostazioni puoi scegliere il nome dell'auto e una tua foto, e ogni gruppo di impostazioni ha il suo riquadro. Dalla **1.3.6** tornano le **Azioni automatiche** (fari e/o clacson quando la Sentinella rileva qualcuno o scatta l'allarme, con pausa minima e fascia oraria facoltativa; spente di default) e il **Programma Sentinella** ha una schermata nuova. Tutte e due le esegue il server Vigilo (dalla 1.0.7), anche a telefono spento: con un server più vecchio il programma resta sul telefono finché non aggiorni. Dalla **1.3.7** la schermata Comandi mostra di nuovo temperatura interna ed esterna, contachilometri e bagagliaio/frunk (serve il server 1.0.8).
 
 <img src="docs/screens/guida-abbinamento.png" width="230" alt="Abbinamento">
 
@@ -137,7 +137,7 @@ Il componente aggiuntivo invia già le notifiche da solo. Se preferisci gestirle
 ## Installazione senza Home Assistant (Docker)
 
 > Se hai già Home Assistant, il componente aggiuntivo qui sopra è la strada più semplice. I file per
-> Windows e l'immagine pronta sono nella release [Docker 1.0.7](https://github.com/redeye-labs/Vigilo/releases/tag/docker-v1.0.7).
+> Windows e l'immagine pronta sono nella release [Docker 1.0.8](https://github.com/redeye-labs/Vigilo/releases/tag/docker-v1.0.8).
 
 Vigilo può funzionare anche senza Home Assistant, su un computer che resta sempre acceso: un PC Windows, un
 mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tutto da solo.
@@ -153,7 +153,7 @@ mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tu
 
 ### Windows 10 / 11
 
-1. Scarica **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Setup.exe)**.
+1. Scarica **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Setup.exe)**.
 2. Aprilo con **doppio clic**. Se compare la schermata blu «Windows ha protetto il PC», premi
    **«Ulteriori informazioni»** e poi **«Esegui comunque»**: il file non ha ancora una firma digitale.
    Premi **Avanti** e poi **Fine**. Non servono permessi di amministratore.
@@ -177,7 +177,7 @@ Nel menu Start trovi **«Vigilo – Apri pagina»**, **«Vigilo – Mostra passw
 correzioni e conserva dati e impostazioni. Per disinstallare: **Impostazioni → App → App installate →
 Vigilo (Docker) → Disinstalla**. Prima di cancellare i dati ti chiede conferma; se non confermi, restano.
 
-**Seconda possibilità: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Installer.bat).** Scaricalo e aprilo con doppio
+**Seconda possibilità: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.8/Vigilo-Installer.bat).** Scaricalo e aprilo con doppio
 clic. Se il browser avvisa che il file non viene scaricato spesso, scegli «Mantieni». Poi segui i passi da
 4 a 7.
 

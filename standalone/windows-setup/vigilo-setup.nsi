@@ -8,8 +8,8 @@ ManifestDPIAware true
 
 !define APPNAME     "Vigilo (Docker)"
 !define PUBLISHER   "RedEye Labs"
-!define VERSION     "1.0.7"
-!define VERSION4    "1.0.7.0"
+!define VERSION     "1.0.8"
+!define VERSION4    "1.0.8.0"
 !define UNINSTKEY   "Software\Microsoft\Windows\CurrentVersion\Uninstall\VigiloDocker"
 !define URL         "https://github.com/redeye-labs/Vigilo"
 !define PAGEURL     "http://localhost:8099"
