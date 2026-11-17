@@ -65,11 +65,11 @@ Official signing certificate SHA-256 fingerprint:
 
 `61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
 
-Verify with: `apksigner verify --print-certs Vigilo-1.3.2.apk`
+Verify with: `apksigner verify --print-certs Vigilo-1.3.3.apk`
 
 In **1.3.0**, Settings (when the app is paired with Home Assistant) has **Notifiche allarme anche dall'app** (off by default): Aware and Panic alerts also come from Vigilo, with a 15–20 second delay. **Suona anche in silenzioso** (on when the first option is on) uses the alarm volume.
 
-Starting with **1.3.1** the persistent notification (when that option is on) shows battery, range and Sentry state, e.g. “🔋 78% · 412 km · Sentinella attiva”, and updates quietly, without sound. From **1.3.2** the status-bar icon is again the Sentinella symbol.
+Starting with **1.3.1** the persistent notification (when that option is on) shows battery, range and Sentry state, e.g. “🔋 78% · 412 km · Sentinella attiva”, and updates quietly, without sound. From **1.3.2** the status-bar icon is again the Sentinella symbol. From **1.3.3** each alert has its own sound: a siren for alarms, a double beep when someone is near the car, a soft tone for notices and problems. Settings › Suoni has a «Prova suono» (test sound) button for each.
 
 ### Blueprints (optional)
 

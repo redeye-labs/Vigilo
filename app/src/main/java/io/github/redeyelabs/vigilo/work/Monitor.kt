@@ -11,6 +11,7 @@ import io.github.redeyelabs.vigilo.data.EventEntity
 import io.github.redeyelabs.vigilo.data.EventType
 import io.github.redeyelabs.vigilo.data.Prefs
 import io.github.redeyelabs.vigilo.notify.Notifier
+import io.github.redeyelabs.vigilo.notify.SoundPlan
 import io.github.redeyelabs.vigilo.widget.VigiloWidget
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -109,7 +110,7 @@ object Monitor {
         list.sortedBy { it.id }.forEach { e ->
             dao.insert(EventEntity(timestamp = e.ts, type = e.type, title = e.title, message = e.message))
             if (shouldNotifyBackendAlarm(notify, e.type, e.ts, e.id, after, now)) {
-                Notifier.show(ctx, Notifier.CH_ALARM, e.title.ifBlank { "Allarme Sentinella" }, e.message)
+                Notifier.show(ctx, Notifier.CH_ALARM, e.title.ifBlank { "Allarme Sentinella" }, e.message, SoundPlan.kindForEvent(e.type))
             }
         }
         p.backendLastEventId = list.maxOf { it.id }
@@ -265,8 +266,8 @@ object Monitor {
         if (p.backendMode) {
             // L'add-on registra già il comando nel suo storico: lo importiamo al prossimo aggiornamento.
             return runCatching {
-                requireNotNull(backendCommand) { "Comando non disponibile con Home Assistant" }
-                onProgress?.invoke("Invio tramite Home Assistant…")
+                requireNotNull(backendCommand) { "Comando non disponibile tramite il server Vigilo" }
+                onProgress?.invoke("Invio tramite il server Vigilo…")
                 Backend(p).command(backendCommand)
             }
         }

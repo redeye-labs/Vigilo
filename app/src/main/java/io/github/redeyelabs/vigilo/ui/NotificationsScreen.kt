@@ -73,10 +73,10 @@ fun NotificationsScreen(vm: MainViewModel, onBack: () -> Unit) {
         onLowBatteryPct = { p.lowBatteryPct = it },
         haCard = if (paired) ({
             VigiloCard {
-                Text("Avvisi Sentinella da Home Assistant", style = MaterialTheme.typography.titleMedium)
+                Text("Avvisi Sentinella dal server Vigilo", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "Arrivano in tempo reale tramite l'app Home Assistant del telefono. La configurazione dell'auto la rinnova il componente aggiuntivo, senza svegliarla.",
+                    "Con Home Assistant arrivano in tempo reale tramite la sua app; con la versione Docker dall'app Vigilo (Impostazioni › Notifiche dall'app) o da ntfy. La configurazione dell'auto la rinnova il server Vigilo, senza svegliarla.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

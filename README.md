@@ -100,11 +100,11 @@ Impronta SHA-256 del certificato di firma ufficiale:
 
 `61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
 
-Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.2.apk`
+Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.3.apk`
 
 Nella **1.3.0**, in Impostazioni (con l'app abbinata a Home Assistant) puoi attivare **Notifiche allarme anche dall'app** (spenta di default): gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. L'opzione **Suona anche in silenzioso** (accesa insieme alla prima) usa il volume della sveglia.
 
-Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella.
+Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno.
 
 <img src="docs/screens/guida-abbinamento.png" width="230" alt="Abbinamento">
 

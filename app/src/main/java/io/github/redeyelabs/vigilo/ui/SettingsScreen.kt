@@ -1,6 +1,7 @@
 package io.github.redeyelabs.vigilo.ui
 
 import android.content.Intent
+import android.widget.Toast
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.clickable
@@ -38,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import io.github.redeyelabs.vigilo.notify.AlertKind
+import io.github.redeyelabs.vigilo.notify.Notifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -62,7 +65,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
     var direct by remember { mutableStateOf(!paired && p.directLoggedIn) }
 
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader("Impostazioni", "Home Assistant, avvisi e preferenze.", onBack = onBack)
+        ScreenHeader("Impostazioni", "Server Vigilo, avvisi e preferenze.", onBack = onBack)
         HomeAssistantSettings(
             paired = paired,
             backendUrl = backendUrl,
@@ -88,12 +91,15 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             if (notifyFromApp) {
                 Toggle("Suona anche in silenzioso", p.alarmBypassSilent) { p.alarmBypassSilent = it }
                 Text(
-                    "Usa il volume della sveglia, anche con il telefono in silenzioso.",
+                    "Allarmi con il volume della sveglia, anche con il telefono in silenzioso: la sirena dura qualche secondo.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+
+        Section("Suoni")
+        SoundTests()
 
         Section("Aggiornamento")
         val autoSec by vm.autoRefreshSeconds.collectAsState()
@@ -104,7 +110,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             }
         }
         Text(
-            if (paired) "Con Home Assistant lo stato arriva in tempo reale dalla telemetria: l'aggiornamento all'apertura e il trascinamento verso il basso bastano."
+            if (paired) "Con il server Vigilo lo stato arriva in tempo reale dalla telemetria: l'aggiornamento all'apertura e il trascinamento verso il basso bastano."
             else foregroundRefreshHint(autoSec),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -125,7 +131,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             Column(Modifier.weight(1f)) {
                 Text("MODALITÀ DIRETTA (AVANZATA)", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Senza Home Assistant: l'app parla direttamente con Tesla. Avvisi solo al controllo periodico.",
+                    "Senza server Vigilo: l'app parla direttamente con Tesla. Avvisi solo al controllo periodico.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -175,7 +181,7 @@ private fun DirectModeSettings(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (paired) {
             Text(
-                "Il telefono è abbinato a Home Assistant: queste impostazioni non vengono usate finché non lo scolleghi.",
+                "Il telefono è abbinato al server Vigilo: queste impostazioni non vengono usate finché non lo scolleghi.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -338,6 +344,42 @@ private fun Field(label: String, initial: String, secret: Boolean = false, onSav
         keyboardOptions = KeyboardOptions(keyboardType = if (secret) KeyboardType.Password else KeyboardType.Uri),
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+/** Pulsanti «Prova suono» per ogni tipo di avviso, con l'eventuale problema che impedirebbe di sentirlo. */
+@Composable
+private fun SoundTests() {
+    val ctx = LocalContext.current
+    var tick by remember { mutableStateOf(0) }
+    Text(
+        "Ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. Con «Suona anche in silenzioso» gli allarmi usano il volume della sveglia.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    listOf(
+        AlertKind.PANIC to "Allarme",
+        AlertKind.AWARE to "Qualcuno vicino",
+        AlertKind.INFO to "Avviso",
+    ).forEach { (kind, label) ->
+        val problem = remember(tick) { Notifier.soundProblem(ctx, kind) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, Modifier.weight(1f))
+            OutlinedButton(onClick = {
+                if (!Notifier.test(ctx, kind)) {
+                    Toast.makeText(ctx, "Consenti le notifiche a Vigilo per provare il suono.", Toast.LENGTH_LONG).show()
+                }
+                tick++
+            }) { Text("Prova suono") }
+        }
+        if (problem != null) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(problem, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { runCatching { ctx.startActivity(Notifier.channelSettingsIntent(ctx, kind)) }; tick++ }) {
+                    Text("Sistema")
+                }
+            }
+        }
+    }
 }
 
 @Composable

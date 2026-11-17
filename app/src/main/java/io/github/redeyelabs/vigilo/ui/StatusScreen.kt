@@ -1,5 +1,7 @@
 package io.github.redeyelabs.vigilo.ui
 
+import io.github.redeyelabs.vigilo.R
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -279,11 +281,16 @@ private fun Events24hCard(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Ultime 24 ore", style = MaterialTheme.typography.titleMedium)
+                val res = LocalContext.current.resources
                 Text(
                     when {
                         total == 0 -> "Nessun evento registrato"
-                        alerts == 0 -> if (total == 1) "1 evento" else "$total eventi"
-                        else -> "$total eventi, di cui $alerts avviso${if (alerts == 1) "" else "i"} Sentinella"
+                        alerts == 0 -> res.getQuantityString(R.plurals.events_count, total, total)
+                        else -> res.getString(
+                            R.string.events_with_alerts,
+                            res.getQuantityString(R.plurals.events_count, total, total),
+                            res.getQuantityString(R.plurals.sentry_alerts_count, alerts, alerts),
+                        )
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

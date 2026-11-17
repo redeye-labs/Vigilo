@@ -42,7 +42,7 @@ fun HistoryScreen(vm: MainViewModel, onBack: (() -> Unit)? = null) {
     )
 
     androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 8.dp)) {
-        ScreenHeader("Storico", "Eventi e avvisi: dal telefono e, se abbinato, da Home Assistant.", onBack = onBack)
+        ScreenHeader("Storico", "Eventi e avvisi: dal telefono e, se abbinato, dal server Vigilo.", onBack = onBack)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 12.dp)) {
             FilterChip(selected = !onlyAlerts, onClick = { onlyAlerts = false }, label = { Text("Tutto") }, colors = chipColors)
             FilterChip(selected = onlyAlerts, onClick = { onlyAlerts = true }, label = { Text("Solo allarmi") }, colors = chipColors)

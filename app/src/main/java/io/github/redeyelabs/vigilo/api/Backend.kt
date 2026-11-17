@@ -104,7 +104,7 @@ class Backend(private val baseUrl: String, private val token: String) {
     private inline fun <reified T> get(path: String): T = send("GET", path, null)
 
     private inline fun <reified T> send(method: String, path: String, body: RequestBody?, slow: Boolean = false): T {
-        require(baseUrl.startsWith("https://")) { "Home Assistant non abbinato: scansiona il QR del componente aggiuntivo." }
+        require(baseUrl.startsWith("https://")) { "Server Vigilo non abbinato: inquadra il QR dell'ultimo passo della configurazione di Vigilo." }
         val req = Request.Builder()
             .url(baseUrl + path)
             .header("Authorization", "Bearer $token")
@@ -120,12 +120,12 @@ class Backend(private val baseUrl: String, private val token: String) {
                 text = resp.body?.string().orEmpty()
             }
         } catch (e: java.io.IOException) {
-            throw ApiException(0, "Home Assistant non raggiungibile: controlla la connessione e che il componente aggiuntivo Vigilo sia avviato.")
+            throw ApiException(0, "Server Vigilo non raggiungibile: controlla la connessione e che Vigilo sia avviato (componente aggiuntivo di Home Assistant o Docker).")
         }
-        if (code == 401) throw ApiException(401, "Abbinamento non valido: genera un nuovo QR nel componente aggiuntivo e scansionalo.")
+        if (code == 401) throw ApiException(401, "Abbinamento non valido: genera un nuovo QR nella pagina di configurazione di Vigilo e inquadralo.")
         if (code !in 200..299) {
             val msg = runCatching { json.decodeFromString(ErrorBody.serializer(), text).error }.getOrNull()
-            throw ApiException(code, msg?.takeIf { it.isNotBlank() } ?: "Errore Home Assistant ($code)")
+            throw ApiException(code, msg?.takeIf { it.isNotBlank() } ?: "Errore del server Vigilo ($code)")
         }
         return json.decodeFromString(text)
     }

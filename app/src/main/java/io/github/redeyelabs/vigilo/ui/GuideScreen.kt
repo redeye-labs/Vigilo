@@ -106,7 +106,7 @@ fun GuideScreenContent(
                 GuideText("Abbinato a:")
                 Text(backendUrl, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
             } else {
-                GuideText("Nel componente aggiuntivo, ultimo passo: inquadra il QR di abbinamento.")
+                GuideText("Nella pagina di configurazione di Vigilo (componente aggiuntivo o Docker), ultimo passo: inquadra il QR di abbinamento.")
                 Button(onClick = onScan, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Filled.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -182,15 +182,15 @@ private fun CheckRow(c: Backend.Check) {
 
 /** Cosa fare quando un controllo non passa. */
 fun checkHint(c: Backend.Check): String = when (c.id) {
-    "tailscale" -> "Nel componente aggiuntivo premi «Genera link di accesso», apri il link e autorizza il dispositivo «vigilo»."
+    "tailscale" -> "Nella pagina di Vigilo premi «Genera link di accesso», apri il link e autorizza il dispositivo."
     "funnel" -> "Nel pannello Tailscale abilita i certificati HTTPS e l'attributo «funnel» nella policy (vedi README)."
-    "mqtt" -> "Installa e avvia «Mosquitto broker», poi riavvia Vigilo."
-    "telemetry_server" -> "Riavvia il componente aggiuntivo; se persiste, guarda il registro."
+    "mqtt" -> "Con Home Assistant: installa e avvia «Mosquitto broker», poi riavvia Vigilo. Con Docker: riavvia il container."
+    "telemetry_server" -> "Riavvia Vigilo (componente aggiuntivo o container Docker); se persiste, guarda il registro."
     "credentials" -> "Incolla Client ID e Client Secret dell'app creata su developer.tesla.com."
-    "login" -> "Premi «Accedi con Tesla» nel componente aggiuntivo."
+    "login" -> "Premi «Accedi con Tesla» nella pagina di Vigilo."
     "pubkey" -> "La chiave pubblica non è raggiungibile da internet: controlla che il Funnel sia attivo."
-    "partner" -> "Nel componente aggiuntivo premi «Riprova la configurazione» per registrare il dominio presso Tesla."
-    "vehicle" -> "Scegli l'auto nel componente aggiuntivo."
+    "partner" -> "Nella pagina di Vigilo premi «Riprova la configurazione» per registrare il dominio presso Tesla."
+    "vehicle" -> "Scegli l'auto nella pagina di Vigilo."
     "key" -> "Apri il link della chiave virtuale sul telefono con l'app Tesla e conferma l'aggiunta della chiave."
     "config" -> "Premi «Invia di nuovo la configurazione»: l'auto la riceve al prossimo risveglio, senza svegliarla."
     "car" -> "Normale finché l'auto non si sveglia: alla prima guida o apertura invierà i dati."

@@ -29,11 +29,11 @@ fun HomeAssistantSettings(
     onChange: ((Backend.Settings) -> Backend.Settings) -> Unit,
 ) {
     VigiloCard {
-        Text("Home Assistant", style = MaterialTheme.typography.titleMedium)
+        Text("Server Vigilo", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
         if (!paired) {
             Text(
-                "Consigliato. Il componente aggiuntivo Vigilo riceve gli eventi della Sentinella in tempo reale e li manda al telefono, anche con l'app chiusa.",
+                "Consigliato. Il server Vigilo (componente aggiuntivo di Home Assistant o versione Docker) riceve gli eventi della Sentinella in tempo reale e li manda al telefono, anche con l'app chiusa.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -57,7 +57,7 @@ fun HomeAssistantSettings(
 @Composable
 fun HaAlertSettings(settings: Backend.SettingsResponse?, onChange: ((Backend.Settings) -> Backend.Settings) -> Unit) {
     if (settings == null) {
-        Text("Lettura delle impostazioni da Home Assistant…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Lettura delle impostazioni dal server Vigilo…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
     val s = settings.settings
@@ -70,7 +70,7 @@ fun HaAlertSettings(settings: Backend.SettingsResponse?, onChange: ((Backend.Set
             PrefToggle("Avviso se il controllo giornaliero fallisce", s.notifyProblems) { v -> onChange { it.copy(notifyProblems = v) } }
         }
         Text(
-            if (s.notifyTargets.isEmpty()) "Nessun telefono scelto: seleziona i destinatari nel componente aggiuntivo (passo «Notifiche»)."
+            if (s.notifyTargets.isEmpty()) "Nessun telefono di Home Assistant scelto (passo «Notifiche» del componente aggiuntivo). Con la versione Docker gli avvisi arrivano dall'app Vigilo (Impostazioni › Notifiche dall'app) o da ntfy."
             else "Destinatari: " + s.notifyTargets.joinToString(", "),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

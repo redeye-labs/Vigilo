@@ -323,7 +323,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun pairBackend(raw: String, onDone: (Boolean) -> Unit = {}) = io {
         val pairing = Backend.parsePairing(raw)
         if (pairing == null) {
-            toast("Codice non valido: scansiona il QR mostrato nel componente aggiuntivo Vigilo.")
+            toast("Codice non valido: inquadra il QR mostrato nella pagina di configurazione di Vigilo.")
             onDone(false)
             return@io
         }
@@ -340,7 +340,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 snapshot.value = Backend.toSnapshot(st)
                 Scheduler.applyTelemetryRenew(getApplication())
                 Scheduler.applyIntensive(getApplication())
-                toast(if (st.vin.isBlank()) "Abbinato a Home Assistant ✔ Scegli l'auto nel componente aggiuntivo." else "Abbinato a Home Assistant ✔")
+                toast(if (st.vin.isBlank()) "Collegato a Vigilo ✔ Scegli l'auto nella pagina di configurazione di Vigilo." else "Collegato a Vigilo ✔")
                 runCatching { Monitor.syncBackendEvents(getApplication()) }
                 onDone(true)
             }
@@ -356,7 +356,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         loggedIn.value = prefs.isLoggedIn
         snapshot.value = null
         Scheduler.applyIntensive(getApplication())
-        toast("Home Assistant scollegato.")
+        toast("Scollegato dal server Vigilo.")
     }
 
     /** Controlli dal vivo dell'add-on (Tailscale, Funnel, login Tesla, chiave, telemetria…). */
