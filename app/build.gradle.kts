@@ -48,8 +48,8 @@ android {
         applicationId = "io.github.redeyelabs.vigilo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 26
-        versionName = "1.3.5"
+        versionCode = 27
+        versionName = "1.3.6"
     }
 
     signingConfigs {
@@ -70,9 +70,7 @@ android {
 
     buildTypes {
         release {
-            // Non minificare: R8 aveva già rotto il TLS del proxy, e può toccare
-            // serialization/Room/WorkManager/widget. Restano escluse solo le risorse PQC
-            // inutili di Bouncy Castle (packaging).
+            // Non minificare: R8 può toccare serialization/Room/WorkManager/widget.
             isMinifyEnabled = false
             isShrinkResources = false
             val canSign = releaseStorePath.isNotEmpty() && releaseKeyAlias.isNotEmpty() &&
@@ -89,7 +87,7 @@ android {
     }
     buildFeatures { compose = true }
 
-    // I JAR firmati di Bouncy Castle portano META-INF/*.SF/*.RSA che in un APK vanno esclusi.
+    // File META-INF duplicati o di firma delle librerie, inutili nell'APK.
     packaging {
         resources {
             excludes += setOf(
@@ -104,10 +102,7 @@ android {
                 "META-INF/*.SF",
                 "META-INF/*.DSA",
                 "META-INF/*.RSA",
-                // Risorse PQC di Bouncy Castle (es. picnic *.properties), non usate dal proxy TLS.
-                "org/bouncycastle/pqc/**",
             )
-            pickFirsts += setOf("META-INF/services/java.security.Provider")
         }
     }
 }
@@ -148,8 +143,6 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    implementation("org.bouncycastle:bcprov-jdk18on:1.80")
-    implementation("org.bouncycastle:bctls-jdk18on:1.80")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")

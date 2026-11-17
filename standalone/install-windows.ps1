@@ -3,7 +3,7 @@
 # Windows PowerShell 5.1 leggono la codifica in modo diverso. Lettere accentate: $([char]0x00E8) = e grave.
 #
 # Doppio clic su install-windows.bat, oppure (tasto Windows + R, incolla, Invio):
-#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
+#   powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install-windows.ps1 | iex"
 #
 # Rilanciarlo aggiorna Vigilo e conserva dati (standalone\data) e configurazione (standalone\.env).
 # Variabili facoltative: VIGILO_DIR (cartella, predefinita %USERPROFILE%\Vigilo), VIGILO_TS_HOSTNAME
@@ -270,21 +270,21 @@ function Invoke-WithRetry([scriptblock]$Action, [int]$Tries, [string]$What) {
     return $false
 }
 
-# Scarica l'immagine gia' pronta dalla pre-release su GitHub con Windows (non dalla rete di Docker/WSL,
+# Scarica l'immagine gia' pronta dalla release su GitHub con Windows (non dalla rete di Docker/WSL,
 # che con alcuni antivirus rovina i download: "tls: bad record MAC") e la carica in Docker.
 # Restituisce $true se l'immagine e' pronta (anche se era gia' aggiornata).
 function Get-ImageFromRelease([string]$Image, [string]$MarkerFile) {
-    $tag = if ($env:VIGILO_RELEASE_TAG) { $env:VIGILO_RELEASE_TAG } else { 'docker-preview-1' }
+    $tag = if ($env:VIGILO_RELEASE_TAG) { $env:VIGILO_RELEASE_TAG } else { 'docker-v1.0.7' }
     $arch = (Invoke-Quiet $script:Docker @('version', '-f', '{{.Server.Arch}}')).Out.Trim()
     if ($arch -notin @('amd64', 'arm64')) { $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' } }
     try {
         $rel = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$($script:Repo)/releases/tags/$tag" -Headers @{ 'User-Agent' = 'vigilo-installer' }
     } catch {
-        Write-Note "Non riesco a leggere la pre-release $tag su GitHub ($($_.Exception.Message))."
+        Write-Note "Non riesco a leggere la release $tag su GitHub ($($_.Exception.Message))."
         return $false
     }
     $asset = $rel.assets | Where-Object { $_.name -eq "vigilo-standalone-$arch.tar.gz" } | Select-Object -First 1
-    if (-not $asset) { Write-Note "Nella pre-release $tag manca l'immagine per $arch."; return $false }
+    if (-not $asset) { Write-Note "Nella release $tag manca l'immagine per $arch."; return $false }
     $stamp = "$($asset.id) $($asset.updated_at)"
     $have = (Invoke-Quiet $script:Docker @('image', 'inspect', $Image)).Code -eq 0
     if ($have -and (Test-Path $MarkerFile) -and ((Get-Content -LiteralPath $MarkerFile -Raw).Trim() -eq $stamp)) {
@@ -319,7 +319,7 @@ function Get-ImageFromRelease([string]$Image, [string]$MarkerFile) {
 # ---------- installazione ----------
 
 function Install-Vigilo {
-    $ref = if ($env:VIGILO_REF) { $env:VIGILO_REF } else { 'standalone-docker' }
+    $ref = if ($env:VIGILO_REF) { $env:VIGILO_REF } else { 'main' }
     $dir = if ($env:VIGILO_DIR) { $env:VIGILO_DIR } else { Join-Path $env:USERPROFILE 'Vigilo' }
     $sa = Join-Path $dir 'standalone'
 
@@ -399,6 +399,17 @@ function Install-Vigilo {
         Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
 
+    # Chi ha installato con il vecchio Vigilo-Setup.exe ha "Vigilo - Aggiorna" che punta al ramo di prova
+    # standalone-docker: lo si fa puntare al ramo principale.
+    $starter = Join-Path $env:LOCALAPPDATA 'Programs\Vigilo\avvia-installazione.ps1'
+    if (Test-Path -LiteralPath $starter) {
+        $txt = Get-Content -LiteralPath $starter -Raw
+        if ($txt -match 'Vigilo/standalone-docker/') {
+            Write-TextFile $starter @($txt.Replace('Vigilo/standalone-docker/', 'Vigilo/main/').TrimEnd())
+            Write-Ok "collegamento $([char]0x00AB)Vigilo - Aggiorna$([char]0x00BB) aggiornato"
+        }
+    }
+
     # Recupera .env e dati da una prova fatta a mano nella cartella Vigilo-standalone-docker.
     $old = Join-Path $env:USERPROFILE 'Vigilo-standalone-docker\standalone'
     $envFile = Join-Path $sa '.env'
@@ -440,9 +451,9 @@ function Install-Vigilo {
         Write-Note "trovato un container vigilo di un'altra cartella ($wdPath): lo sostituisco (i dati restano nella cartella)."
         $null = Invoke-Quiet $script:Docker @('rm', '-f', 'vigilo')
     }
-    # Immagine: 1) gia' pronta dalla pre-release GitHub (scaricata da Windows), 2) docker compose pull,
+    # Immagine: 1) gia' pronta dalla release GitHub (scaricata da Windows), 2) docker compose pull,
     # 3) solo se nessuna delle due funziona, compilazione dal sorgente. VIGILO_BUILD=1 forza la compilazione.
-    $image = if ($env:VIGILO_IMAGE) { $env:VIGILO_IMAGE } else { 'ghcr.io/redeye-labs/vigilo-standalone:preview' }
+    $image = if ($env:VIGILO_IMAGE) { $env:VIGILO_IMAGE } else { 'ghcr.io/redeye-labs/vigilo-standalone:latest' }
     $marker = Join-Path $sa 'data\.image-release'
     $build = $env:VIGILO_BUILD -eq '1'
     Push-Location $sa
@@ -494,6 +505,10 @@ function Install-Vigilo {
         Stop-Install "Vigilo non risulta pronto (stato: $status). Registro: cd `"$sa`" ; docker compose logs --tail 50"
     }
     Write-Ok "Vigilo $([char]0x00E8) avviato"
+    # Immagine della vecchia versione di prova: non serve piu'.
+    if ($image -ne 'ghcr.io/redeye-labs/vigilo-standalone:preview') {
+        $null = Invoke-Quiet $script:Docker @('image', 'rm', 'ghcr.io/redeye-labs/vigilo-standalone:preview')
+    }
 
     # 6) Password negli appunti (mai a schermo) e apertura della pagina
     Write-Step 'Fatto'

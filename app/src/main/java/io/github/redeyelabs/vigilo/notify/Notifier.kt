@@ -182,7 +182,10 @@ object Notifier {
         if (k == AlertKind.PANIC) {
             builder.setFullScreenIntent(openAppIntent(ctx, "storico", requestCode = 1002), true)
         }
-        NotificationManagerCompat.from(ctx).notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), builder.build())
+        // ContextCompat gestisce anche Android < 13 (lì vale «notifiche attive»).
+        if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            NotificationManagerCompat.from(ctx).notify((System.currentTimeMillis() % Int.MAX_VALUE).toInt(), builder.build())
+        }
         if (actual == CH_ALARM_LOUD) AlarmPlayer.play(ctx, k)
     }
 

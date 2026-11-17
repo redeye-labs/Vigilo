@@ -13,8 +13,6 @@ var standaloneTextSwaps = [][2]string{
 	{"così Tesla e l'auto possono raggiungere Home Assistant senza aprire porte sul router.",
 		"così Tesla e l'auto possono raggiungere questo server senza aprire porte sul router."},
 	{"(resta solo in questo Home Assistant)", "(resta solo su questo server)"},
-	{"Da inquadrare <b>dentro Vigilo</b>: Impostazioni, Collega a Home Assistant, Inquadra QR (non con la fotocamera normale).",
-		"Da inquadrare <b>dentro Vigilo</b>: Impostazioni, Collega a Home Assistant (vale anche per questo server senza Home Assistant), Inquadra QR (non con la fotocamera normale)."},
 	{`<div class="sub">Configurazione guidata.`, `<div class="sub">Configurazione guidata (versione Docker, senza Home Assistant).`},
 }
 

@@ -38,7 +38,7 @@ function Uninstall-Vigilo {
     }
     $null = Invoke-Quiet $docker @('rm', '-f', 'vigilo')
     $removed = $false
-    foreach ($img in @('ghcr.io/redeye-labs/vigilo-standalone:preview', 'vigilo-standalone:local')) {
+    foreach ($img in @('ghcr.io/redeye-labs/vigilo-standalone:latest', 'ghcr.io/redeye-labs/vigilo-standalone:preview', 'vigilo-standalone:local')) {
         if ((Invoke-Quiet $docker @('image', 'rm', $img)).Code -eq 0) { $removed = $true }
     }
     if ($removed) { Write-Host '    OK  immagine rimossa' -ForegroundColor Green }

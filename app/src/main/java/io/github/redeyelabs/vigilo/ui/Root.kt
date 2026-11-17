@@ -39,6 +39,7 @@ enum class Screen(val key: String) {
     MAP("mappa"),
     CHARGE("ricarica"),
     SCHEDULE("programma"),
+    ACTIONS("azioni"),
     HISTORY("storico"),
     SETTINGS("impostazioni"),
     GUIDE("guida"),
@@ -96,6 +97,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.MAP -> MapScreen(vm, onBack = goHome)
                     Screen.CHARGE -> ChargeScreen(vm, onBack = goHome)
                     Screen.SCHEDULE -> ScheduleScreen(vm, onBack = goHome)
+                    Screen.ACTIONS -> ActionsScreen(vm, onBack = goHome)
                     Screen.HISTORY -> HistoryScreen(vm, onBack = goHome)
                     Screen.SETTINGS -> SettingsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.GUIDE -> GuideScreen(vm, onBack = { screen = if (loggedIn) Screen.HOME else Screen.SETTINGS })

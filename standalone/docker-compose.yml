@@ -6,7 +6,7 @@
 services:
   vigilo:
     # Immagine già pronta (amd64/arm64). "build" serve solo a chi sviluppa (docker compose up -d --build).
-    image: ${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:preview}
+    image: ${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:latest}
     build:
       context: ..
       dockerfile: standalone/Dockerfile

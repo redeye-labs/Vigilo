@@ -10,6 +10,7 @@
   registra nello Storico.
 - Nuove chiamate per l'app (/api/v1/actions e /api/v1/schedules), separate dalle impostazioni: le app
   più vecchie continuano a funzionare e non cancellano queste scelte. Configurazione esistente invariata.
+- Passo 7: istruzioni aggiornate per l'app attuale (Guida → Scansiona il QR).
 - Lo stesso server gira anche senza Home Assistant, come contenitore Docker (cartella standalone/).
 
 

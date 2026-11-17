@@ -139,7 +139,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
 
 /** Gruppo di impostazioni nello stesso pannello a contrasto della scheda «Server Vigilo». */
 @Composable
-private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     VigiloCard {
         Text(title, style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
@@ -148,7 +148,7 @@ private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> 
 }
 
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

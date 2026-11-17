@@ -189,6 +189,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         backendUrl.value = ""
         backendChecks.value = emptyList()
         backendSettings.value = null
+        scheduleWhere.value = ScheduleWhere.LOADING
+        serverRules.value = emptyList()
+        actions.value = ActionsState.NotPaired
         loggedIn.value = prefs.isLoggedIn
         snapshot.value = null
         Scheduler.applyIntensive(getApplication())
@@ -226,6 +229,99 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { Backend(prefs).saveSettings(next) }
                 .onSuccess { backendSettings.value = it }
                 .onFailure { toast(it.message ?: "Impostazioni non salvate") }
+        }
+    }
+
+    // ---------- programma Sentinella ----------
+
+    /** Dove vivono le regole: sul server (1.0.7+) o, con server più vecchi, sul telefono. */
+    enum class ScheduleWhere { LOADING, SERVER, PHONE }
+
+    val scheduleWhere = MutableStateFlow(ScheduleWhere.LOADING)
+    val serverRules = MutableStateFlow<List<Backend.Rule>>(emptyList())
+
+    private fun tz() = java.time.ZoneId.systemDefault().id
+
+    fun loadSchedules() {
+        if (!prefs.backendMode) { scheduleWhere.value = ScheduleWhere.PHONE; return }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val b = Backend(prefs)
+                var remote = b.schedules()
+                val local = db.schedules().all()
+                if (local.isNotEmpty() || remote.tz != tz()) {
+                    remote = b.saveSchedules(Backend.Schedules(tz(), io.github.redeyelabs.vigilo.work.ScheduleSync.merge(remote.rules, local)))
+                    local.forEach { db.schedules().delete(it); Scheduler.cancelRule(getApplication(), it.id) }
+                    if (local.isNotEmpty()) toast("Programma spostato sul server Vigilo ✔")
+                }
+                serverRules.value = remote.rules
+                scheduleWhere.value = ScheduleWhere.SERVER
+            } catch (e: Exception) {
+                if (scheduleWhere.value == ScheduleWhere.LOADING) scheduleWhere.value = ScheduleWhere.PHONE
+                if (!Backend.isUnsupported(e)) toast(e.message ?: "Programma non letto dal server")
+            }
+        }
+    }
+
+    private fun putRules(next: List<Backend.Rule>) {
+        val prev = serverRules.value
+        serverRules.value = next
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { Backend(prefs).saveSchedules(Backend.Schedules(tz(), next)) }
+                .onSuccess { serverRules.value = it.rules }
+                .onFailure { serverRules.value = prev; toast(it.message ?: "Programma non salvato") }
+        }
+    }
+
+    fun saveRule(r: Backend.Rule) {
+        if (scheduleWhere.value == ScheduleWhere.SERVER) {
+            val list = serverRules.value
+            // Id provvisorio negativo (unico in lista) finché il server non assegna il suo.
+            putRules(
+                if (r.id == 0L || list.none { it.id == r.id }) list + r.copy(id = -System.nanoTime())
+                else list.map { if (it.id == r.id) r else it },
+            )
+        } else {
+            saveSchedule(ScheduleEntity(id = r.id, hour = r.hour, minute = r.minute, daysMask = r.daysMask, enableSentry = r.enable, active = r.active))
+        }
+    }
+
+    fun deleteRule(r: Backend.Rule) {
+        if (scheduleWhere.value == ScheduleWhere.SERVER) putRules(serverRules.value.filterNot { it.id == r.id })
+        else deleteSchedule(ScheduleEntity(id = r.id, hour = r.hour, minute = r.minute, daysMask = r.daysMask, enableSentry = r.enable, active = r.active))
+    }
+
+    // ---------- azioni automatiche ----------
+
+    sealed interface ActionsState {
+        data object Loading : ActionsState
+        data object NotPaired : ActionsState
+        data object Unsupported : ActionsState
+        data class Failed(val message: String) : ActionsState
+        data class Ready(val actions: Backend.Actions) : ActionsState
+    }
+
+    val actions = MutableStateFlow<ActionsState>(ActionsState.Loading)
+
+    fun loadActions() {
+        if (!prefs.backendMode) { actions.value = ActionsState.NotPaired; return }
+        viewModelScope.launch(Dispatchers.IO) {
+            actions.value = try {
+                ActionsState.Ready(Backend(prefs).actions())
+            } catch (e: Exception) {
+                if (Backend.isUnsupported(e)) ActionsState.Unsupported else ActionsState.Failed(e.message ?: "Server non raggiungibile")
+            }
+        }
+    }
+
+    fun saveActions(transform: (Backend.Actions) -> Backend.Actions) {
+        val cur = (actions.value as? ActionsState.Ready)?.actions ?: return
+        val next = transform(cur).copy(tz = tz())
+        actions.value = ActionsState.Ready(next)
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { Backend(prefs).saveActions(next) }
+                .onSuccess { actions.value = ActionsState.Ready(it) }
+                .onFailure { actions.value = ActionsState.Ready(cur); toast(it.message ?: "Azioni non salvate") }
         }
     }
 

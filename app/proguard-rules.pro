@@ -1,12 +1,5 @@
 # Vigilo – regole R8/ProGuard per la build minificata (firmata con il keystore debug).
 
-# --- Bouncy Castle (caricato per nome e per riflessione) ---
-# Il provider BC registra MessageDigest/Signature/KeyAgreement tramite SPI:
-# una keep parziale aveva rimosso SHA-512 e il proxy falliva con
-# "no such algorithm: SHA-512 for provider BC". Teniamo l'intero package.
--keep class org.bouncycastle.** { *; }
--dontwarn org.bouncycastle.**
-
 # --- Kotlinx Serialization (serializer generati e Companion) ---
 -keepattributes *Annotation*, InnerClasses, EnclosingMethod, Signature
 -keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations

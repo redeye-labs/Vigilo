@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Vigilo standalone – installazione automatica per Linux / NAS / Raspberry Pi (64 bit).
 #
-#   curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install.sh | bash
 #
 # Rilanciarlo aggiorna Vigilo e conserva dati (standalone/data) e configurazione (standalone/.env).
 # Disinstallare:  curl -fsSL .../install.sh | bash -s -- --uninstall
@@ -10,11 +10,11 @@
 #   VIGILO_DIR=~/vigilo            cartella di installazione
 #   VIGILO_TS_HOSTNAME=vigilo-docker   nome del nodo Tailscale (senza domanda)
 #   VIGILO_YES=1                   risponde «sì» alle domande (es. installazione di Docker)
-#   VIGILO_REF=standalone-docker   ramo da scaricare;  VIGILO_SRC=/percorso  copia locale (sviluppo)
+#   VIGILO_REF=main   ramo da scaricare;  VIGILO_SRC=/percorso  copia locale (sviluppo)
 set -euo pipefail
 
 REPO="redeye-labs/Vigilo"
-REF="${VIGILO_REF:-standalone-docker}"
+REF="${VIGILO_REF:-main}"
 DIR="${VIGILO_DIR:-$HOME/vigilo}"
 DEFAULT_HOST="vigilo-docker"
 PORT=8099
@@ -188,23 +188,23 @@ retry() {
   done
   return 1
 }
-IMAGE="${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:preview}"
-RELTAG="${VIGILO_RELEASE_TAG:-docker-preview-1}"
+IMAGE="${VIGILO_IMAGE:-ghcr.io/redeye-labs/vigilo-standalone:latest}"
+RELTAG="${VIGILO_RELEASE_TAG:-docker-v1.0.7}"
 MARKER="$DIR/standalone/.image-release"
-# Immagine già pronta dalla pre-release su GitHub (file .tar.gz, verificato con sha256), poi "docker load".
+# Immagine già pronta dalla release su GitHub (file .tar.gz, verificato con sha256), poi "docker load".
 image_from_release() {
   local arch json line url size digest f
   arch="$("${DOCKER[@]}" version -f '{{.Server.Arch}}' 2>/dev/null || true)"
   case "$arch" in amd64|arm64) ;; *) case "$(uname -m)" in aarch64|arm64) arch=arm64 ;; *) arch=amd64 ;; esac ;; esac
   json="$(curl -fsSL -H 'User-Agent: vigilo-installer' "https://api.github.com/repos/$REPO/releases/tags/$RELTAG" 2>/dev/null)" \
-    || { warn "non riesco a leggere la pre-release $RELTAG su GitHub"; return 1; }
+    || { warn "non riesco a leggere la release $RELTAG su GitHub"; return 1; }
   # Nel JSON di un asset "size" e "digest" vengono prima di "browser_download_url".
   line="$(printf '%s' "$json" | tr ',{}' '\n\n\n' | awk -v want="vigilo-standalone-$arch.tar.gz" '
     /"size":/ { s=$0; sub(/.*"size": */, "", s) }
     /"digest":/ { d=$0; sub(/.*"digest": *"/, "", d); sub(/".*/, "", d) }
     /"browser_download_url":/ { u=$0; sub(/.*"browser_download_url": *"/, "", u); sub(/".*/, "", u)
       n=split(u, p, "/"); if (p[n] == want) { print u, s, d; exit } }')"
-  [ -n "$line" ] || { warn "nella pre-release $RELTAG manca l'immagine per $arch"; return 1; }
+  [ -n "$line" ] || { warn "nella release $RELTAG manca l'immagine per $arch"; return 1; }
   read -r url size digest <<<"$line"
   if "${DOCKER[@]}" image inspect "$IMAGE" >/dev/null 2>&1 && [ -f "$MARKER" ] && [ "$(cat "$MARKER")" = "$digest $url" ]; then
     ok "immagine già aggiornata"; return 0
@@ -260,6 +260,8 @@ for _ in $(seq 1 60); do
 done
 printf '\n'
 [ "$status" = "healthy" ] || die "Vigilo non risulta pronto (stato: $status). Registro: cd $DIR/standalone && ${COMPOSE[*]} logs --tail 50"
+# Immagine della vecchia versione di prova: non serve più.
+[ "$IMAGE" = "ghcr.io/redeye-labs/vigilo-standalone:preview" ] || "${DOCKER[@]}" image rm ghcr.io/redeye-labs/vigilo-standalone:preview >/dev/null 2>&1 || true
 ok "Vigilo è avviato"
 
 # ---------------------------------------------------------------------------

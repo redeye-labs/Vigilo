@@ -1,5 +1,5 @@
 # Vigilo (Docker) - avvio dell'installazione/aggiornamento dal menu Start.
-# Usa la versione piu' recente di install-windows.ps1 pubblicata sul ramo standalone-docker, cosi' le
+# Usa la versione piu' recente di install-windows.ps1 pubblicata sul ramo principale (main), cosi' le
 # correzioni arrivano senza riscaricare Vigilo-Setup.exe. Se GitHub non risponde usa la copia installata.
 # File solo ASCII (Windows PowerShell 5.1).
 
@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $bundled = Join-Path $here 'install-windows.ps1'
 $latest = Join-Path $here 'install-windows.latest.ps1'
-$url = 'https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1'
+$url = 'https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install-windows.ps1'
 
 $host.UI.RawUI.WindowTitle = 'Vigilo - installazione'
 $script = $bundled

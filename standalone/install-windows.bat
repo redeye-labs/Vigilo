@@ -4,7 +4,7 @@ rem Usa install-windows.ps1 se si trova accanto a questo file, altrimenti lo sca
 setlocal
 title Vigilo - installazione
 set "PS1=%~dp0install-windows.ps1"
-set "URL=https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1"
+set "URL=https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install-windows.ps1"
 if exist "%PS1%" (
   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PS1%"
 ) else (

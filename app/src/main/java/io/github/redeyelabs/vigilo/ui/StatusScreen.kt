@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -59,10 +60,12 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
     val pending by vm.pendingAction.collectAsState()
     val pull by vm.pullRefreshing.collectAsState()
     val events by vm.events.collectAsState()
+    val actions by vm.actions.collectAsState()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1_000) } }
     LaunchedEffect(loggedIn) {
         if (loggedIn && vm.prefs.vin.isNotBlank() && s == null) vm.refresh()
+        if (loggedIn) vm.loadActions()
     }
 
     val name = vm.prefs.displayVehicleName(s?.name).ifBlank { "Vigilo" }
@@ -82,6 +85,7 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
         alerts24 = alerts24,
         buckets = buckets,
         notificationsSubtitle = NOTIFICATIONS_SUBTITLE,
+        actionsSubtitle = actionsSubtitle(actions),
         onRefresh = { if (ready) vm.refresh() },
         onPullRefresh = { vm.pullRefresh() },
         onToggleSentry = { vm.setSentry(s?.sentry != true) },
@@ -103,6 +107,7 @@ fun StatusScreenContent(
     alerts24: Int,
     buckets: IntArray,
     notificationsSubtitle: String,
+    actionsSubtitle: String = ACTIONS_SUBTITLE,
     onRefresh: () -> Unit,
     onPullRefresh: () -> Unit,
     onToggleSentry: () -> Unit,
@@ -171,8 +176,15 @@ fun StatusScreenContent(
                 onClick = { onOpen(Screen.NOTIFICATIONS) },
             )
             MenuRow(
+                Icons.Filled.FlashOn,
+                "Azioni automatiche",
+                subtitle = actionsSubtitle,
+                onClick = { onOpen(Screen.ACTIONS) },
+            )
+            MenuRow(
                 Icons.Filled.Schedule,
-                "Programmazione Sentinella",
+                "Programma Sentinella",
+                subtitle = "Accendi e spegni la Sentinella in automatico",
                 onClick = { onOpen(Screen.SCHEDULE) },
             )
             MenuRow(

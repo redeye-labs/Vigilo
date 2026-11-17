@@ -78,6 +78,50 @@ class ScreenshotsTest {
     }
 
     @Test
+    fun azioni() {
+        paparazzi.snapshot(name = "azioni") {
+            PhoneShell {
+                ActionsScreenContent(
+                    state = MainViewModel.ActionsState.Ready(
+                        Backend.Actions(enabled = true, onAware = true, onPanic = true, flash = true, honk = false, hoursOnly = true),
+                    ),
+                    onChange = {},
+                    onRetry = {},
+                    onBack = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun programma() {
+        paparazzi.snapshot(name = "programma") {
+            PhoneShell {
+                ScheduleScreenContent(
+                    rules = listOf(
+                        Backend.Rule(id = 1, hour = 7, minute = 0, daysMask = 0b0011111, enable = false, active = true),
+                        Backend.Rule(id = 2, hour = 22, minute = 30, daysMask = 0b1111111, enable = true, active = true),
+                        Backend.Rule(id = 3, hour = 9, minute = 15, daysMask = 0b1100000, enable = true, active = false),
+                    ),
+                    where = MainViewModel.ScheduleWhere.SERVER,
+                    onSave = {},
+                    onDelete = {},
+                    onBack = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun programmaVuoto() {
+        paparazzi.snapshot(name = "programma_vuoto") {
+            PhoneShell {
+                ScheduleScreenContent(rules = emptyList(), where = MainViewModel.ScheduleWhere.SERVER, onSave = {}, onDelete = {}, onBack = {})
+            }
+        }
+    }
+
+    @Test
     fun guida() {
         paparazzi.snapshot(name = "guida") {
             PhoneShell {

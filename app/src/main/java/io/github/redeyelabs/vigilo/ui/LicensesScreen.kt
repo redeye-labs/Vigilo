@@ -60,11 +60,6 @@ val AppLicenses: List<LicenseItem> = listOf(
         "https://github.com/square/okhttp",
     ),
     LicenseItem(
-        "Bouncy Castle",
-        "MIT",
-        "https://www.bouncycastle.org/licence.html",
-    ),
-    LicenseItem(
         "Google Play Services Code Scanner",
         "Termini Google Play Services / Android SDK",
         "https://developers.google.com/android/guides/licenses",

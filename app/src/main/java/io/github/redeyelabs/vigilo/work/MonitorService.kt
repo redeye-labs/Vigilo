@@ -1,11 +1,14 @@
 package io.github.redeyelabs.vigilo.work
 
+import android.Manifest
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import io.github.redeyelabs.vigilo.data.Prefs
 import io.github.redeyelabs.vigilo.notify.Notifier
 import io.github.redeyelabs.vigilo.notify.ServiceStatus
@@ -75,8 +78,8 @@ class MonitorService : Service() {
             if (Build.VERSION.SDK_INT >= 34) startForeground(Notifier.SERVICE_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else startForeground(Notifier.SERVICE_ID, n)
         } else {
-            runCatching {
-                NotificationManagerCompat.from(this).notify(Notifier.SERVICE_ID, n)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                runCatching { NotificationManagerCompat.from(this).notify(Notifier.SERVICE_ID, n) }
             }
         }
     }

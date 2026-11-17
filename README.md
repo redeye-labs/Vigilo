@@ -30,7 +30,22 @@ App Android Vigilo ◀──HTTPS + token di abbinamento────────
 - **Niente server esterni** (niente Render, niente VPS), niente porte aperte sul router: il Funnel di
   Tailscale pubblica solo ciò che Tesla deve raggiungere.
 
-## Cosa serve
+## Due modi di installarlo
+
+Il server Vigilo è lo stesso programma, in due confezioni. L'app Android è la stessa per tutte e due.
+
+| | **A. Home Assistant** | **B. Docker, senza Home Assistant** |
+|---|---|---|
+| Per chi | hai già Home Assistant | non hai Home Assistant: PC Windows, mini PC, NAS, Raspberry Pi |
+| Come si installa | componente aggiuntivo dallo Store di HA | `Vigilo-Setup.exe` (Windows) o una riga di comando (Linux) |
+| Avvisi | app Home Assistant e/o app Vigilo | app Vigilo e/o ntfy |
+| Aggiornare | Store di HA › Vigilo › Aggiorna | menu Start › «Vigilo – Aggiorna» (Linux: rilancia la riga) |
+| Istruzioni | [Installazione da zero](#installazione-da-zero) | [Installazione senza Home Assistant](#installazione-senza-home-assistant-docker) |
+
+In tutte e due il server fa anche il **Programma Sentinella** (accendi/spegni a orari fissi) e le **Azioni
+automatiche** (fari e/o clacson quando la Sentinella rileva qualcuno), anche con il telefono spento.
+
+## Cosa serve (Home Assistant)
 
 - Home Assistant OS o Supervised (amd64 o aarch64, es. Raspberry Pi 4/5).
 - App **Mosquitto broker** + integrazione MQTT.
@@ -71,7 +86,7 @@ App Android Vigilo ◀──HTTPS + token di abbinamento────────
 | Chiave virtuale | apri il link/QR sul telefono con l'app Tesla e confermi | verifica l'associazione |
 | Telemetria | niente | crea CA e certificato, firma e invia la configurazione, avvia fleet-telemetry |
 | Notifiche | scegli i telefoni e la pausa tra due avvisi | Aware con pausa, Panic sul canale sveglia (`alarm_stream`) |
-| App Android | inquadri il QR «Scarica l'app» con la fotocamera del telefono (o [scarichi l'APK](https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk)), poi inquadri il QR «Collega l'app» da dentro Vigilo (Impostazioni → Collega a Home Assistant → Inquadra QR). Non usare «Rigenera» se l'app è già collegata. | abbinamento con token; il passo diventa verde quando l'app è collegata |
+| App Android | inquadri il QR «Scarica l'app» con la fotocamera del telefono (o [scarichi l'APK](https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk)), poi inquadri il QR «Collega l'app» da dentro Vigilo (Guida → Scansiona il QR). Non usare «Rigenera» se l'app è già collegata. | abbinamento con token; il passo diventa verde quando l'app è collegata |
 
 Valori per il portale Tesla (te li dà la procedura già pronti):
 
@@ -100,11 +115,11 @@ Impronta SHA-256 del certificato di firma ufficiale:
 
 `61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
 
-Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.5.apk`
+Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.6.apk`
 
 Nella **1.3.0**, in Impostazioni (con l'app abbinata a Home Assistant) puoi attivare **Notifiche allarme anche dall'app** (spenta di default): gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. L'opzione **Suona anche in silenzioso** (accesa insieme alla prima) usa il volume della sveglia.
 
-Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono. Dalla **1.3.5** l'app funziona solo con un server Vigilo (componente aggiuntivo di Home Assistant o versione Docker): la vecchia modalità diretta è stata tolta e i suoi dati (token, client secret) vengono cancellati dal telefono all'aggiornamento. In Impostazioni puoi scegliere il nome dell'auto e una tua foto, e ogni gruppo di impostazioni ha il suo riquadro.
+Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono. Dalla **1.3.5** l'app funziona solo con un server Vigilo (componente aggiuntivo di Home Assistant o versione Docker): la vecchia modalità diretta è stata tolta e i suoi dati (token, client secret) vengono cancellati dal telefono all'aggiornamento. In Impostazioni puoi scegliere il nome dell'auto e una tua foto, e ogni gruppo di impostazioni ha il suo riquadro. Dalla **1.3.6** tornano le **Azioni automatiche** (fari e/o clacson quando la Sentinella rileva qualcuno o scatta l'allarme, con pausa minima e fascia oraria facoltativa; spente di default) e il **Programma Sentinella** ha una schermata nuova. Tutte e due le esegue il server Vigilo (dalla 1.0.7), anche a telefono spento: con un server più vecchio il programma resta sul telefono finché non aggiorni.
 
 <img src="docs/screens/guida-abbinamento.png" width="230" alt="Abbinamento">
 
@@ -121,8 +136,8 @@ Il componente aggiuntivo invia già le notifiche da solo. Se preferisci gestirle
 
 ## Installazione senza Home Assistant (Docker)
 
-> **In prova.** Questa versione non è ancora stata provata con un'auto vera. Se hai Home Assistant, il
-> componente aggiuntivo qui sopra resta la scelta consigliata.
+> Se hai già Home Assistant, il componente aggiuntivo qui sopra è la strada più semplice. I file per
+> Windows e l'immagine pronta sono nella release [Docker 1.0.7](https://github.com/redeye-labs/Vigilo/releases/tag/docker-v1.0.7).
 
 Vigilo può funzionare anche senza Home Assistant, su un computer che resta sempre acceso: un PC Windows, un
 mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tutto da solo.
@@ -138,7 +153,7 @@ mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tu
 
 ### Windows 10 / 11
 
-1. Scarica **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe)**.
+1. Scarica **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Setup.exe)**.
 2. Aprilo con **doppio clic**. Se compare la schermata blu «Windows ha protetto il PC», premi
    **«Ulteriori informazioni»** e poi **«Esegui comunque»**: il file non ha ancora una firma digitale.
    Premi **Avanti** e poi **Fine**. Non servono permessi di amministratore.
@@ -155,14 +170,14 @@ mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tu
      nel campo password premi **Ctrl+V**. Per rivederla in seguito apri dal menu Start **«Vigilo – Mostra
      password»**, oppure apri con il Blocco note il file `%USERPROFILE%\Vigilo\standalone\data\ui_password`.
 7. Segui i **7 passi** della pagina, gli stessi del componente aggiuntivo. Al passo 7 inquadra il QR da
-   dentro Vigilo (Impostazioni → Collega a Home Assistant → Inquadra QR), poi attiva **«Notifiche allarme
+   dentro Vigilo (Guida → Scansiona il QR), poi attiva **«Notifiche allarme
    anche dall'app»**.
 
 Nel menu Start trovi **«Vigilo – Apri pagina»**, **«Vigilo – Mostra password»** e **«Vigilo – Aggiorna»**. «Aggiorna» scarica le ultime
 correzioni e conserva dati e impostazioni. Per disinstallare: **Impostazioni → App → App installate →
 Vigilo (Docker) → Disinstalla**. Prima di cancellare i dati ti chiede conferma; se non confermi, restano.
 
-**Seconda possibilità: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat).** Scaricalo e aprilo con doppio
+**Seconda possibilità: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-v1.0.7/Vigilo-Installer.bat).** Scaricalo e aprilo con doppio
 clic. Se il browser avvisa che il file non viene scaricato spesso, scegli «Mantieni». Poi segui i passi da
 4 a 7.
 
@@ -170,7 +185,7 @@ clic. Se il browser avvisa che il file non viene scaricato spesso, scegli «Mant
 segui i passi da 4 a 7.
 
 ```
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install-windows.ps1 | iex"
 ```
 
 Senza l'`.exe`: per aggiornare riapri il `.bat`; per disinstallare fai clic destro su
@@ -180,7 +195,7 @@ Senza l'`.exe`: per aggiornare riapri il `.bat`; per disinstallare fai clic dest
 
 1. Apri un terminale sul server, oppure collegati con SSH, e incolla:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/main/standalone/install.sh | bash
    ```
 2. Se Docker manca, l'installatore ti chiede se vuoi installarlo. Rispondi di sì.
 3. Quando ti chiede il **nome**, premi **Invio**: resta `vigilo-docker`.
@@ -203,7 +218,7 @@ da password e gli avvisi li manda l'app Vigilo, con ntfy come opzione gratuita. 
 
 1. Scarica il progetto e prepara la configurazione:
    ```bash
-   git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git
+   git clone https://github.com/redeye-labs/Vigilo.git
    cd Vigilo/standalone
    cp .env.example .env
    nano .env

@@ -80,6 +80,41 @@ class Backend(private val baseUrl: String, private val token: String) {
         @SerialName("available_targets") val availableTargets: List<String> = emptyList(),
     )
 
+    /** Azioni automatiche eseguite dal server (Vigilo 1.0.7+). */
+    @Serializable
+    data class Actions(
+        val enabled: Boolean = false,
+        @SerialName("on_aware") val onAware: Boolean = true,
+        @SerialName("on_panic") val onPanic: Boolean = false,
+        val flash: Boolean = true,
+        val honk: Boolean = false,
+        @SerialName("cooldown_sec") val cooldownSec: Int = 300,
+        @SerialName("hours_only") val hoursOnly: Boolean = false,
+        @SerialName("from_min") val fromMin: Int = 22 * 60,
+        @SerialName("to_min") val toMin: Int = 7 * 60,
+        val tz: String = "",
+    )
+
+    @Serializable
+    private data class ActionsResponse(val ok: Boolean = false, val actions: Actions = Actions())
+
+    /** Regola del programma Sentinella (giorni: bit0 = lunedì … bit6 = domenica). */
+    @Serializable
+    data class Rule(
+        val id: Long = 0,
+        val hour: Int = 22,
+        val minute: Int = 0,
+        @SerialName("days_mask") val daysMask: Int = 0b0011111,
+        val enable: Boolean = true,
+        val active: Boolean = true,
+    )
+
+    @Serializable
+    data class Schedules(val tz: String = "", val rules: List<Rule> = emptyList())
+
+    @Serializable
+    private data class SchedulesResponse(val ok: Boolean = false, val schedules: Schedules = Schedules())
+
     @Serializable
     private data class CommandResponse(val ok: Boolean = false, val message: String = "", val status: Status? = null)
 
@@ -94,6 +129,14 @@ class Backend(private val baseUrl: String, private val token: String) {
     fun settings(): SettingsResponse = get("/api/v1/settings")
     fun saveSettings(s: Settings): SettingsResponse =
         send("PUT", "/api/v1/settings", json.encodeToString(Settings.serializer(), s).toRequestBody(JSON))
+
+    /** Le chiamate seguenti rispondono 404 sui server più vecchi di 1.0.7 (vedi [isUnsupported]). */
+    fun actions(): Actions = get<ActionsResponse>("/api/v1/actions").actions
+    fun saveActions(a: Actions): Actions =
+        send<ActionsResponse>("PUT", "/api/v1/actions", json.encodeToString(Actions.serializer(), a).toRequestBody(JSON)).actions
+    fun schedules(): Schedules = get<SchedulesResponse>("/api/v1/schedules").schedules
+    fun saveSchedules(s: Schedules): Schedules =
+        send<SchedulesResponse>("PUT", "/api/v1/schedules", json.encodeToString(Schedules.serializer(), s).toRequestBody(JSON)).schedules
 
     /** Comandi: sentry_on, sentry_off, lock, unlock, honk, flash. Restituisce il messaggio dell'add-on. */
     fun command(name: String): String {
@@ -133,6 +176,9 @@ class Backend(private val baseUrl: String, private val token: String) {
     companion object {
         private val JSON = "application/json".toMediaType()
         private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
+
+        /** True se l'errore indica un server Vigilo senza la funzione richiesta (versione precedente). */
+        fun isUnsupported(e: Throwable): Boolean = e is ApiException && e.code == 404
 
         /** Dati letti dal QR: vigilo://pair?url=https%3A%2F%2F…&token=… */
         data class Pairing(val url: String, val token: String)
