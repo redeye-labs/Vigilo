@@ -29,6 +29,7 @@ class MonitorService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var lastText: String? = null
     private var lastBattery: Int? = null
+    private var loop: kotlinx.coroutines.Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -40,8 +41,11 @@ class MonitorService : Service() {
             force = true,
             foreground = true,
         )
-        scope.coroutineContext[kotlinx.coroutines.Job]?.children?.forEach { it.cancel() }
-        scope.launch {
+        // Riavvii ripetuti (apertura dell'app, aggiornamento, riavvio): un solo ciclo attivo.
+        // Dopo un cambio di impostazioni (restart) il ciclo riparte subito con i nuovi intervalli.
+        if (loop?.isActive == true && intent?.getBooleanExtra(EXTRA_RESTART_LOOP, false) != true) return START_STICKY
+        loop?.cancel()
+        loop = scope.launch {
             while (isActive) {
                 val p = Prefs.get(this@MonitorService)
                 val pollAlarms = Scheduler.shouldPollBackendAlarms(p)
@@ -85,5 +89,6 @@ class MonitorService : Service() {
 
     companion object {
         const val BACKEND_ALARM_POLL_MS = 18_000L
+        const val EXTRA_RESTART_LOOP = "restart_loop"
     }
 }

@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import io.github.redeyelabs.vigilo.notify.AlertKind
 import io.github.redeyelabs.vigilo.notify.Notifier
+import io.github.redeyelabs.vigilo.work.BatteryOpt
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -82,6 +83,7 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
                 notifyFromApp = it
                 p.notifyAlarmsFromApp = it
                 vm.applyMonitoring()
+                if (it && !BatteryOpt.isExempt(ctx)) BatteryOpt.request(ctx)
             }
             Text(
                 "Gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. Resta accesa una notifica fissa e si consuma un po' più di batteria.",
@@ -89,6 +91,19 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (notifyFromApp) {
+                var exempt by remember { mutableStateOf(BatteryOpt.isExempt(ctx)) }
+                LaunchedEffect(Unit) { while (true) { exempt = BatteryOpt.isExempt(ctx); kotlinx.coroutines.delay(2_000) } }
+                if (!exempt) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Il risparmio batteria può fermare Vigilo in background. Consenti l'uso senza limiti.",
+                            Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        TextButton(onClick = { BatteryOpt.request(ctx) }) { Text("Consenti") }
+                    }
+                }
                 Toggle("Suona anche in silenzioso", p.alarmBypassSilent) { p.alarmBypassSilent = it }
                 Text(
                     "Allarmi con il volume della sveglia, anche con il telefono in silenzioso: la sirena dura qualche secondo.",

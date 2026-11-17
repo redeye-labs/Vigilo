@@ -63,6 +63,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onAppResume() {
         appForeground = true
+        // Riporta su il servizio se il sistema l'ha fermato (idempotente se è già attivo).
+        Scheduler.applyIntensive(getApplication())
         refreshSilent()
         syncHomeRefreshLoop()
     }
@@ -243,7 +245,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun applyMonitoring() {
         Scheduler.applyPolling(getApplication())
-        Scheduler.applyIntensive(getApplication())
+        Scheduler.applyIntensive(getApplication(), restartLoop = true)
     }
 
 

@@ -151,12 +151,17 @@ object Scheduler {
     /** True se l'app deve interrogare gli eventi dell'add-on per notificare gli allarmi da sola. */
     fun shouldPollBackendAlarms(p: Prefs): Boolean = p.backendMode && p.notifyAlarmsFromApp
 
+    fun shouldRunService(p: Prefs): Boolean = p.intensiveEnabled || shouldPollBackendAlarms(p)
+
     /** Avvia il servizio in primo piano per il monitoraggio intensivo e/o le notifiche allarme dall'app. */
-    fun applyIntensive(ctx: Context) {
+    fun applyIntensive(ctx: Context, restartLoop: Boolean = false) {
         val p = Prefs.get(ctx)
-        val i = Intent(ctx, MonitorService::class.java)
-        if (p.intensiveEnabled || shouldPollBackendAlarms(p)) ContextCompat.startForegroundService(ctx, i)
-        else ctx.stopService(i)
+        val i = Intent(ctx, MonitorService::class.java).putExtra(MonitorService.EXTRA_RESTART_LOOP, restartLoop)
+        if (shouldRunService(p)) {
+            // Idempotente: se il servizio è già attivo riceve solo un nuovo onStartCommand.
+            runCatching { ContextCompat.startForegroundService(ctx, i) }
+                .onFailure { android.util.Log.w("Vigilo", "servizio in primo piano non avviabile ora", it) }
+        } else ctx.stopService(i)
     }
 
     /** Prossima occorrenza della regola dopo [afterNow]. */
@@ -200,12 +205,34 @@ object Scheduler {
     }
 }
 
+/**
+ * Riavvia monitoraggio e notifiche dall'app dopo il riavvio del telefono e dopo l'aggiornamento dell'app
+ * (Android ferma i servizi dell'app quando la si aggiorna). Entrambi gli eventi sono esenzioni ammesse
+ * per avviare un servizio in primo piano da background (Android 12+); il tipo specialUse è consentito
+ * anche da BOOT_COMPLETED su Android 15.
+ */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        Scheduler.applyPolling(context)
-        Scheduler.applyTelemetryRenew(context)
-        runBlocking { Scheduler.rescheduleAll(context) }
-        Scheduler.applyIntensive(context)
+        if (intent.action !in RESTART_ACTIONS) return
+        val pending = goAsync()
+        Thread {
+            try {
+                Scheduler.applyPolling(context)
+                Scheduler.applyTelemetryRenew(context)
+                runBlocking { Scheduler.rescheduleAll(context) }
+                Scheduler.applyIntensive(context)
+            } finally {
+                pending.finish()
+            }
+        }.start()
+    }
+
+    companion object {
+        val RESTART_ACTIONS = setOf(
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED,
+            "android.intent.action.QUICKBOOT_POWERON",
+            "com.htc.intent.action.QUICKBOOT_POWERON",
+        )
     }
 }
