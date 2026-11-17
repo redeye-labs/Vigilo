@@ -78,6 +78,107 @@ Starting with **1.3.1** the persistent notification (when that option is on) sho
 
 The add-on already sends notifications itself; use the blueprints only if you prefer HA automations (and turn the add-on's off). The Aware blueprint now has an optional “Suona come una sveglia” input (off by default) to use the `alarm_stream` channel. Re-import the blueprint from Settings → Automations & scenes → Blueprints (or the button above); existing automations keep the previous behaviour until you enable the new option.
 
+## Install without Home Assistant (Docker)
+
+> **Preview.** This version has not been tested with a real car yet. If you have Home Assistant, the add-on
+> above is still the recommended choice.
+
+Vigilo can also run without Home Assistant, on any machine that stays on: a Windows PC, a mini PC, a NAS or
+a Raspberry Pi 4/5. An installer does almost everything for you.
+
+**What you need**
+
+- A PC or server that stays on. The installer takes care of **WSL** and **Docker**: it installs them if
+  they're missing, and asks you first.
+- A free [Tailscale](https://tailscale.com) account with HTTPS and Funnel enabled (see above).
+- An app on the [Tesla developer portal](https://developer.tesla.com). The Vigilo page shows you the values
+  to copy.
+- The Vigilo Android app 1.3 or later.
+
+### Windows 10 / 11
+
+1. Download **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe)**.
+2. **Double-click** it. If a blue "Windows protected your PC" screen appears, click **"More info"**, then
+   **"Run anyway"**: the file isn't digitally signed yet. Click **Next**, then **Finish**. No administrator
+   rights needed.
+3. A console window does the rest. It asks before updating WSL or installing Docker Desktop. If the PC then
+   needs a reboot, it tells you: afterwards open **"Vigilo – Aggiorna"** from the Start menu and it picks up
+   where it left off.
+4. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`. If you already run Vigilo on
+   Home Assistant, keep `vigilo-docker` or pick another name that's different from the one you use there.
+5. **Wait a few minutes.** The first run downloads about 70 MB.
+6. Your browser then opens **http://localhost:8099** by itself and asks you to sign in:
+   - **User name: `vigilo`** (always this).
+   - **Password:** Vigilo creates it on first start. It's printed at the end of the install window, in the
+     "PER ENTRARE NELLA PAGINA DI VIGILO" box, and it's already on the clipboard: press **Ctrl+V** in the
+     password field. To see it again later, open **"Vigilo – Mostra password"** from the Start menu, or open
+     `%USERPROFILE%\Vigilo\standalone\data\ui_password` in Notepad.
+7. Follow the **7 steps** on the page, the same as the add-on. At step 7, scan the QR from inside Vigilo
+   (Settings → Collega a Home Assistant → Inquadra QR), then turn on **"Notifiche allarme anche dall'app"**.
+
+The Start menu has **"Vigilo – Apri pagina"** (open page), **"Vigilo – Mostra password"** (show password)
+and **"Vigilo – Aggiorna"** (update: gets the latest fixes and keeps your data and settings). To uninstall: **Settings → Apps → Installed apps →
+Vigilo (Docker) → Uninstall**. It asks before deleting your data; if you don't confirm, the data stays.
+
+**Second option: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat).** Download it and double-click it. If
+your browser warns that the file isn't commonly downloaded, choose "Keep". Then follow steps 4–7.
+
+**Third option, nothing to download:** press **Win + R**, paste this line and press Enter. Then follow
+steps 4–7.
+
+```
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
+```
+
+Without the `.exe`: to update, open the `.bat` again; to uninstall, right-click
+`%USERPROFILE%\Vigilo\standalone\uninstall-windows.ps1` → "Run with PowerShell".
+
+### Linux, NAS, Raspberry Pi
+
+1. Open a terminal on the server, or connect over SSH, and paste:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash
+   ```
+2. If Docker is missing, the installer asks whether to install it. Say yes.
+3. When it asks for the **name**, press **Enter**: it stays `vigilo-docker`.
+4. **Wait a few minutes** the first time (it downloads about 70 MB).
+5. At the end it prints a "PER ENTRARE NELLA PAGINA DI VIGILO" box with the address (for example
+   `http://192.168.x.x:8099`), the **user name `vigilo`** and the **password**. Open the address from a browser
+   on your home network. To see the password again: `sudo cat ~/vigilo/standalone/data/ui_password`.
+6. Follow the **7 steps** on the page, as above.
+
+**Update:** run the same line again. **Uninstall:** `bash ~/vigilo/standalone/install.sh --uninstall`.
+
+> **Important:** don't forward port 8099 on your router, and never share the `standalone/data` folder,
+> because it holds your keys. Tesla and the app go through Tailscale Funnel, not through this port.
+
+<details>
+<summary><b>Manual install (advanced)</b></summary>
+
+Without Home Assistant, car data goes through an MQTT broker inside the container, the page is
+password-protected, and alerts come from the Vigilo app, with free ntfy as an option. You need Docker with
+Compose v2.
+
+1. Get the project and prepare the configuration:
+   ```bash
+   git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git
+   cd Vigilo/standalone
+   cp .env.example .env
+   nano .env
+   ```
+   Everything in `.env` is optional. If the add-on already runs in the same tailnet, set
+   `VIGILO_TS_HOSTNAME=vigilo-docker`.
+2. Start it with `docker compose up -d --build` (builds from source: 5–15 minutes). Then check that
+   `docker compose ps` shows `healthy`.
+3. Read the password with `sudo cat data/ui_password`, or set your own with `VIGILO_UI_PASSWORD` in `.env`.
+4. Open `http://<server-address>:8099` (user `vigilo`) and follow the 7 steps. At step 1, use "Genera link
+   di accesso" or a `TS_AUTHKEY` in `.env`. Step 6 has the app instructions and the ntfy fields.
+
+To update: `git pull && docker compose up -d --build`. Details, variables, ntfy and troubleshooting:
+[standalone/README.md](standalone/README.md).
+
+</details>
+
 ## Costs
 
 Fleet API is pay-per-use with a monthly free credit. Vigilo does **no paid polling** and **never wakes the car**
@@ -99,7 +200,7 @@ the old Render service, delete the old Tesla developer app, remove the old virtu
 ## Security
 
 Secrets (client secret, tokens, private key, pairing token) live only in the add-on's `/data` (0600) or encrypted
-on the phone (Android Keystore) and are never logged. The config UI is Ingress-only. Exposed via Funnel: public
+on the phone (Android Keystore) and are never logged. The config UI is Ingress-only (Docker version: port 8099 with a password; never expose it to the internet). Exposed via Funnel: public
 key, OAuth callback, token-protected app API, mTLS telemetry port.
 
 ## Build

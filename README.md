@@ -119,6 +119,110 @@ Il componente aggiuntivo invia già le notifiche da solo. Se preferisci gestirle
 [![Importa: Sentinella Panic](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fredeye-labs%2FVigilo%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fvigilo%2Fsentinella_panic.yaml)
 **Panic** – allarme: canale `alarm_stream` (suona come una sveglia anche in «Non disturbare»).
 
+## Installazione senza Home Assistant (Docker)
+
+> **In prova.** Questa versione non è ancora stata provata con un'auto vera. Se hai Home Assistant, il
+> componente aggiuntivo qui sopra resta la scelta consigliata.
+
+Vigilo può funzionare anche senza Home Assistant, su un computer che resta sempre acceso: un PC Windows, un
+mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tutto da solo.
+
+**Cosa ti serve**
+
+- Un PC o un server che resta sempre acceso. A **WSL** e **Docker** pensa l'installatore: se mancano li
+  installa, ma prima ti chiede conferma.
+- Un account [Tailscale](https://tailscale.com) gratuito, con HTTPS e Funnel attivi (vedi sopra).
+- Un'app sul [portale sviluppatori Tesla](https://developer.tesla.com). La pagina di Vigilo ti mostra i valori
+  da copiare.
+- L'app Android Vigilo 1.3 o successiva.
+
+### Windows 10 / 11
+
+1. Scarica **[Vigilo-Setup.exe](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Setup.exe)**.
+2. Aprilo con **doppio clic**. Se compare la schermata blu «Windows ha protetto il PC», premi
+   **«Ulteriori informazioni»** e poi **«Esegui comunque»**: il file non ha ancora una firma digitale.
+   Premi **Avanti** e poi **Fine**. Non servono permessi di amministratore.
+3. Si apre una finestra che fa il resto. Se deve aggiornare WSL o installare Docker Desktop, prima ti
+   chiede conferma. Se poi serve un riavvio del PC, te lo dice: dopo il riavvio apri dal menu Start
+   **«Vigilo – Aggiorna»** e riprende da dove si era fermato.
+4. Quando ti chiede il **nome**, premi **Invio**: resta `vigilo-docker`. Se hai già Vigilo su Home Assistant,
+   lascia `vigilo-docker` o scegli un nome diverso da quello che usi lì.
+5. **Aspetta qualche minuto.** La prima volta scarica circa 70 MB.
+6. Alla fine il browser si apre da solo su **http://localhost:8099** e chiede di accedere:
+   - **Nome utente: `vigilo`** (è sempre questo).
+   - **Password:** Vigilo la crea da solo la prima volta. La trovi scritta alla fine della finestra di
+     installazione, nel riquadro «PER ENTRARE NELLA PAGINA DI VIGILO», ed è già copiata negli appunti:
+     nel campo password premi **Ctrl+V**. Per rivederla in seguito apri dal menu Start **«Vigilo – Mostra
+     password»**, oppure apri con il Blocco note il file `%USERPROFILE%\Vigilo\standalone\data\ui_password`.
+7. Segui i **7 passi** della pagina, gli stessi del componente aggiuntivo. Al passo 7 inquadra il QR da
+   dentro Vigilo (Impostazioni → Collega a Home Assistant → Inquadra QR), poi attiva **«Notifiche allarme
+   anche dall'app»**.
+
+Nel menu Start trovi **«Vigilo – Apri pagina»**, **«Vigilo – Mostra password»** e **«Vigilo – Aggiorna»**. «Aggiorna» scarica le ultime
+correzioni e conserva dati e impostazioni. Per disinstallare: **Impostazioni → App → App installate →
+Vigilo (Docker) → Disinstalla**. Prima di cancellare i dati ti chiede conferma; se non confermi, restano.
+
+**Seconda possibilità: [Vigilo-Installer.bat](https://github.com/redeye-labs/Vigilo/releases/download/docker-preview-1/Vigilo-Installer.bat).** Scaricalo e aprilo con doppio
+clic. Se il browser avvisa che il file non viene scaricato spesso, scegli «Mantieni». Poi segui i passi da
+4 a 7.
+
+**Terza possibilità, senza scaricare niente:** premi **Win + R**, incolla questa riga e premi Invio. Poi
+segui i passi da 4 a 7.
+
+```
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install-windows.ps1 | iex"
+```
+
+Senza l'`.exe`: per aggiornare riapri il `.bat`; per disinstallare fai clic destro su
+`%USERPROFILE%\Vigilo\standalone\uninstall-windows.ps1` → «Esegui con PowerShell».
+
+### Linux, NAS, Raspberry Pi
+
+1. Apri un terminale sul server, oppure collegati con SSH, e incolla:
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/redeye-labs/Vigilo/standalone-docker/standalone/install.sh | bash
+   ```
+2. Se Docker manca, l'installatore ti chiede se vuoi installarlo. Rispondi di sì.
+3. Quando ti chiede il **nome**, premi **Invio**: resta `vigilo-docker`.
+4. **Aspetta qualche minuto** la prima volta (scarica circa 70 MB).
+5. Alla fine compare il riquadro «PER ENTRARE NELLA PAGINA DI VIGILO» con l'indirizzo (per esempio
+   `http://192.168.x.x:8099`), il **nome utente `vigilo`** e la **password**. Apri l'indirizzo dal browser di un
+   computer di casa. Per rivedere la password: `sudo cat ~/vigilo/standalone/data/ui_password`.
+6. Segui i **7 passi** della pagina, come sopra.
+
+**Aggiornare:** rilancia la stessa riga. **Disinstallare:** `bash ~/vigilo/standalone/install.sh --uninstall`.
+
+> **Importante:** non aprire la porta 8099 sul router e non condividere la cartella `standalone/data`, perché
+> contiene le chiavi. Tesla e l'app passano da Tailscale Funnel, non da questa porta.
+
+<details>
+<summary><b>Installazione a mano (per esperti)</b></summary>
+
+Senza Home Assistant, i dati dall'auto passano da un broker MQTT interno al container, la pagina è protetta
+da password e gli avvisi li manda l'app Vigilo, con ntfy come opzione gratuita. Serve Docker con Compose v2.
+
+1. Scarica il progetto e prepara la configurazione:
+   ```bash
+   git clone -b standalone-docker https://github.com/redeye-labs/Vigilo.git
+   cd Vigilo/standalone
+   cp .env.example .env
+   nano .env
+   ```
+   Le voci di `.env` sono tutte facoltative. Se hai già Vigilo su Home Assistant nello stesso tailnet, scrivi
+   `VIGILO_TS_HOSTNAME=vigilo-docker`.
+2. Avvia Vigilo con `docker compose up -d --build` (compila dal sorgente: 5–15 minuti). Poi controlla con
+   `docker compose ps` che risulti `healthy`.
+3. Leggi la password con `sudo cat data/ui_password`. In alternativa, impostala tu con `VIGILO_UI_PASSWORD`
+   nel file `.env`.
+4. Apri `http://<indirizzo-del-server>:8099` (utente `vigilo`) e segui i 7 passi. Al passo 1 puoi usare
+   «Genera link di accesso» oppure una chiave `TS_AUTHKEY` nel file `.env`. Al passo 6 trovi le istruzioni
+   per l'app e i campi per ntfy.
+
+Aggiornare: `git pull && docker compose up -d --build`. Dettagli, variabili, ntfy e soluzione dei problemi:
+[standalone/README.md](standalone/README.md).
+
+</details>
+
 ## Costi
 
 La Fleet API di Tesla è a consumo, con un credito mensile gratuito. Vigilo **non fa letture periodiche a
@@ -153,7 +257,8 @@ configurato a mano + automazioni copiate):
 
 - Client Secret, token, chiave privata e token di abbinamento restano **solo** in `/data` del componente
   aggiuntivo (0600) o cifrati sul telefono (Android Keystore). Mai nei log.
-- La pagina di configurazione è raggiungibile solo dall'Ingress di Home Assistant.
+- La pagina di configurazione è raggiungibile solo dall'Ingress di Home Assistant (nella versione Docker:
+  dalla porta 8099 con password, da non esporre su internet).
 - Su internet sono esposti solo: chiave pubblica, ritorno del login, API dell'app (token a 256 bit,
   rigenerabile) e porta telemetria (mTLS).
 
@@ -164,6 +269,7 @@ configurato a mano + automazioni copiate):
 | `repository.yaml`, `addon/vigilo/` | componente aggiuntivo Home Assistant (server Go + fleet-telemetry ufficiale) |
 | `app/` | app Android (Kotlin, Jetpack Compose) |
 | `blueprints/` | blueprint Aware e Panic |
+| `standalone/` | versione Docker senza Home Assistant (Dockerfile, docker-compose.yml) |
 | `tools/ha-cleanup-old-setup.sh` | pulizia della vecchia installazione |
 | `docs/` | icona e screenshot |
 
