@@ -69,6 +69,7 @@ type State struct {
 	Settings            Settings     `json:"settings"`
 	AutoActions         AutoActions  `json:"auto_actions"`
 	Schedules           Schedules    `json:"schedules"`
+	ScheduleRuns        map[string]schedRun `json:"schedule_runs,omitempty"`
 	Vehicle             VehicleState `json:"vehicle"`
 	// Solo modalità standalone (nil, e quindi assente dal file, nel componente aggiuntivo).
 	Ntfy *NtfyConfig `json:"ntfy,omitempty"`
@@ -110,6 +111,10 @@ func (st *Store) Get() State {
 	c := st.s
 	c.Settings.NotifyTargets = append([]string(nil), st.s.Settings.NotifyTargets...)
 	c.Schedules.Rules = append([]ScheduleRule(nil), st.s.Schedules.Rules...)
+	if st.s.ScheduleRuns != nil {
+		c.ScheduleRuns = make(map[string]schedRun, len(st.s.ScheduleRuns))
+		for k, v := range st.s.ScheduleRuns { c.ScheduleRuns[k] = v }
+	}
 	if st.s.Ntfy != nil {
 		n := *st.s.Ntfy
 		c.Ntfy = &n
