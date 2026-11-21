@@ -143,9 +143,9 @@ type automation struct {
 }
 
 type schedRun struct {
-	done     bool
-	attempts int
-	last     time.Time
+	Done     bool      `json:"done"`
+	Attempts int       `json:"attempts"`
+	Last     time.Time `json:"last"`
 }
 
 // shouldReact decide (senza effetti) se reagire a un evento della Sentinella.
@@ -251,17 +251,23 @@ func (a *App) runSchedules(ctx context.Context, now time.Time) {
 	for _, d := range dueRules(s.Schedules, now) {
 		a.auto.mu.Lock()
 		if a.auto.runs == nil {
-			a.auto.runs = map[string]*schedRun{}
-		}
+            a.auto.runs = map[string]*schedRun{}
+            for key, value := range a.store.Get().ScheduleRuns {
+                copy := value
+                a.auto.runs[key] = &copy
+            }
+        }
 		r := a.auto.runs[d.Key]
 		if r == nil {
 			r = &schedRun{}
 			a.auto.runs[d.Key] = r
 		}
-		skip := r.done || r.attempts >= 3 || (!r.last.IsZero() && now.Sub(r.last) < 2*time.Minute)
+		skip := r.Done || r.Attempts >= 3 || (!r.Last.IsZero() && now.Sub(r.Last) < 2*time.Minute)
 		if !skip {
-			r.attempts++
-			r.last = now
+			r.Attempts++
+			r.Last = now
+            // Persist before sending: a process restart must not reset retry limits.
+            a.persistScheduleRunsLocked(now)
 		}
 		a.auto.mu.Unlock()
 		if skip {
@@ -276,14 +282,30 @@ func (a *App) runSchedules(ctx context.Context, now time.Time) {
 		cancel()
 		a.auto.mu.Lock()
 		if err == nil {
-			r.done = true
+			r.Done = true
 		}
 		// pulizia delle chiavi vecchie
 		for k, v := range a.auto.runs {
-			if now.Sub(v.last) > 24*time.Hour {
+			if !v.Last.IsZero() && now.Sub(v.Last) > 48*time.Hour {
 				delete(a.auto.runs, k)
 			}
 		}
+		a.persistScheduleRunsLocked(now)
 		a.auto.mu.Unlock()
 	}
+}
+
+ 
+// persistScheduleRunsLocked records attempts and outcomes across container/HA restarts.
+// Caller must hold a.auto.mu. Old executions are pruned to keep state.json bounded.
+func (a *App) persistScheduleRunsLocked(now time.Time) {
+    snapshot := make(map[string]schedRun, len(a.auto.runs))
+    for key, run := range a.auto.runs {
+        if run != nil && !run.Last.IsZero() && now.Sub(run.Last) <= 48*time.Hour {
+            snapshot[key] = *run
+        }
+    }
+    if err := a.store.Update(func(state *State) { state.ScheduleRuns = snapshot }); err != nil {
+        log.Printf("persistenza esecuzioni programmate: %v", err)
+    }
 }

@@ -80,13 +80,13 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
         if (paired) {
             SettingsGroup("Notifiche dall'app") {
                 var notifyFromApp by remember { mutableStateOf(p.notifyAlarmsFromApp) }
-                Toggle("Notifiche allarme anche dall'app", p.notifyAlarmsFromApp) {
+                Toggle("Monitoraggio allarmi sul telefono", p.notifyAlarmsFromApp) {
                     notifyFromApp = it
                     p.notifyAlarmsFromApp = it
                     vm.applyMonitoring()
                     if (it && !BatteryOpt.isExempt(ctx)) BatteryOpt.request(ctx)
                 }
-                Hint("Gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. Resta accesa una notifica fissa e si consuma un po' più di batteria.")
+                Hint("Indipendente dalla Sentinella Tesla. Disattivandolo, il servizio di monitoraggio si ferma e la notifica fissa viene rimossa. Quando attivo, Android richiede una notifica persistente (ritardo tipico 15–20 secondi).")
                 if (notifyFromApp) {
                     var exempt by remember { mutableStateOf(BatteryOpt.isExempt(ctx)) }
                     LaunchedEffect(Unit) { while (true) { exempt = BatteryOpt.isExempt(ctx); kotlinx.coroutines.delay(2_000) } }

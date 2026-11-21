@@ -2,9 +2,9 @@
 <network-security-config>
     <!--
       Il server Vigilo si raggiunge sempre in HTTPS (Tailscale, certificato pubblico): l'app rifiuta
-      gli abbinamenti non HTTPS. Il traffico in chiaro resta consentito solo per compatibilità.
+      gli abbinamenti non HTTPS. I collegamenti HTTP non cifrati sono vietati.
     -->
-    <base-config cleartextTrafficPermitted="true">
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

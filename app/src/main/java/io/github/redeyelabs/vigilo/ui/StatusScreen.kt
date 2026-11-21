@@ -62,6 +62,7 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
     val events by vm.events.collectAsState()
     val actions by vm.actions.collectAsState()
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var monitoringEnabled by remember { androidx.compose.runtime.mutableStateOf(vm.prefs.notifyAlarmsFromApp) }
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1_000) } }
     LaunchedEffect(loggedIn) {
         if (loggedIn && vm.prefs.vin.isNotBlank() && s == null) vm.refresh()
@@ -89,6 +90,12 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
         onRefresh = { if (ready) vm.refresh() },
         onPullRefresh = { vm.pullRefresh() },
         onToggleSentry = { vm.setSentry(s?.sentry != true) },
+        monitoringEnabled = monitoringEnabled,
+        onMonitoringChange = { enabled ->
+            monitoringEnabled = enabled
+            vm.prefs.notifyAlarmsFromApp = enabled
+            vm.applyMonitoring()
+        },
         onOpen = onOpen,
     )
 }
@@ -112,6 +119,8 @@ fun StatusScreenContent(
     onPullRefresh: () -> Unit,
     onToggleSentry: () -> Unit,
     onOpen: (Screen) -> Unit,
+    monitoringEnabled: Boolean = false,
+    onMonitoringChange: (Boolean) -> Unit = {},
 ) {
     PullToRefreshBox(
         isRefreshing = pullRefreshing,
@@ -158,6 +167,25 @@ fun StatusScreenContent(
                 subtitle = sentrySubtitle(snapshot, ready),
                 onToggle = onToggleSentry,
             )
+
+            if (ready) {
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Avvisi sul telefono", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (monitoringEnabled) "Monitoraggio attivo: Android mostra la notifica del servizio"
+                            else "Monitoraggio spento: nessuna notifica fissa",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = monitoringEnabled,
+                        onCheckedChange = onMonitoringChange,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(16.dp))
             Events24hCard(
