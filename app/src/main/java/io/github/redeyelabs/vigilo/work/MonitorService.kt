@@ -35,7 +35,14 @@ class MonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val initial = Monitor.lastSnapshot(Prefs.get(this))
+        // Android può riavviare un servizio START_STICKY anche dopo che l'utente ha
+        // disabilitato gli avvisi. Non pubblicare alcuna notifica in quel caso.
+        val prefs = Prefs.get(this)
+        if (!Scheduler.shouldRunService(prefs)) {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        val initial = Monitor.lastSnapshot(prefs)
         postService(
             ServiceStatus.text(initial) ?: ServiceStatus.FALLBACK_TEXT,
             initial?.batteryLevel,
