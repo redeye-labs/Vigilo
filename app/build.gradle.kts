@@ -69,6 +69,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Test builds can coexist with the installed signed Vigilo release.
+            applicationIdSuffix = ".test"
+            versionNameSuffix = "-test"
+        }
         release {
             // Non minificare: R8 può toccare serialization/Room/WorkManager/widget.
             isMinifyEnabled = false
