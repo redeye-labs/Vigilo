@@ -70,8 +70,8 @@ android {
 
     buildTypes {
         debug {
-            // Test builds can coexist with the installed signed Vigilo release.
-            applicationIdSuffix = ".test"
+            // Keep the production package ID for a clean reinstall during testing.
+            // GitHub Actions signs this debug build with its ephemeral debug key.
             versionNameSuffix = "-test"
         }
         release {
