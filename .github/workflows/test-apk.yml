@@ -1,4 +1,4 @@
-name: Build test APK
+name: Vigilo APK installabile
 
 on:
   workflow_dispatch:
@@ -29,14 +29,18 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-36" "build-tools;36.0.0"
-      - name: Build test APK (distinct package, debug signed)
+      - name: Build Vigilo APK (debug signed, original package)
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug --no-daemon
+      - name: Prepare Vigilo.apk
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/Vigilo.apk
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Vigilo-Test-APK
-          path: app/build/outputs/apk/debug/*.apk
+          name: Vigilo-APK
+          path: dist/Vigilo.apk
           if-no-files-found: error
           retention-days: 30
