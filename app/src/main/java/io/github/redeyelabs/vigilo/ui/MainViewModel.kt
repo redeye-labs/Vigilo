@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     val prefs = Prefs.get(app)
     private val db = AppDatabase.get(app)
+    init { prefs.ensureMonitoringSession() }
 
     val snapshot = MutableStateFlow(Monitor.lastSnapshot(prefs))
     val busy = MutableStateFlow(false)
