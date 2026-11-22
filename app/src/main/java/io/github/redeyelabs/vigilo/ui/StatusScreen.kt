@@ -1,8 +1,10 @@
 package io.github.redeyelabs.vigilo.ui
 
-import io.github.redeyelabs.vigilo.R
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.Canvas
+import io.github.redeyelabs.vigilo.work.BatteryOpt
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -61,6 +63,8 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
     val pull by vm.pullRefreshing.collectAsState()
     val events by vm.events.collectAsState()
     val actions by vm.actions.collectAsState()
+    val monitoringEnabled by vm.monitoringEnabled.collectAsState()
+    val ctx = LocalContext.current
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(1_000) } }
     LaunchedEffect(loggedIn) {
@@ -70,9 +74,13 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
 
     val name = vm.prefs.displayVehicleName(s?.name).ifBlank { "Vigilo" }
     val ready = loggedIn && vm.prefs.vin.isNotBlank()
-    val last24 = remember(events, now) { eventsInLast24h(events, now) }
-    val alerts24 = sentryAlertCount(last24)
-    val buckets = remember(last24, now) { hourlyEventBuckets(last24, now) }
+    val sessionStartedAt = vm.prefs.monitoringStartedAt
+    val sessionEndedAt = if (monitoringEnabled) now else vm.prefs.monitoringStoppedAt
+    val sessionEvents = remember(events, sessionStartedAt, sessionEndedAt) {
+        if (sessionStartedAt <= 0L || sessionEndedAt < sessionStartedAt) emptyList()
+        else events.filter { it.timestamp in sessionStartedAt..sessionEndedAt }
+    }
+    val sessionAlerts = sentryAlertCount(sessionEvents)
     StatusScreenContent(
         name = name,
         snapshot = s,
@@ -81,14 +89,19 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
         showHero = vm.prefs.showHeroCar,
         pendingSentry = pending == "sentry",
         pullRefreshing = pull,
-        last24 = last24,
-        alerts24 = alerts24,
-        buckets = buckets,
+        sessionEvents = sessionEvents.size,
+        sessionAlerts = sessionAlerts,
+        sessionStartedAt = sessionStartedAt,
+        monitoringEnabled = monitoringEnabled,
         notificationsSubtitle = "$NOTIFICATIONS_SUBTITLE · App ${if (vm.prefs.notifyAlarmsFromApp) "ON" else "OFF"}",
         actionsSubtitle = actionsSubtitle(actions),
         onRefresh = { if (ready) vm.refresh() },
         onPullRefresh = { vm.pullRefresh() },
         onToggleSentry = { vm.setSentry(s?.sentry != true) },
+        onToggleMonitoring = { enabled ->
+            vm.setAppMonitoringEnabled(enabled)
+            if (enabled && !BatteryOpt.isExempt(ctx)) BatteryOpt.request(ctx)
+        },
         onOpen = onOpen,
     )
 }
@@ -103,14 +116,16 @@ fun StatusScreenContent(
     showHero: Boolean,
     pendingSentry: Boolean,
     pullRefreshing: Boolean,
-    last24: List<EventEntity>,
-    alerts24: Int,
-    buckets: IntArray,
+    sessionEvents: Int,
+    sessionAlerts: Int,
+    sessionStartedAt: Long,
+    monitoringEnabled: Boolean,
     notificationsSubtitle: String,
     actionsSubtitle: String = ACTIONS_SUBTITLE,
     onRefresh: () -> Unit,
     onPullRefresh: () -> Unit,
     onToggleSentry: () -> Unit,
+    onToggleMonitoring: (Boolean) -> Unit,
     onOpen: (Screen) -> Unit,
 ) {
     PullToRefreshBox(
@@ -160,11 +175,13 @@ fun StatusScreenContent(
             )
 
             Spacer(Modifier.height(16.dp))
-            Events24hCard(
-                total = last24.size,
-                alerts = alerts24,
-                buckets = buckets,
-                recent = last24.take(3),
+            MonitoringSummaryCard(
+                total = sessionEvents,
+                alerts = sessionAlerts,
+                startedAt = sessionStartedAt,
+                active = monitoringEnabled,
+                enabled = ready,
+                onToggle = onToggleMonitoring,
                 onSeeAll = { onOpen(Screen.HISTORY) },
             )
 
@@ -271,70 +288,50 @@ private fun SentryStatusCard(
 }
 
 @Composable
-private fun Events24hCard(
+private fun MonitoringSummaryCard(
     total: Int,
     alerts: Int,
-    buckets: IntArray,
-    recent: List<EventEntity>,
+    startedAt: Long,
+    active: Boolean,
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
     onSeeAll: () -> Unit,
 ) {
+    val since = remember(startedAt) {
+        if (startedAt > 0L) SimpleDateFormat("dd/MM 'alle' HH:mm", Locale.ITALY).format(Date(startedAt)) else null
+    }
     VigiloCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Notifications, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Ultime 24 ore", style = MaterialTheme.typography.titleMedium)
-                val res = LocalContext.current.resources
+                Text("Monitoraggio avvisi", style = MaterialTheme.typography.titleMedium)
                 Text(
                     when {
-                        total == 0 -> "Nessun evento registrato"
-                        alerts == 0 -> res.getQuantityString(R.plurals.events_count, total, total)
-                        else -> res.getString(
-                            R.string.events_with_alerts,
-                            res.getQuantityString(R.plurals.events_count, total, total),
-                            res.getQuantityString(R.plurals.sentry_alerts_count, alerts, alerts),
-                        )
+                        active -> "Attivo dal ${since ?: "momento attuale"}"
+                        since != null -> "Ultima sessione: dal $since"
+                        else -> "Non ancora attivato"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = onSeeAll) { Text("Vedi tutto") }
+            VigiloSwitch(checked = active, onCheckedChange = onToggle, enabled = enabled)
         }
-        Spacer(Modifier.height(12.dp))
-        HourlySparkline(buckets)
-        if (recent.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            recent.forEach { e ->
-                Text(
-                    e.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (io.github.redeyelabs.vigilo.data.EventType.isAlert(e.type))
-                        VigiloDanger else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 2.dp),
-                    maxLines = 1,
-                )
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("$total", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text("Eventi registrati", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(Modifier.weight(1f)) {
+                Text("$alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-    }
-}
-
-@Composable
-private fun HourlySparkline(buckets: IntArray) {
-    val max = (buckets.maxOrNull() ?: 0).coerceAtLeast(1)
-    val bar = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-    val empty = MaterialTheme.colorScheme.outline
-    Canvas(Modifier.fillMaxWidth().height(44.dp)) {
-        val n = buckets.size
-        val gap = 2.dp.toPx()
-        val w = ((size.width - gap * (n - 1)) / n).coerceAtLeast(1f)
-        buckets.forEachIndexed { i, v ->
-            val h = if (v <= 0) 3.dp.toPx() else (size.height * (v.toFloat() / max)).coerceAtLeast(3.dp.toPx())
-            val x = i * (w + gap)
-            drawRoundRect(
-                color = if (v > 0) bar else empty,
-                topLeft = androidx.compose.ui.geometry.Offset(x, size.height - h),
-                size = androidx.compose.ui.geometry.Size(w, h),
-                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx()),
-            )
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onSeeAll) { Text("Vedi storico") }
         }
     }
 }
