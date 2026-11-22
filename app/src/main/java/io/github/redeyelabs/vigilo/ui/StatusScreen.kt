@@ -36,7 +36,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +50,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.redeyelabs.vigilo.api.Snapshot
-import io.github.redeyelabs.vigilo.data.EventEntity
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,7 +91,7 @@ fun StatusScreen(vm: MainViewModel, onOpen: (Screen) -> Unit) {
         sessionAlerts = sessionAlerts,
         sessionStartedAt = sessionStartedAt,
         monitoringEnabled = monitoringEnabled,
-        notificationsSubtitle = "$NOTIFICATIONS_SUBTITLE · App ${if (vm.prefs.notifyAlarmsFromApp) "ON" else "OFF"}",
+        notificationsSubtitle = NOTIFICATIONS_SUBTITLE,
         actionsSubtitle = actionsSubtitle(actions),
         onRefresh = { if (ready) vm.refresh() },
         onPullRefresh = { vm.pullRefresh() },
@@ -182,7 +180,6 @@ fun StatusScreenContent(
                 active = monitoringEnabled,
                 enabled = ready,
                 onToggle = onToggleMonitoring,
-                onSeeAll = { onOpen(Screen.HISTORY) },
             )
 
             Spacer(Modifier.height(8.dp))
@@ -295,7 +292,6 @@ private fun MonitoringSummaryCard(
     active: Boolean,
     enabled: Boolean,
     onToggle: (Boolean) -> Unit,
-    onSeeAll: () -> Unit,
 ) {
     val since = remember(startedAt) {
         if (startedAt > 0L) SimpleDateFormat("dd/MM 'alle' HH:mm", Locale.ITALY).format(Date(startedAt)) else null
@@ -328,10 +324,6 @@ private fun MonitoringSummaryCard(
                 Text("$alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
                 Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = onSeeAll) { Text("Vedi storico") }
         }
     }
 }
