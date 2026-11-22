@@ -141,6 +141,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.schedules().delete(s); Scheduler.cancelRule(getApplication(), s.id)
     }
 
+    /** Stato osservabile: home e impostazioni aggiornano lo stesso interruttore. */
+    val monitoringEnabled = MutableStateFlow(prefs.notifyAlarmsFromApp)
+
+    fun setAppMonitoringEnabled(enabled: Boolean) {
+        prefs.setAppMonitoringEnabled(enabled)
+        monitoringEnabled.value = enabled
+        applyMonitoring()
+    }
+
     fun applyMonitoring() {
         Scheduler.applyPolling(getApplication())
         Scheduler.applyIntensive(getApplication(), restartLoop = true)
