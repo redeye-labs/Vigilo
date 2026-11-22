@@ -5,10 +5,12 @@
 [English version](README.en.md) · Licenza [MIT](LICENSE) · Progetto indipendente, **non affiliato a Tesla**.
 
 <p>
-  <img src="docs/screens/home.png" width="230" alt="Schermata Auto">
+  <img src="docs/screens/home.png" width="230" alt="Schermata Auto (versione precedente)">
   <img src="docs/screens/guida.png" width="230" alt="Guida con controlli dal vivo">
-  <img src="docs/screens/impostazioni.png" width="230" alt="Impostazioni">
+  <img src="docs/screens/impostazioni.png" width="230" alt="Impostazioni (versione precedente)">
 </p>
+
+> **Nota:** gli screenshot Home e Impostazioni sono di una versione precedente alla 1.3.10. Le funzionalità aggiornate sono descritte qui sotto; sostituire le immagini quando saranno disponibili nuove schermate.
 
 ## Come funziona
 
@@ -108,16 +110,12 @@ Valori per il portale Tesla (te li dà la procedura già pronti):
 2. Al primo avvio si apre la **Guida**: premi «Scansiona il QR» e inquadra il QR dell'ultimo passo.
 3. La guida mostra i **controlli dal vivo** del componente aggiuntivo: quando sono tutti spuntati hai finito.
 
-Dalla **1.2.0** la chiave di firma dell'APK è nuova. Se hai già la 1.1.x (o precedente), **disinstallala prima**,
-poi installa la 1.2.0 (o successiva) e rabbina l'app inquadrando di nuovo il QR.
+**Firma APK e aggiornamenti.** Nelle vecchie build era usato il certificato SHA-256
+`61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`.
+Il nuovo [processo di firma](docs/SIGNING_FROM_PHONE.md) usa un keystore persistente diverso. Android non può installare un aggiornamento con un certificato di firma differente: al passaggio alla nuova firma occorre disinstallare la versione precedente una volta, con possibile perdita dei dati locali. Conserva le informazioni per riabbinare l'app al server prima di farlo.
+Verifica il certificato dell'APK effettivamente scaricato con `apksigner verify --print-certs Vigilo.apk`; un Artifacts di GitHub Actions non equivale automaticamente a una Release pubblicata.
 
-Impronta SHA-256 del certificato di firma ufficiale:
-
-`61:61:B9:CF:FE:C8:D1:30:43:51:5F:12:F1:44:C5:F8:F6:AB:AE:A0:8A:BE:33:D0:67:3F:CA:08:4F:00:3C:47`
-
-Puoi verificarla con: `apksigner verify --print-certs Vigilo-1.3.6.apk`
-
-Nella **1.3.0**, in Impostazioni (con l'app abbinata a Home Assistant) puoi attivare **Notifiche allarme anche dall'app** (spenta di default): gli avvisi Aware e Panic arrivano anche da Vigilo, con circa 15–20 secondi di ritardo. L'opzione **Suona anche in silenzioso** (accesa insieme alla prima) usa il volume della sveglia.
+Dalla **1.3.10**, nella **Home** c'è **Monitoraggio avvisi**: lo switch attiva o disattiva il monitoraggio Android indipendentemente dalla Sentinella Tesla. La scheda riporta la data di inizio sessione, gli eventi registrati e gli avvisi Sentinella nella sessione corrente o nell'ultima terminata; il grafico «Ultime 24 ore» è stato tolto. Sono conteggiati gli eventi nello storico **locale disponibile** (fino agli ultimi 500 caricati), non necessariamente tutti gli eventi del server né le notifiche effettivamente recapitate. Apri **Storico eventi** per consultare i dettagli. Nella sezione **Impostazioni → Avvisi sul telefono** resta **Suona anche in silenzioso**, che usa il volume della sveglia, oltre alle indicazioni sul risparmio batteria quando necessarie. Gli avvisi Aware/Panic dall'app possono arrivare con un ritardo tipico di 15–20 secondi.
 
 Dalla **1.3.1** la notifica fissa (se l'opzione è attiva) mostra batteria, autonomia e stato della Sentinella, per esempio «🔋 78% · 412 km · Sentinella attiva», e si aggiorna da sola, senza suonare. Dalla **1.3.2** l'icona in alto è di nuovo il simbolo della Sentinella. Dalla **1.3.3** ogni avviso ha il suo suono: sirena per l'allarme, doppio bip quando qualcuno è vicino all'auto, tono discreto per avvisi e problemi. In Impostazioni › Suoni c'è «Prova suono» per ciascuno. Dalla **1.3.4** il servizio delle notifiche dall'app riparte da solo dopo un aggiornamento dell'app o il riavvio del telefono. Dalla **1.3.5** l'app funziona solo con un server Vigilo (componente aggiuntivo di Home Assistant o versione Docker): la vecchia modalità diretta è stata tolta e i suoi dati (token, client secret) vengono cancellati dal telefono all'aggiornamento. In Impostazioni puoi scegliere il nome dell'auto e una tua foto, e ogni gruppo di impostazioni ha il suo riquadro. Dalla **1.3.6** tornano le **Azioni automatiche** (fari e/o clacson quando la Sentinella rileva qualcuno o scatta l'allarme, con pausa minima e fascia oraria facoltativa; spente di default) e il **Programma Sentinella** ha una schermata nuova. Tutte e due le esegue il server Vigilo (dalla 1.0.7), anche a telefono spento: con un server più vecchio il programma resta sul telefono finché non aggiorni. Dalla **1.3.7** la schermata Comandi mostra di nuovo temperatura interna ed esterna, contachilometri e bagagliaio/frunk (serve il server 1.0.8).
 
@@ -170,8 +168,8 @@ mini PC, un NAS o un Raspberry Pi 4/5. Un programma di installazione fa quasi tu
      nel campo password premi **Ctrl+V**. Per rivederla in seguito apri dal menu Start **«Vigilo – Mostra
      password»**, oppure apri con il Blocco note il file `%USERPROFILE%\Vigilo\standalone\data\ui_password`.
 7. Segui i **7 passi** della pagina, gli stessi del componente aggiuntivo. Al passo 7 inquadra il QR da
-   dentro Vigilo (Guida → Scansiona il QR), poi attiva **«Notifiche allarme
-   anche dall'app»**.
+   dentro Vigilo (Guida → Scansiona il QR), poi attiva **«Monitoraggio avvisi»**
+   nella schermata principale dell’app.
 
 Nel menu Start trovi **«Vigilo – Apri pagina»**, **«Vigilo – Mostra password»** e **«Vigilo – Aggiorna»**. «Aggiorna» scarica le ultime
 correzioni e conserva dati e impostazioni. Per disinstallare: **Impostazioni → App → App installate →
@@ -308,8 +306,7 @@ configurato a mano + automazioni copiate):
 
 - Server: `cd addon/vigilo/server && go build .` (Go 1.27). Test di integrazione facoltativo con un broker MQTT e il binario fleet-telemetry: vedi `integration_test.go`.
 
-A ogni release dell'app, nella pagina GitHub Releases, allega **due** file APK: `Vigilo-x.y.z.apk` (versione nel nome) e anche **`Vigilo.apk`** (stesso file, nome fisso). Il secondo è quello usato dal QR e dal link stabile
-`https://github.com/redeye-labs/Vigilo/releases/latest/download/Vigilo.apk`.
+Per compilare automaticamente l'APK firmato si usa [Vigilo APK firmato](https://github.com/redeye-labs/Vigilo/actions/workflows/signed-release.yml): le modifiche dell'app su `main` avviano la build e caricano `Vigilo.apk` negli **Artifacts** dell'esecuzione. La pubblicazione in **GitHub Releases** è separata: il workflow deve essere avviato manualmente con `publish_release=true`. Finché non viene pubblicata una nuova Release, `releases/latest/download/Vigilo.apk` può puntare a una versione precedente o non essere disponibile. Controlla la firma e la compatibilità dell'aggiornamento prima di distribuire l'APK.
 
 ## Crediti e licenze
 
