@@ -46,6 +46,33 @@ class Prefs private constructor(private val sp: SharedPreferences) {
      * non raddoppiare le notifiche già inviate da Home Assistant.
      */
     var notifyAlarmsFromApp: Boolean get() = sp.getBoolean("notify_app_alarms", false); set(v) = sp.edit { putBoolean("notify_app_alarms", v) }
+    /** Inizio dell'ultima sessione di monitoraggio sul telefono (millisecondi epoch). */
+    var monitoringStartedAt: Long get() = sp.getLong("monitoring_started_at", 0L); private set(v) = sp.edit { putLong("monitoring_started_at", v) }
+    /** Fine della sessione precedente; 0 se la sessione è attualmente in corso. */
+    var monitoringStoppedAt: Long get() = sp.getLong("monitoring_stopped_at", 0L); private set(v) = sp.edit { putLong("monitoring_stopped_at", v) }
+
+    /** Mantiene la sessione coerente anche quando si passa dalla home alle Impostazioni. */
+    fun setAppMonitoringEnabled(enabled: Boolean, now: Long = System.currentTimeMillis()) {
+        val wasEnabled = notifyAlarmsFromApp
+        if (enabled == wasEnabled) return
+        sp.edit {
+            putBoolean("notify_app_alarms", enabled)
+            if (enabled) {
+                putLong("monitoring_started_at", now)
+                putLong("monitoring_stopped_at", 0L)
+            } else if (monitoringStartedAt > 0L) {
+                putLong("monitoring_stopped_at", now)
+            }
+        }
+    }
+
+    /** Aggiornamento da versioni senza contatore: non attribuire eventi precedenti all'attivazione. */
+    fun ensureMonitoringSession(now: Long = System.currentTimeMillis()) {
+        if (notifyAlarmsFromApp && monitoringStartedAt == 0L) {
+            monitoringStartedAt = now
+            monitoringStoppedAt = 0L
+        }
+    }
     /** Se acceso insieme a [notifyAlarmsFromApp], la notifica usa il volume della sveglia (anche in silenzioso). Acceso di default. */
     var alarmBypassSilent: Boolean get() = sp.getBoolean("alarm_bypass_silent", true); set(v) = sp.edit { putBoolean("alarm_bypass_silent", v) }
     fun unpairBackend() = sp.edit { remove("backend_url"); remove("backend_token"); remove("backend_last_event"); remove("last_snapshot") }
