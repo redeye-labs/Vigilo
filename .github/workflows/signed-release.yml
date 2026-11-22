@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/signed-release.yml"
+      - "app/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
   workflow_dispatch:
     inputs:
       publish_release:
