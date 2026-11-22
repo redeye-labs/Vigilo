@@ -78,23 +78,23 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
         )
 
         if (paired) {
-            SettingsGroup("Notifiche dall'app") {
+            SettingsGroup("Avvisi sul telefono") {
                 val notifyFromApp by vm.monitoringEnabled.collectAsState()
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Monitoraggio allarmi sul telefono", Modifier.weight(1f))
-                    VigiloSwitch(checked = notifyFromApp, onCheckedChange = {
-                        vm.setAppMonitoringEnabled(it)
-                        if (it && !BatteryOpt.isExempt(ctx)) BatteryOpt.request(ctx)
-                    })
-                }
-                Hint("Indipendente dalla Sentinella Tesla. Disattivandolo, il servizio di monitoraggio si ferma e la notifica fissa viene rimossa. Quando attivo, Android richiede una notifica persistente (ritardo tipico 15–20 secondi).")
+                Hint("Attiva o disattiva il monitoraggio dalla schermata principale. Questa sezione regola il comportamento degli avvisi sul telefono.")
+                Toggle("Suona anche in silenzioso", p.alarmBypassSilent) { p.alarmBypassSilent = it }
+                Hint("Gli allarmi usano il volume della sveglia anche con il telefono in silenzioso. La sirena dura qualche secondo.")
                 if (notifyFromApp) {
                     var exempt by remember { mutableStateOf(BatteryOpt.isExempt(ctx)) }
-                    LaunchedEffect(Unit) { while (true) { exempt = BatteryOpt.isExempt(ctx); kotlinx.coroutines.delay(2_000) } }
+                    LaunchedEffect(Unit) {
+                        while (true) {
+                            exempt = BatteryOpt.isExempt(ctx)
+                            kotlinx.coroutines.delay(2_000)
+                        }
+                    }
                     if (!exempt) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Il risparmio batteria può fermare Vigilo in background. Consenti l'uso senza limiti.",
+                                "Il risparmio batteria può interrompere Vigilo in background. Consenti l'uso senza limiti.",
                                 Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
@@ -102,8 +102,6 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
                             TextButton(onClick = { BatteryOpt.request(ctx) }) { Text("Consenti") }
                         }
                     }
-                    Toggle("Suona anche in silenzioso", p.alarmBypassSilent) { p.alarmBypassSilent = it }
-                    Hint("Allarmi con il volume della sveglia, anche con il telefono in silenzioso: la sirena dura qualche secondo.")
                 }
             }
         }
