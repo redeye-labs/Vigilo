@@ -50,13 +50,15 @@ class ScreenshotsTest {
                     showHero = false,
                     pendingSentry = false,
                     pullRefreshing = false,
-                    last24 = last24,
-                    alerts24 = sentryAlertCount(last24),
-                    buckets = hourlyEventBuckets(last24, now),
+                    sessionEvents = last24.size,
+                    sessionAlerts = sentryAlertCount(last24),
+                    sessionStartedAt = now - 6 * 3_600_000L,
+                    monitoringEnabled = true,
                     notificationsSubtitle = NOTIFICATIONS_SUBTITLE,
                     onRefresh = {},
                     onPullRefresh = {},
                     onToggleSentry = {},
+                    onToggleMonitoring = {},
                     onOpen = {},
                 )
             }
