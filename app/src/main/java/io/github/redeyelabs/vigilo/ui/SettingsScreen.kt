@@ -79,12 +79,13 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
 
         if (paired) {
             SettingsGroup("Notifiche dall'app") {
-                var notifyFromApp by remember { mutableStateOf(p.notifyAlarmsFromApp) }
-                Toggle("Monitoraggio allarmi sul telefono", p.notifyAlarmsFromApp) {
-                    notifyFromApp = it
-                    p.notifyAlarmsFromApp = it
-                    vm.applyMonitoring()
-                    if (it && !BatteryOpt.isExempt(ctx)) BatteryOpt.request(ctx)
+                val notifyFromApp by vm.monitoringEnabled.collectAsState()
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Monitoraggio allarmi sul telefono", Modifier.weight(1f))
+                    VigiloSwitch(checked = notifyFromApp, onCheckedChange = {
+                        vm.setAppMonitoringEnabled(it)
+                        if (it && !BatteryOpt.isExempt(ctx)) BatteryOpt.request(ctx)
+                    })
                 }
                 Hint("Indipendente dalla Sentinella Tesla. Disattivandolo, il servizio di monitoraggio si ferma e la notifica fissa viene rimossa. Quando attivo, Android richiede una notifica persistente (ritardo tipico 15–20 secondi).")
                 if (notifyFromApp) {
