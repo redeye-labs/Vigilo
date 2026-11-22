@@ -47,13 +47,18 @@ jobs:
           umask 077
           printf '%s' "$KEY_B64" | base64 --decode > "$RUNNER_TEMP/vigilo-release.jks"
           test -s "$RUNNER_TEMP/vigilo-release.jks"
-      - name: Validate signing key before Gradle
+      - name: Validate signing credentials before Gradle
         env:
           VIGILO_KEYSTORE_PASSWORD: ${{ secrets.VIGILO_KEYSTORE_PASSWORD }}
           VIGILO_KEY_ALIAS: ${{ secrets.VIGILO_KEY_ALIAS }}
         run: |
-          # Remove accidental CR/LF from values copied on mobile.
-          PASS="${VIGILO_KEYSTORE_PASSWORD%        env:
+          if ! keytool -list -keystore "$RUNNER_TEMP/vigilo-release.jks" -storepass "$VIGILO_KEYSTORE_PASSWORD" -alias "$VIGILO_KEY_ALIAS" >/dev/null 2>&1; then
+            echo "::error::Keystore, password or alias mismatch. Replace all three repository Secrets with the exact contents from the same signing ZIP."
+            exit 1
+          fi
+          echo "Keystore credentials validated without exposing private values."
+      - name: Assemble signed release APK
+        env:
           VIGILO_KEYSTORE_PATH: ${{ runner.temp }}/vigilo-release.jks
           VIGILO_KEY_ALIAS: ${{ secrets.VIGILO_KEY_ALIAS }}
           VIGILO_KEYSTORE_PASSWORD: ${{ secrets.VIGILO_KEYSTORE_PASSWORD }}
