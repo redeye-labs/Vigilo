@@ -25,17 +25,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Install required Android SDK
-        shell: bash
-        run: |
-          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager -print -quit)"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "::error::Android sdkmanager non trovato in $SDK_ROOT/cmdline-tools"
-            exit 1
-          fi
-          echo "Using $SDKMANAGER"
-          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "platforms;android-36 build-tools;36.0.0"
       - name: Build Vigilo APK (debug signed, original package)
         run: |
           chmod +x gradlew
