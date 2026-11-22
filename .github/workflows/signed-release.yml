@@ -1,6 +1,10 @@
 name: Vigilo APK firmato
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/signed-release.yml"
   workflow_dispatch:
     inputs:
       publish_release:
