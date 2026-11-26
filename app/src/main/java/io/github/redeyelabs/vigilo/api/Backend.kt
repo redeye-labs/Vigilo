@@ -318,6 +318,25 @@ class Backend(private val baseUrl: String, private val token: String) {
     fun v2TireSamples(): List<V2Measurement> =
         get<V2TiresResponse>("/api/v2/diagnostics/tires").readings
 
+    @Serializable
+    data class V2CapacityTrend(
+        @SerialName("first_bms_kwh") val firstKWh: Double = 0.0,
+        @SerialName("latest_bms_kwh") val latestKWh: Double = 0.0,
+        @SerialName("percent_change") val percentChange: Double = 0.0,
+        @SerialName("sample_count") val sampleCount: Int = 0,
+        val note: String = "",
+    )
+
+    @Serializable
+    data class V2CapacityTrendResponse(
+        val ok: Boolean = false,
+        val available: Boolean = false,
+        val note: String = "",
+        val trend: V2CapacityTrend? = null,
+    )
+
+    fun v2CapacityTrend(): V2CapacityTrendResponse = get("/api/v2/battery/trend")
+
     fun v2BatterySummary(): V2BatteryObservations =
         get<V2BatteryResponse>("/api/v2/battery/summary").battery
 
