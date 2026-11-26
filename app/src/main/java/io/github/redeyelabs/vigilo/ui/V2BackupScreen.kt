@@ -39,6 +39,7 @@ fun V2BackupScreen(vm: MainViewModel, onBack: () -> Unit) {
     var enabled by remember { mutableStateOf(false) }
     var refresh by remember { mutableStateOf(0) }
     var pendingJson by remember { mutableStateOf<String?>(null) }
+    var pendingCsv by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     val saveBackup = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -56,6 +57,27 @@ fun V2BackupScreen(vm: MainViewModel, onBack: () -> Unit) {
                     message = "Esportazione salvata."
                 } catch (e: Exception) {
                     message = e.message ?: "Esportazione non salvata."
+                }
+            }
+        }
+    }
+
+    val saveCsv = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri ->
+        val content = pendingCsv
+        pendingCsv = null
+        if (uri != null && content != null) {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri, "w")?.use {
+                            it.write(content.toByteArray(Charsets.UTF_8))
+                        } ?: error("Destinazione non scrivibile")
+                    }
+                    message = "CSV salvato."
+                } catch (e: Exception) {
+                    message = e.message ?: "Impossibile salvare CSV."
                 }
             }
         }
@@ -123,6 +145,31 @@ fun V2BackupScreen(vm: MainViewModel, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Esporta dati JSON") }
             }
+        }
+        VigiloCard {
+            Text("Report sicurezza", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Scarica gli eventi senza titoli e messaggi potenzialmente sensibili. " +
+                    "Il file CSV contiene solo ID, orario e categoria degli eventi del server attivo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(
+                enabled = paired && !working,
+                onClick = {
+                    working = true
+                    scope.launch {
+                        try {
+                            pendingCsv = withContext(Dispatchers.IO) {
+                                Backend(vm.prefs).v2SecurityCsv()
+                            }
+                            saveCsv.launch("Vigilo-sicurezza-${LocalDate.now()}.csv")
+                        } catch (e: Exception) {
+                            message = e.message ?: "Impossibile esportare CSV."
+                        } finally { working = false }
+                    }
+                },
+            ) { Text("Esporta eventi CSV") }
         }
         VigiloCard {
             Text("Backup completo del server", style = MaterialTheme.typography.titleMedium)
