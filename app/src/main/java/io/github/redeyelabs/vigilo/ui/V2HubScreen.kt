@@ -103,6 +103,19 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        VigiloCard {
+            Text("Moduli disponibili", style = MaterialTheme.typography.titleMedium)
+            listOf(
+                Screen.V2_ENERGY to "Batteria, ricariche e viaggi",
+                Screen.V2_AUTOMATIONS to "Automazioni e avvisi",
+                Screen.V2_DIAGNOSTICS to "Diagnostica e pneumatici",
+                Screen.V2_BACKUP to "Backup e report",
+            ).forEach { (page, label) ->
+                OutlinedButton(onClick = { onOpen(page) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(label)
+                }
+            }
+        }
         if (!paired) {
             VigiloCard { Text("Collega prima Vigilo al server dalla Guida.") }
         } else if (loading) {
