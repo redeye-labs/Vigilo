@@ -38,22 +38,25 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
     var capabilities by remember { mutableStateOf<Backend.V2Capabilities?>(null) }
     var diagnostic by remember { mutableStateOf<Backend.V2Diagnostics?>(null) }
     var security by remember { mutableStateOf<Backend.V2Security?>(null) }
+    var report by remember { mutableStateOf<Backend.V2Report?>(null) }
 
     LaunchedEffect(paired, refresh) {
         capabilities = null
         diagnostic = null
         security = null
+        report = null
         error = null
         loading = paired
         if (paired) {
             try {
                 val result = withContext(Dispatchers.IO) {
                     val b = Backend(vm.prefs)
-                    Triple(b.v2Capabilities(), b.v2Diagnostics(), b.v2Security())
+                    Pair(Triple(b.v2Capabilities(), b.v2Diagnostics(), b.v2Security()), b.v2SecurityReport())
                 }
-                capabilities = result.first
-                diagnostic = result.second
-                security = result.third
+                capabilities = result.first.first
+                diagnostic = result.first.second
+                security = result.first.third
+                report = result.second
             } catch (e: Exception) {
                 error = if (Backend.isUnsupported(e)) {
                     "Il server Vigilo non supporta ancora queste funzionalità. Non è necessario cambiare l'app attuale."
@@ -125,6 +128,21 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
                     Text(
                         "I conteggi dipendono dallo storico presente sul server. " +
                             "Non rappresentano necessariamente tutti gli eventi avvenuti.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            report?.let { r ->
+                VigiloCard {
+                    Text("Report degli ultimi 7 giorni", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(8.dp))
+                    Text("${r.totalEvents} eventi registrati")
+                    Text("${r.awareEvents} eventi Aware · ${r.panicEvents} allarmi Panic")
+                    Text("${r.groupedIncidents} episodi raggruppati")
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Copertura parziale: eventi disponibili nell'archivio locale del server.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
