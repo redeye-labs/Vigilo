@@ -59,7 +59,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
    list=append(list,map[string]any{
     "id":m,"enabled":v.modules.Enabled(vehicleID,m),
     // Only capabilities truly implemented may be marked available.
-    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery||m==ModuleCharging||m==ModuleTrips,
+    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery||m==ModuleCharging||m==ModuleTrips||m==ModuleBackup,
    })
   }
   v.write(w,map[string]any{"ok":true,"schema":1,"modules":list,"vehicle_configured":vehicleID!=""})
@@ -143,6 +143,16 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   w.Header().Set("Content-Type","text/csv; charset=utf-8")
   w.Header().Set("Content-Disposition","attachment; filename=\"vigilo-security.csv\"")
   if err:=v.history.ExportSecurityCSV(w,vehicleID);err!=nil{return}
+ case "/api/v2/backup/export":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleBackup){http.Error(w,"backup module disabled",http.StatusForbidden);return}
+  if _,err:=v.history.ImportLegacyEvents(vehicleID,v.events.List(0,1000));err!=nil{
+   http.Error(w,"history unavailable",http.StatusServiceUnavailable);return
+  }
+  snapshot,err:=CreateV2PortableExport(vehicleID,v.history,v.metrics,v.modules)
+  if err!=nil{http.Error(w,"export unavailable",http.StatusServiceUnavailable);return}
+  w.Header().Set("Content-Disposition","attachment; filename=\"vigilo2-data.json\"")
+  v.write(w,snapshot)
  case "/api/v2/diagnostics":
   last:=time.Time{}
   if s.Vehicle.LastTelemetry>0{last=time.UnixMilli(s.Vehicle.LastTelemetry)}
