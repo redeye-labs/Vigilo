@@ -309,6 +309,37 @@ class Backend(private val baseUrl: String, private val token: String) {
         return send<V2TariffResponse>("PUT", "/api/v2/charging/tariff", body).price
     }
 
+    @Serializable
+    data class V2AutomationRule(
+        val id: String = "",
+        @SerialName("vehicle_id") val vehicleID: String = "",
+        val enabled: Boolean = false,
+        val condition: String = "soc_below",
+        val threshold: Double = 0.0,
+        @SerialName("cooldown_sec") val cooldownSec: Int = 3600,
+    )
+
+    @Serializable
+    data class V2AutomationsResponse(
+        val ok: Boolean = false,
+        val enabled: Boolean = false,
+        val rules: List<V2AutomationRule> = emptyList(),
+    )
+
+    @Serializable
+    private data class V2Operation(val ok: Boolean = false)
+
+    fun v2Automations(): V2AutomationsResponse = get("/api/v2/automations")
+
+    fun v2SaveAutomation(rule: V2AutomationRule) {
+        require(rule.id in setOf("soc-low", "sentry-panic"))
+        require(rule.condition in setOf("soc_below", "sentry_panic"))
+        require(rule.cooldownSec in 300..86400)
+        val body = json.encodeToString(V2AutomationRule.serializer(), rule).toRequestBody(JSON)
+        val result: V2Operation = send("PUT", "/api/v2/automations", body)
+        require(result.ok) { "Il server non ha confermato la regola." }
+    }
+
     fun v2Capabilities(): V2Capabilities = get("/api/v2/capabilities")
     fun v2Diagnostics(): V2Diagnostics = get("/api/v2/diagnostics")
     fun v2Security(limit: Int = 200): V2Security =
