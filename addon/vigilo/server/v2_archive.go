@@ -61,6 +61,23 @@ func OpenV2Archive(dir string) (*V2Archive, error) {
  if err != nil { return nil, err }
  if err := json.Unmarshal(b, &a.data); err != nil { return nil, fmt.Errorf("archivio Vigilo 2 non valido: %w", err) }
  if a.data.Schema != v2ArchiveSchema { return nil, fmt.Errorf("versione archivio Vigilo 2 non supportata: %d", a.data.Schema) }
+ // Historical V2 previews may still contain original event title/message.
+ // Sanitize them in-place on startup before serving any report or export.
+ cleaned:=V2ArchiveData{Schema:a.data.Schema,LegacyVehicleID:a.data.LegacyVehicleID,
+  Events:append([]V2ArchivedEvent(nil),a.data.Events...)}
+ altered:=false
+ for i:=range cleaned.Events {
+  label,ok:=v2SafeEventTitle(cleaned.Events[i].Type)
+  if !ok{label="Evento"}
+  if cleaned.Events[i].Title!=label || cleaned.Events[i].Message!="" {
+   cleaned.Events[i].Title=label
+   cleaned.Events[i].Message=""
+   altered=true
+  }
+ }
+ if altered {
+  if err:=a.saveLocked(cleaned);err!=nil{return nil,fmt.Errorf("impossibile proteggere gli eventi archiviati: %w",err)}
+ }
  return a, nil
 }
 
