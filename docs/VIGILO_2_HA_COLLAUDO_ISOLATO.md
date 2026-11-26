@@ -62,7 +62,7 @@ Il file `config.yaml` del pacchetto riporta:
 ```yaml
 name: Vigilo 2 - Collaudo isolato
 slug: vigilo2_smoke
-boot: manual
+boot: manual_only
 ingress: true
 ingress_port: 8099
 ```
