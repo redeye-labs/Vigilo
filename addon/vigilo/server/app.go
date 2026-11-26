@@ -34,6 +34,7 @@ type App struct {
 	v2Rules *V2RuleEngine
 	v2HomeKnown bool
 	v2AtHome bool
+	v2HomeVehicle string
 
 	mu            sync.Mutex
 	auto          automation
@@ -117,15 +118,15 @@ func (a *App) OnTelemetryField(field string, val any) {
 	if field=="LocatedAtHome" {
 		if home,ok:=val.(bool);ok {
 			a.mu.Lock()
-			a.v2HomeKnown,a.v2AtHome=true,home
+			a.v2HomeKnown,a.v2AtHome,a.v2HomeVehicle=true,home,a.store.Get().VIN
 			a.mu.Unlock()
 		}
 	}
 	if field=="LocatedAtHome"||field=="Gear"{
 		a.mu.Lock()
-		known,home:=a.v2HomeKnown,a.v2AtHome
+		known,home,owner:=a.v2HomeKnown,a.v2AtHome,a.v2HomeVehicle
 		a.mu.Unlock()
-		if known{
+		if known && owner==a.store.Get().VIN{
 			if home{
 				a.triggerV2Automations("away_from_home",1)
 			}else if a.store.Get().Vehicle.Gear=="P"{
