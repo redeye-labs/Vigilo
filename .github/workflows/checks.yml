@@ -64,7 +64,7 @@ jobs:
               c = t.extractfile("vigilo2_smoke/config.yaml").read().decode()
               d = t.extractfile("vigilo2_smoke/Dockerfile").read().decode()
               assert "slug: vigilo2_smoke" in c
-              assert "boot: manual" in c
+              assert "boot: manual_only" in c
               assert "ENV VIGILO_ISOLATED_PREVIEW=1" in d
               assert "slug: vigilo\\n" not in c
           PY
