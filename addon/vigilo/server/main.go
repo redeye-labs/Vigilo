@@ -147,12 +147,13 @@ func main() {
 	v2Modules, modulesErr := OpenV2ModuleStore(*dataDir)
 	v2Metrics, metricsErr := OpenV2Metrics(*dataDir)
 	v2Identity, identityErr := OpenV2VehicleIdentity(*dataDir)
-	if historyErr != nil || modulesErr != nil || metricsErr != nil || identityErr != nil {
-		log.Printf("Vigilo 2 moduli sperimentali non disponibili: archive=%v modules=%v metrics=%v identity=%v", historyErr, modulesErr, metricsErr, identityErr)
+	v2Rules, rulesErr := OpenV2RuleEngine(*dataDir)
+	if historyErr != nil || modulesErr != nil || metricsErr != nil || identityErr != nil || rulesErr != nil {
+		log.Printf("Vigilo 2 unavailable: history=%v modules=%v metrics=%v identity=%v rules=%v", historyErr, modulesErr, metricsErr, identityErr, rulesErr)
 	} else {
-		app.v2Metrics, app.v2Modules, app.v2Identity = v2Metrics, v2Modules, v2Identity
+		app.v2Metrics, app.v2Modules, app.v2Identity, app.v2Rules = v2Metrics, v2Modules, v2Identity, v2Rules
 		muxV2 := http.NewServeMux()
-		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules, tesla: tesla, identity: v2Identity, metrics: v2Metrics})
+		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules, tesla: tesla, identity: v2Identity, metrics: v2Metrics, rules: v2Rules})
 		muxV2.Handle("/", publicHandler)
 		publicHandler = muxV2
 	}
