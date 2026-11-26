@@ -149,7 +149,7 @@ func main() {
 		log.Printf("Vigilo 2 moduli sperimentali non disponibili: archive=%v modules=%v", historyErr, modulesErr)
 	} else {
 		muxV2 := http.NewServeMux()
-		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules})
+		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules, tesla: tesla})
 		muxV2.Handle("/", publicHandler)
 		publicHandler = muxV2
 	}
