@@ -5,6 +5,7 @@ import (
  "crypto/subtle"
  "io"
  "encoding/json"
+ "errors"
  "net/http"
  "strconv"
  "strings"
@@ -245,6 +246,23 @@ func (v *V2PublicAPI) configureTariff(w http.ResponseWriter,r *http.Request,vehi
  v.write(w,map[string]any{"ok":true,"price_eur_per_kwh":req.Price})
 }
 
+// Verify a recent real vehicle state before accepting ANY advanced action.
+// A cached "Online" flag alone is not a safety guarantee.
+func validateV2CommandVehicle(s State, now time.Time) error {
+ if !s.Vehicle.Online || !strings.EqualFold(s.Vehicle.ConnState,"online") {
+  return errors.New("vehicle offline or sleeping")
+ }
+ if s.Vehicle.Gear!="P" {
+  return errors.New("vehicle must report parked gear P")
+ }
+ last:=s.Vehicle.LastTelemetry
+ if last<=0 || now.Sub(time.UnixMilli(last))>2*time.Minute ||
+    time.UnixMilli(last).After(now.Add(30*time.Second)) {
+  return errors.New("vehicle telemetry is not recent")
+ }
+ return nil
+}
+
 func (v *V2PublicAPI) command(w http.ResponseWriter,r *http.Request,s State,vehicleID VehicleID){
  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
  if !v.modules.Enabled(vehicleID,ModuleCommands){
@@ -257,21 +275,18 @@ func (v *V2PublicAPI) command(w http.ResponseWriter,r *http.Request,s State,vehi
  if err:=json.NewDecoder(io.LimitReader(r.Body,2048)).Decode(&req);err!=nil{
   http.Error(w,"invalid JSON",http.StatusBadRequest);return
  }
- var spec V2CommandSpec
  if req.Value==nil{
   var err error
-  spec,err=ValidateV2AdvancedCommand(req.Command,true)
+  _,err=ValidateV2AdvancedCommand(req.Command,true)
   if err!=nil{http.Error(w,"unknown command",http.StatusBadRequest);return}
  }else{
   if _,_,_,err:=ValidateV2ParameterCommand(req.Command,*req.Value,true);err!=nil{
    http.Error(w,"invalid command value",http.StatusBadRequest);return
   }
  }
- if !s.Vehicle.Online{
-  http.Error(w,"vehicle offline or sleeping; no automatic wake",http.StatusConflict);return
- }
- if (spec.Sensitive || req.Value!=nil) && s.Vehicle.Gear!="P"{
-  http.Error(w,"vehicle must be parked",http.StatusConflict);return
+ if err:=validateV2CommandVehicle(s,time.Now().UTC());err!=nil{
+  // Never wake the car automatically to execute an advanced command.
+  http.Error(w,err.Error()+"; no automatic wake",http.StatusConflict);return
  }
  if v.tesla==nil{http.Error(w,"commands unavailable",http.StatusServiceUnavailable);return}
  ctx,cancel:=context.WithTimeout(r.Context(),30*time.Second)
