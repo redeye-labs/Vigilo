@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -21,12 +23,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.redeyelabs.vigilo.api.Backend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 /** Vigilo 2 preview. Never substitutes demo values for missing telemetry. */
 @Composable
@@ -39,6 +43,11 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
     var diagnostic by remember { mutableStateOf<Backend.V2Diagnostics?>(null) }
     var security by remember { mutableStateOf<Backend.V2Security?>(null) }
     var report by remember { mutableStateOf<Backend.V2Report?>(null) }
+    val scope = rememberCoroutineScope()
+    var confirmCommand by remember { mutableStateOf<String?>(null) }
+    var commandBusy by remember { mutableStateOf(false) }
+    var commandMessage by remember { mutableStateOf<String?>(null) }
+
 
     LaunchedEffect(paired, refresh) {
         capabilities = null
@@ -170,9 +179,98 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
                     }
                 }
             }
+            capabilities?.modules?.firstOrNull { it.id == "commands" }?.let { commandModule ->
+                VigiloCard {
+                    Text("Comandi Tesla avanzati", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Le azioni sono manuali, richiedono conferma e non svegliano automaticamente l'auto.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            commandBusy = true
+                            scope.launch {
+                                try {
+                                    withContext(Dispatchers.IO) {
+                                        Backend(vm.prefs).v2SetModule("commands", !commandModule.enabled)
+                                    }
+                                    refresh++
+                                } catch (e: Exception) {
+                                    commandMessage = e.message ?: "Impossibile modificare il modulo."
+                                } finally {
+                                    commandBusy = false
+                                }
+                            }
+                        },
+                        enabled = !commandBusy,
+                    ) { Text(if (commandModule.enabled) "Disattiva comandi" else "Abilita comandi") }
+                    if (commandModule.enabled) {
+                        val actions = listOf(
+                            "climate_on" to "Accendi clima",
+                            "climate_off" to "Spegni clima",
+                            "charge_start" to "Avvia ricarica",
+                            "charge_stop" to "Ferma ricarica",
+                            "charge_port_open" to "Apri sportellino",
+                            "charge_port_close" to "Chiudi sportellino",
+                            "trunk_rear" to "Aziona bagagliaio",
+                            "trunk_front" to "Aziona frunk",
+                        )
+                        actions.forEach { (action, label) ->
+                            OutlinedButton(
+                                onClick = { confirmCommand = action },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !commandBusy,
+                            ) { Text(label) }
+                        }
+                    }
+                    commandMessage?.let { text ->
+                        Spacer(Modifier.height(6.dp))
+                        Text(text, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             OutlinedButton(onClick = { refresh++ }, modifier = Modifier.fillMaxWidth()) {
                 Text("Aggiorna dati")
             }
         }
+    }
+
+    confirmCommand?.let { action ->
+        AlertDialog(
+            onDismissRequest = { if (!commandBusy) confirmCommand = null },
+            title = { Text("Conferma comando Tesla") },
+            text = {
+                Text("Vuoi inviare \"$action\" all'auto? Il veicolo deve essere online e alcuni comandi possono azionare parti fisiche.")
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !commandBusy,
+                    onClick = {
+                        commandBusy = true
+                        scope.launch {
+                            try {
+                                commandMessage = withContext(Dispatchers.IO) {
+                                    Backend(vm.prefs).v2ManualCommand(action)
+                                }
+                            } catch (e: Exception) {
+                                commandMessage = e.message ?: "Il comando non è stato completato."
+                            } finally {
+                                commandBusy = false
+                                confirmCommand = null
+                            }
+                        }
+                    },
+                ) { Text("Conferma") }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmCommand = null },
+                    enabled = !commandBusy,
+                ) { Text("Annulla") }
+            },
+        )
     }
 }
