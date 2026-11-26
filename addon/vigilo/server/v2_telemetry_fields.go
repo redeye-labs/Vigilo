@@ -20,7 +20,7 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID) map[string]any {
   add(900,"NominalFullPackEnergyKwh","EnergyRemaining")
  }
  if prefs.Enabled(vehicle,ModuleCharging){
-  add(300,"LifetimeEnergyChargedKwh","ACChargingEnergyIn","DCChargingEnergyIn","ChargeState","ChargePower")
+  add(300,"LifetimeEnergyChargedKwh","ACChargingEnergyIn","DCChargingEnergyIn","DCChargingPower")
  }
  if prefs.Enabled(vehicle,ModuleTrips){
   // LifetimeEnergyUsedDrive is Tesla Semi only. On Model 3, LifetimeEnergyUsed
