@@ -550,6 +550,7 @@ func (t *Tesla) VehicleData(ctx context.Context, vin string, v *VehicleState) er
 	if m, ok := num(cs["battery_range"]); ok {
 		km := m * 1.609344
 		v.RangeKm = &km
+		v.RangeRated = true
 	}
 	if s := str(cs["charging_state"]); s != "" {
 		v.Charging = s
@@ -706,6 +707,7 @@ var telemetryFields = map[string]any{
 	"Location":            map[string]any{"interval_seconds": 60},
 	"Soc":                 map[string]any{"interval_seconds": 300},
 	"EstBatteryRange":     map[string]any{"interval_seconds": 300},
+	"RatedRange":          map[string]any{"interval_seconds": 300},
 	"DetailedChargeState": map[string]any{"interval_seconds": 60},
 }
 
