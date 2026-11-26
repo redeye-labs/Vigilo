@@ -15,7 +15,9 @@ func newTestV2PublicAPI(t *testing.T) (*V2PublicAPI,string) {
  if err=state.Update(func(s *State){s.VIN="test-vehicle-1";s.Vehicle.ConnState="asleep"});err!=nil{t.Fatal(err)}
  history,err:=OpenV2Archive(dir);if err!=nil{t.Fatal(err)}
  modules,err:=OpenV2ModuleStore(dir);if err!=nil{t.Fatal(err)}
- return &V2PublicAPI{state:state,history:history,modules:modules,events:NewEventLog(dir)},state.Get().PairingToken
+ identity,err:=OpenV2VehicleIdentity(dir);if err!=nil{t.Fatal(err)}
+ metrics,err:=OpenV2Metrics(dir);if err!=nil{t.Fatal(err)}
+ return &V2PublicAPI{state:state,history:history,modules:modules,identity:identity,metrics:metrics,events:NewEventLog(dir)},state.Get().PairingToken
 }
 
 func v2Request(api *V2PublicAPI,token,method,path string) *httptest.ResponseRecorder {
@@ -56,12 +58,12 @@ func TestV2APISecurityDoesNotMixEvents(t *testing.T){
  api,token:=newTestV2PublicAPI(t)
  ts:=time.Now().Add(-time.Hour).UnixMilli()
  if _,err:=api.history.ImportLegacyEvents("other-vehicle",[]Event{{ID:100,TS:ts,Type:EvPanic}});err!=nil{t.Fatal(err)}
- if _,err:=api.history.ImportLegacyEvents("test-vehicle-1",[]Event{{ID:101,TS:ts,Type:EvAware}});err!=nil{t.Fatal(err)}
+ if _,err:=api.history.ImportLegacyEvents(api.identity.ID("test-vehicle-1"),[]Event{{ID:101,TS:ts,Type:EvAware}});err!=nil{t.Fatal(err)}
  w:=v2Request(api,token,http.MethodGet,"/api/v2/security/incidents?limit=10")
  if w.Code!=http.StatusOK{t.Fatal(w.Code)}
  var out struct{ Incidents []V2IncidentSummary `json:"incidents"` }
  if err:=json.Unmarshal(w.Body.Bytes(),&out);err!=nil{t.Fatal(err)}
- if len(out.Incidents)!=1||out.Incidents[0].VehicleID!="test-vehicle-1"{
+ if len(out.Incidents)!=1||out.Incidents[0].VehicleID!=api.identity.ID("test-vehicle-1"){
   t.Fatalf("leaked events from another vehicle: %+v",out)
  }
 }
