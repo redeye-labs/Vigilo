@@ -1,7 +1,7 @@
 name: Vigilo
-version: "1.0.10"
+version: "2.0.0-beta.1"
 slug: vigilo
-description: Avvisi Sentinella in tempo reale, comandi e storico per la tua auto, con l'app Android Vigilo.
+description: Vigilo 2 beta sperimentale - moduli Tesla e sicurezza. Non installare sulla produzione senza backup e collaudo.
 url: https://github.com/redeye-labs/Vigilo
 arch:
   - amd64
