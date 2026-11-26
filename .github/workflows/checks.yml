@@ -81,7 +81,7 @@ jobs:
   ha-upgrade-candidate:
     name: Home Assistant in-place upgrade candidate (no deploy)
     if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vigilo-2-foundations' }}
-    needs: [backend, android]
+    needs: [backend, android, ha-container-build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,3 +108,13 @@ jobs:
             dist/vigilo2-ha-upgrade-candidate.sha256
           if-no-files-found: error
           retention-days: 14
+
+  ha-container-build:
+    name: Home Assistant Docker image compile
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vigilo-2-foundations' }}
+    needs: [backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile actual Home Assistant add-on image (no container start)
+        run: docker build --pull --tag vigilo2-ha-candidate:ci addon/vigilo
