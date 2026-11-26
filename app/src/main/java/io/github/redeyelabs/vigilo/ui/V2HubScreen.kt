@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
 
 /** Vigilo 2 preview. Never substitutes demo values for missing telemetry. */
 @Composable
-fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
+fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit) {
     val paired by vm.backendMode.collectAsState()
     var refresh by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
