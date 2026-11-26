@@ -196,6 +196,27 @@ class Backend(private val baseUrl: String, private val token: String) {
     fun v2SecurityReport(days: Int = 7): V2Report =
         get<V2ReportResponse>("/api/v2/security/report?days=${days.coerceIn(1, 90)}").report
 
+    @Serializable
+    data class V2ModuleChange(
+        val ok: Boolean = false,
+        val module: String = "",
+        val enabled: Boolean = false,
+    )
+
+    fun v2SetModule(module: String, enabled: Boolean): V2ModuleChange {
+        require(module in setOf("security", "diagnostics", "backup", "commands", "battery", "charging", "automation", "trips"))
+        val body = """{"module":"$module","enabled":$enabled}""".toRequestBody(JSON)
+        return send("PUT", "/api/v2/modules", body)
+    }
+
+    fun v2ManualCommand(action: String): String {
+        require(action in setOf("climate_on", "climate_off", "charge_start", "charge_stop",
+            "charge_port_open", "charge_port_close", "trunk_rear", "trunk_front"))
+        val body = """{"command":"$action"}""".toRequestBody(JSON)
+        val response: CommandResponse = send("POST", "/api/v2/commands", body, slow = true, confirmed = true)
+        return response.message
+    }
+
     fun v2Capabilities(): V2Capabilities = get("/api/v2/capabilities")
     fun v2Diagnostics(): V2Diagnostics = get("/api/v2/diagnostics")
     fun v2Security(limit: Int = 200): V2Security =
@@ -226,13 +247,14 @@ class Backend(private val baseUrl: String, private val token: String) {
 
     private inline fun <reified T> get(path: String): T = send("GET", path, null)
 
-    private inline fun <reified T> send(method: String, path: String, body: RequestBody?, slow: Boolean = false): T {
+    private inline fun <reified T> send(method: String, path: String, body: RequestBody?, slow: Boolean = false, confirmed: Boolean = false): T {
         require(baseUrl.startsWith("https://")) { "Server Vigilo non abbinato: inquadra il QR dell'ultimo passo della configurazione di Vigilo." }
         val req = Request.Builder()
             .url(baseUrl + path)
             .header("Authorization", "Bearer $token")
             .header("Accept", "application/json")
             .method(method, body)
+            .apply { if (confirmed) header("X-Vigilo-Confirm", "yes") }
             .build()
         val client = if (slow) Http.client.newBuilder().readTimeout(110, TimeUnit.SECONDS).build() else Http.client
         val text: String
