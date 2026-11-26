@@ -145,11 +145,14 @@ func main() {
 	publicHandler := app.PublicHandler()
 	v2History, historyErr := OpenV2Archive(*dataDir)
 	v2Modules, modulesErr := OpenV2ModuleStore(*dataDir)
-	if historyErr != nil || modulesErr != nil {
-		log.Printf("Vigilo 2 moduli sperimentali non disponibili: archive=%v modules=%v", historyErr, modulesErr)
+	v2Metrics, metricsErr := OpenV2Metrics(*dataDir)
+	v2Identity, identityErr := OpenV2VehicleIdentity(*dataDir)
+	if historyErr != nil || modulesErr != nil || metricsErr != nil || identityErr != nil {
+		log.Printf("Vigilo 2 moduli sperimentali non disponibili: archive=%v modules=%v metrics=%v identity=%v", historyErr, modulesErr, metricsErr, identityErr)
 	} else {
+		app.v2Metrics, app.v2Modules, app.v2Identity = v2Metrics, v2Modules, v2Identity
 		muxV2 := http.NewServeMux()
-		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules, tesla: tesla})
+		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules, tesla: tesla, identity: v2Identity, metrics: v2Metrics})
 		muxV2.Handle("/", publicHandler)
 		publicHandler = muxV2
 	}
