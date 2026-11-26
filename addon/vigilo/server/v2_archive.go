@@ -22,6 +22,7 @@ type V2Archive struct {
 
 type V2ArchiveData struct {
  Schema int `json:"schema"`
+ LegacyVehicleID VehicleID `json:"legacy_vehicle_id,omitempty"`
  Events []V2ArchivedEvent `json:"events"`
 }
 
@@ -68,11 +69,14 @@ func (a *V2Archive) ImportLegacyEvents(vehicleID VehicleID, legacy []Event) (int
  if vehicleID == "" { return 0, errors.New("vehicle_id obbligatorio") }
  a.mu.Lock()
  defer a.mu.Unlock()
+ // Legacy events have no vehicle identifier; never reassign them to a
+ // different vehicle after the first successful migration.
+ if a.data.LegacyVehicleID!="" && a.data.LegacyVehicleID!=vehicleID {return 0,nil}
  existing := make(map[int64]bool, len(a.data.Events))
  for _, e := range a.data.Events {
   if e.VehicleID == vehicleID { existing[e.ID] = true }
  }
- next := V2ArchiveData{Schema: v2ArchiveSchema, Events: append([]V2ArchivedEvent(nil), a.data.Events...)}
+ next := V2ArchiveData{Schema: v2ArchiveSchema, LegacyVehicleID:a.data.LegacyVehicleID, Events: append([]V2ArchivedEvent(nil), a.data.Events...)}
  added := 0
  for _, e := range legacy {
   if e.ID <= 0 || e.TS <= 0 || existing[e.ID] { continue }
@@ -84,6 +88,7 @@ func (a *V2Archive) ImportLegacyEvents(vehicleID VehicleID, legacy []Event) (int
   added++
  }
  if added == 0 { return 0, nil }
+ if next.LegacyVehicleID==""{next.LegacyVehicleID=vehicleID}
  sort.SliceStable(next.Events, func(i, j int) bool {
   if next.Events[i].Timestamp == next.Events[j].Timestamp {
    if next.Events[i].VehicleID == next.Events[j].VehicleID { return next.Events[i].ID < next.Events[j].ID }
