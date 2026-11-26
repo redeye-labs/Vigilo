@@ -32,3 +32,16 @@ func TestV2RuleEngineRejectsDangerousActions(t *testing.T){
  bad:=V2AlertRule{ID:"battery",Condition:"soc_below",Threshold:99,CooldownSec:300,Enabled:true}
  if err=engine.Put("a",bad);err==nil{t.Fatal("unbounded threshold accepted")}
 }
+
+func TestV2ParkedAwayTriggersOnlyKnownBooleanTransitions(t *testing.T){
+ e,err:=OpenV2RuleEngine(t.TempDir());if err!=nil{t.Fatal(err)}
+ rule:=V2AlertRule{ID:"parked-away",VehicleID:"other",Condition:"away_from_home",CooldownSec:3600,Enabled:true}
+ if err=e.Put("a",rule);err!=nil{t.Fatal(err)}
+ at:=time.Date(2026,11,26,10,0,0,0,time.UTC)
+ if got:=e.Evaluate("a","away_from_home",2,at);len(got)!=0{t.Fatal("unknown home state triggered")}
+ if got:=e.Evaluate("a","away_from_home",0,at);len(got)!=1{t.Fatal("first departure not notified")}
+ if got:=e.Evaluate("a","away_from_home",0,at.Add(2*time.Hour));len(got)!=0{t.Fatal("duplicate departure alert")}
+ if got:=e.Evaluate("a","away_from_home",1,at.Add(3*time.Hour));len(got)!=0{t.Fatal("arrival home triggered alert")}
+ if got:=e.Evaluate("a","away_from_home",0,at.Add(4*time.Hour));len(got)!=1{t.Fatal("second trip not notified")}
+ if got:=e.Evaluate("b","away_from_home",0,at.Add(4*time.Hour));len(got)!=0{t.Fatal("vehicle isolation failed")}
+}
