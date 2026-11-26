@@ -39,6 +39,11 @@ func CreateV2PortableExport(vehicle VehicleID,history *V2Archive,metrics *V2Metr
   TariffEURPerKWh:modules.Tariff(vehicle),
  }
  for _,e:=range history.Snapshot(vehicle,10000){
+  // Export only known event kinds. Unknown types may be user-controlled.
+  switch e.Type{
+  case EvAware,EvPanic,EvSentry,EvCommand,EvConnect,EvProblem,EvSetup,EvSchedule:
+  default:continue
+  }
   // Keep event type and UTC timestamp, strip untrusted message/title.
   snapshot.Events=append(snapshot.Events,V2ArchivedEvent{
    ID:e.ID,Timestamp:e.Timestamp,Type:e.Type,
@@ -73,6 +78,10 @@ func VerifyV2PortableExport(snapshot V2PortableExport) error{
  }
  for _,e:=range snapshot.Events{
   if e.VehicleID!="export_vehicle"||e.Title!=""||e.Message!=""||e.Timestamp<=0{return errors.New("evento non valido")}
+  switch e.Type {
+  case EvAware,EvPanic,EvSentry,EvCommand,EvConnect,EvProblem,EvSetup,EvSchedule:
+  default:return errors.New("tipo evento non valido")
+  }
  }
  allow:=map[string]bool{}
  for _,s:=range allowedPortableFields{allow[s]=true}
