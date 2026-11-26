@@ -35,8 +35,9 @@ Se manca uno di questi tre elementi, FERMA IL COLLAUDO.
 ## 2. Scarica il pacchetto beta isolato
 
 1. Apri la PR #4: https://github.com/redeye-labs/Vigilo/pull/4
-2. Apri la più recente esecuzione *Vigilo checks* con **backend**, **android** e
-   **Home Assistant isolated smoke package** verdi.
+2. Apri la più recente esecuzione *Vigilo checks* con **backend** e
+   **Home Assistant isolated smoke package** verdi. Il test Android è separato
+   perché non è coinvolto nella prova di installazione Home Assistant.
 3. Scarica l'artifact `Vigilo2-HA-Isolated-Smoke`. Decomprimi lo ZIP artifact:
    contiene `vigilo2-ha-smoke.tar.gz` e `vigilo2-ha-smoke.sha256`.
 4. Verifica lo SHA-256. NON scaricare il codice dalla branch principale:
