@@ -28,7 +28,7 @@ arch:
   - aarch64
 init: false
 startup: application
-boot: manual
+boot: manual_only
 ingress: true
 ingress_port: 8099
 panel_icon: mdi:shield-check
