@@ -30,6 +30,10 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID) map[string]any {
  if prefs.Enabled(vehicle,ModuleDiagnostics){
   add(900,"TpmsPressureFl","TpmsPressureFr","TpmsPressureRl","TpmsPressureRr")
  }
+ if prefs.Enabled(vehicle,ModuleAutomation){
+  // Boolean Tesla indication: no GPS coordinates are stored for this rule.
+  add(60,"LocatedAtHome")
+ }
  return fields
 }
 
