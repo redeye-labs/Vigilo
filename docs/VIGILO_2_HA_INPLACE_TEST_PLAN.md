@@ -32,7 +32,8 @@ aggiorna automaticamente l'add-on. Non sostituire l'installazione con il pacchet
 
 La pipeline GitHub Actions del branch `feature/vigilo-2-foundations`:
 - esegue test Go, vet, build Android e test unitari;
-- soltanto dopo esito positivo crea l'archivio sorgente
+- compila davvero l'immagine Docker dell'add-on Home Assistant, senza avviarla;
+- soltanto dopo il successo di tutti questi controlli crea l'archivio sorgente
   `vigilo2-ha-upgrade-candidate.tar.gz` e il suo SHA-256;
 - verifica slug `vigilo`, versione `2.0.0-beta.1`, Dockerfile,
   indirizzo Ingress e presenza del test di compatibilità telemetria;
