@@ -89,18 +89,8 @@ func (a *App) OnTelemetryField(field string, val any) {
 			if f, ok := num(val); ok {
 				v.Battery = &f
 			}
-		case "EstBatteryRange":
-			// Fleet Telemetry fornisce un valore già in km: nessuna conversione miglia/km.
-			// Manteniamo la stima soltanto come fallback finché RatedRange non arriva.
-			if f, ok := num(val); ok && f >= 0 && !v.RangeRated {
-				v.RangeKm = &f
-			}
-		case "RatedRange":
-			// Autonomia nominale come nell'interfaccia Tesla (diversa da EstBatteryRange).
-			if f, ok := num(val); ok && f >= 0 {
-				v.RangeKm = &f
-				v.RangeRated = true
-			}
+		case "EstBatteryRange", "RatedRange":
+			updateRangeFromTelemetry(v, field, val)
 		case "Gear":
 			v.Gear = normalizeEnum(val, "ShiftState")
 		case "DetailedChargeState":
@@ -112,6 +102,24 @@ func (a *App) OnTelemetryField(field string, val any) {
 		a.onSentry(prevSentry, sentryChange)
 	}
 	a.bus.PublishState()
+}
+
+// Fleet Telemetry fornisce i chilometri già convertiti; la Fleet API separata usa miglia.
+// RatedRange rappresenta l'autonomia nominale visualizzata da Tesla e ha priorità
+// su EstBatteryRange, la stima legata alle condizioni di guida.
+func updateRangeFromTelemetry(v *VehicleState, field string, val any) {
+	f, ok := num(val)
+	if !ok || f < 0 {
+		return
+	}
+	switch field {
+	case "RatedRange":
+		v.RangeKm, v.RangeRated = &f, true
+	case "EstBatteryRange":
+		if !v.RangeRated {
+			v.RangeKm = &f
+		}
+	}
 }
 
 var windowsMu sync.Mutex
