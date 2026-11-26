@@ -29,7 +29,7 @@ func ChargingSessions(vehicle VehicleID, measurements []V2Measurement, tariff *f
  commit:=func(){
   if current!=nil && current.BatteryEnergyKWh>0 {
    if tariff!=nil && !math.IsNaN(*tariff)&&!math.IsInf(*tariff,0)&&*tariff>=0{
-    amount:=math.Round(current.BatteryEnergyKWh**tariff*100)/100
+    amount:=math.Round(current.BatteryEnergyKWh * (*tariff)*100)/100
     current.EstimatedCostEUR=&amount
     current.PriceSource="user_tariff_estimate_excludes_charger_losses"
    }
