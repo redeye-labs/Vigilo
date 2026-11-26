@@ -115,6 +115,9 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
                 TextButton(onClick = { onOpen(Screen.V2_ENERGY) }) {
                     Text("Batteria, ricariche e viaggi")
                 }
+                TextButton(onClick = { onOpen(Screen.V2_AUTOMATIONS) }) {
+                    Text("Automazioni e avvisi aggiuntivi")
+                }
             }
         }
 
