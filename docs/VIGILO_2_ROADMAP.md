@@ -25,12 +25,29 @@ Un'unica app Android, server personale HA o Docker, moduli opzionali, veicoli se
 7. Il vecchio `state.json` contiene segreti e non deve essere incluso in esportazioni ordinarie.
 8. Per il multi-veicolo, progettare l'isolamento di token, stato, config telemetrica, scheduler, MQTT e storico prima di abilitare un secondo VIN. Il modello dati da solo non costituisce supporto multi-veicolo completo.
 
+## Stato dei prototipi (non pronti per la distribuzione)
+
+- La persistenza V2 usa per ora file JSON atomici separati. **Non è ancora il database SQLite definitivo**, né è stato eseguito il collaudo di migrazione su sistemi reali.
+- I report sicurezza dipendono solo dallo storico disponibile sul server e dichiarano `partial_history_only`.
+- La raccolta batteria misura solo i segnali effettivamente ricevuti e soltanto dopo opt-in. I nuovi campi energetici avanzati non sono ancora configurati automaticamente sulla vettura.
+- Comandi manuali V2: richiedono modulo attivo, richiesta autenticata e conferma per ogni operazione. Non abilitare automazioni per questi comandi.
+- Nessuna funzionalità multi-veicolo operativa: la pseudonimizzazione è solo una fondazione per la futura segregazione completa.
+- Il nuovo archivio locale e la relativa chiave privata richiedono un backup del server prima del rilascio pubblico.
+- Android: pannello sperimentale raggiungibile da Impostazioni, senza alterare la schermata Home.
+- I percorsi `/api/v2/*` non sono parte di una release stabile; non promettere compatibilità pubblica prima della versione finale.
+
 ## Fase 0 — fondazione
 
 - [x] Salvare i sorgenti pre-sviluppo in branch di backup.
 - [x] Tipi di dominio per moduli, provenienza dei dati, identificativi veicolo.
 - [x] Raggruppamento eventi Sentinella puro e isolato per auto, con unit test.
-- [ ] Collaudare i test con GitHub Actions; correggere ogni fallimento.
+- [x] Archivio storico sperimentale separato, importazione idempotente e CSV redatto.
+- [x] Preferenze moduli per veicolo, disabilitate per default.
+- [x] Pseudonimizzazione VIN tramite chiave privata locale; archivio campioni telemetrici su richiesta.
+- [x] API sperimentali Bearer: capabilities, diagnostica, eventi, report e misure.
+- [x] Comandi manuali sperimentali clima/ricarica/bagagliaio con conferma, opt-in e controllo auto online.
+- [x] Schermata Android Vigilo 2 e client tipizzato dei nuovi endpoint.
+- [ ] Collaudare tutti i test dopo le ultime modifiche, correggere ogni fallimento.
 - [ ] Scegliere un driver SQLite affidabile e verificare dipendenze, architetture HA/Docker, Go toolchain e versioni.
 - [ ] Migrazione non distruttiva da `state.json` e `events.json` con backup e rollback.
 - [ ] API v2 versionate, controllo di compatibilità client/server e capabilities per veicolo.
