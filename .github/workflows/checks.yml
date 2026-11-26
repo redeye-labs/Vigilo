@@ -63,10 +63,10 @@ jobs:
           with tarfile.open("dist/vigilo2-ha-smoke.tar.gz", "r:gz") as t:
               c = t.extractfile("vigilo2_smoke/config.yaml").read().decode()
               d = t.extractfile("vigilo2_smoke/Dockerfile").read().decode()
-              assert "slug: vigilo" in c.splitlines()
+              assert "slug: vigilo2_smoke" in c.splitlines()
               assert "boot: manual_only" in c
               assert "ENV VIGILO_ISOLATED_PREVIEW=1" in d
-              assert "slug: vigilo\\n" not in c
+              assert "slug: vigilo" not in c.splitlines()
           PY
       - name: Upload isolated HA smoke archive (not a release)
         uses: actions/upload-artifact@v4
@@ -94,7 +94,7 @@ jobs:
           with tarfile.open("dist/vigilo2-ha-upgrade-candidate.tar.gz", "r:gz") as t:
               c=t.extractfile("vigilo/config.yaml").read().decode()
               d=t.extractfile("vigilo/Dockerfile").read().decode()
-              assert "slug: vigilo\\n" in c
+              assert "slug: vigilo" in c.splitlines()
               assert 'version: "2.0.0-beta.1"' in c
               assert "VIGILO_ISOLATED_PREVIEW=1" not in d
               assert t.getmember("vigilo/server/v2_upgrade_safety_test.go")
