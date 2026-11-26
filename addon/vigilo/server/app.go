@@ -90,9 +90,16 @@ func (a *App) OnTelemetryField(field string, val any) {
 				v.Battery = &f
 			}
 		case "EstBatteryRange":
-			if f, ok := num(val); ok {
-				km := f * 1.609344
-				v.RangeKm = &km
+			// Fleet Telemetry fornisce un valore già in km: nessuna conversione miglia/km.
+			// Manteniamo la stima soltanto come fallback finché RatedRange non arriva.
+			if f, ok := num(val); ok && f >= 0 && !v.RangeRated {
+				v.RangeKm = &f
+			}
+		case "RatedRange":
+			// Autonomia nominale come nell'interfaccia Tesla (diversa da EstBatteryRange).
+			if f, ok := num(val); ok && f >= 0 {
+				v.RangeKm = &f
+				v.RangeRated = true
 			}
 		case "Gear":
 			v.Gear = normalizeEnum(val, "ShiftState")
@@ -393,7 +400,7 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 			}
 		})
 	}
-	need := force || err != nil || ts.Missing || ts.Hostname != host ||
+	need := force || s.TelemetryFieldsVersion < 2 || err != nil || ts.Missing || ts.Hostname != host ||
 		(ts.Exp > 0 && time.Until(time.Unix(ts.Exp, 0)) < 30*24*time.Hour)
 	if !need {
 		a.setupMsg("") // configurazione presente sull'auto: un errore precedente non vale più
@@ -408,6 +415,7 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 		a.setupMsg(serr.Error())
 		return "", serr
 	}
+	_ = a.store.Update(func(st *State) { st.TelemetryFieldsVersion = 2 })
 	a.setupMsg("")
 	a.events.Add(EvSetup, "Configurazione inviata all'auto", "Valida per 364 giorni, si rinnova da sola.")
 	return msg, nil
