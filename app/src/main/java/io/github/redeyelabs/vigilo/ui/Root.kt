@@ -107,6 +107,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.LICENSES -> LicensesScreen(onBack = { screen = Screen.SETTINGS })
                     Screen.V2_HUB -> V2HubScreen(vm, onBack = { screen = Screen.SETTINGS })
                     Screen.V2_ENERGY -> V2EnergyScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = { screen = Screen.SETTINGS })
                 }
                 if (busy && !progress.isNullOrBlank()) {
                     Surface(
