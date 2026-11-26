@@ -35,6 +35,22 @@ type V2ArchivedEvent struct {
  Message string `json:"message"`
 }
 
+// New V2 history stores only allowlisted event categories and timestamps.
+// Original verbose event details remain in the separate V1 log.
+func v2SafeEventTitle(kind string) (string,bool) {
+ switch kind {
+ case EvAware:return "Sentinella Aware",true
+ case EvPanic:return "Sentinella Panic",true
+ case EvSentry:return "Cambio Sentinella",true
+ case EvCommand:return "Comando",true
+ case EvConnect:return "Telemetria",true
+ case EvProblem:return "Errore",true
+ case EvSetup:return "Configurazione",true
+ case EvSchedule:return "Programmazione",true
+ default:return "",false
+ }
+}
+
 const v2ArchiveSchema = 1
 
 func OpenV2Archive(dir string) (*V2Archive, error) {
@@ -80,9 +96,11 @@ func (a *V2Archive) ImportLegacyEvents(vehicleID VehicleID, legacy []Event) (int
  added := 0
  for _, e := range legacy {
   if e.ID <= 0 || e.TS <= 0 || existing[e.ID] { continue }
+  title,valid:=v2SafeEventTitle(e.Type)
+  if !valid{continue}
   next.Events = append(next.Events, V2ArchivedEvent{
-   ID: e.ID, VehicleID: vehicleID, Timestamp: e.TS,
-   Type: e.Type, Title: e.Title, Message: e.Message,
+   ID:e.ID,VehicleID:vehicleID,Timestamp:e.TS,
+   Type:e.Type,Title:title,Message:"",
   })
   existing[e.ID] = true
   added++
