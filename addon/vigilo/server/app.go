@@ -412,7 +412,15 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 			}
 		})
 	}
-	need := force || s.TelemetryFieldsVersion < 2 || err != nil || ts.Missing || ts.Hostname != host ||
+	// Additional telemetry is opt-in. Only reconfigure Tesla when the selected
+	// field set actually changes; the original Sentry fields are retained.
+	fields := telemetryFields
+	if a.v2Modules != nil && a.v2Identity != nil {
+		fields = V2TelemetryFields(a.v2Modules, a.v2Identity.ID(s.VIN))
+	}
+	configHash := V2TelemetryFieldsHash(fields)
+	need := force || s.TelemetryFieldsVersion < 3 || s.TelemetryConfigHash != configHash ||
+		err != nil || ts.Missing || ts.Hostname != host ||
 		(ts.Exp > 0 && time.Until(time.Unix(ts.Exp, 0)) < 30*24*time.Hour)
 	if !need {
 		a.setupMsg("") // configurazione presente sull'auto: un errore precedente non vale più
@@ -422,12 +430,12 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 	if cerr != nil {
 		return "", errors.New("certificati non ancora pronti")
 	}
-	msg, serr := a.tesla.SendTelemetryConfig(ctx, s.VIN, host, telemetryPort, ca)
+	msg, serr := a.tesla.SendTelemetryConfigWithFields(ctx, s.VIN, host, telemetryPort, ca, fields)
 	if serr != nil {
 		a.setupMsg(serr.Error())
 		return "", serr
 	}
-	_ = a.store.Update(func(st *State) { st.TelemetryFieldsVersion = 2 })
+	_ = a.store.Update(func(st *State) { st.TelemetryFieldsVersion = 3; st.TelemetryConfigHash = configHash })
 	a.setupMsg("")
 	a.events.Add(EvSetup, "Configurazione inviata all'auto", "Valida per 364 giorni, si rinnova da sola.")
 	return msg, nil
