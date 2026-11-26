@@ -38,6 +38,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
     var moduleEnabled by remember { mutableStateOf(false) }
     var lowEnabled by remember { mutableStateOf(false) }
     var panicEnabled by remember { mutableStateOf(false) }
+    var parkedEnabled by remember { mutableStateOf(false) }
     var limit by remember { mutableStateOf("20") }
     var rulesLoaded by remember { mutableStateOf(false) }
 
@@ -53,6 +54,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
             moduleEnabled = data.first.modules.any { it.id == "automation" && it.enabled }
             lowEnabled = data.second.rules.firstOrNull { it.id == "soc-low" }?.enabled ?: false
             panicEnabled = data.second.rules.firstOrNull { it.id == "sentry-panic" }?.enabled ?: false
+            parkedEnabled = data.second.rules.firstOrNull { it.id == "parked-away" }?.enabled ?: false
             limit = (data.second.rules.firstOrNull { it.id == "soc-low" }?.threshold?.toInt() ?: 20).toString()
             rulesLoaded = true
         } catch (e: Exception) {
@@ -164,6 +166,34 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                             }
                         },
                     ) { Text(if (panicEnabled) "Disattiva avviso Panic aggiuntivo" else "Attiva avviso Panic aggiuntivo") }
+                }
+                VigiloCard {
+                    Text("Parcheggio fuori casa", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Avviso una volta quando la Tesla indica che si trova fuori casa ed è in P. " +
+                            "Richiede il segnale LocatedAtHome: potrebbe non essere disponibile su tutti i veicoli.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        enabled = !working,
+                        onClick = {
+                            working = true
+                            scope.launch {
+                                try {
+                                    withContext(Dispatchers.IO) {
+                                        Backend(vm.prefs).v2SaveAutomation(Backend.V2AutomationRule(
+                                            id = "parked-away", enabled = !parkedEnabled,
+                                            condition = "away_from_home", threshold = 0.0, cooldownSec = 3600,
+                                        ))
+                                    }
+                                    refresh++
+                                } catch (e: Exception) {
+                                    error = e.message ?: "La regola non è stata salvata."
+                                } finally { working = false }
+                            }
+                        },
+                    ) { Text(if (parkedEnabled) "Disattiva avviso fuori casa" else "Attiva avviso fuori casa") }
                 }
                 Text(
                     "I comandi e le programmazioni Sentinella già esistenti restano indipendenti.",
