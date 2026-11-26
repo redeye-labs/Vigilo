@@ -126,6 +126,60 @@ class Backend(private val baseUrl: String, private val token: String) {
     @Serializable
     private data class ErrorBody(val ok: Boolean = false, val error: String = "")
 
+    /** Vigilo 2 preview: read-only endpoints, available only on updated personal servers. */
+    @Serializable
+    data class V2Module(
+        val id: String = "",
+        val enabled: Boolean = false,
+        val available: Boolean = false,
+    )
+
+    @Serializable
+    data class V2Capabilities(
+        val ok: Boolean = false,
+        val schema: Int = 0,
+        val modules: List<V2Module> = emptyList(),
+        @SerialName("vehicle_configured") val vehicleConfigured: Boolean = false,
+    )
+
+    @Serializable
+    data class V2Connection(
+        val status: String = "",
+        val details: String = "",
+        @SerialName("last_seen_at") val lastSeenAt: String? = null,
+    )
+
+    @Serializable
+    data class V2Diagnostics(
+        val ok: Boolean = false,
+        @SerialName("vehicle_id") val vehicleID: String = "",
+        @SerialName("telemetry") val telemetry: V2Connection = V2Connection(),
+        @SerialName("permission_status") val permissionStatus: String = "not_verified",
+        @SerialName("server_reachable") val serverReachable: Boolean = false,
+    )
+
+    @Serializable
+    data class V2Incident(
+        @SerialName("vehicle_id") val vehicleID: String = "",
+        @SerialName("started_at") val startedAt: String = "",
+        @SerialName("ended_at") val endedAt: String = "",
+        @SerialName("event_count") val eventCount: Int = 0,
+        val panic: Boolean = false,
+    )
+
+    @Serializable
+    data class V2Security(
+        val ok: Boolean = false,
+        @SerialName("vehicle_id") val vehicleID: String = "",
+        val incidents: List<V2Incident> = emptyList(),
+        val scope: String = "",
+    )
+
+    fun v2Capabilities(): V2Capabilities = get("/api/v2/capabilities")
+    fun v2Diagnostics(): V2Diagnostics = get("/api/v2/diagnostics")
+    fun v2Security(limit: Int = 200): V2Security =
+        get("/api/v2/security/incidents?limit=${limit.coerceIn(1, 1000)}")
+
     fun status(): Status = get("/api/v1/status")
     /** Lettura dalla Fleet API solo se l'auto è già sveglia (l'add-on non la sveglia). */
     fun refresh(): Status = send("POST", "/api/v1/refresh", "{}".toRequestBody(JSON))
