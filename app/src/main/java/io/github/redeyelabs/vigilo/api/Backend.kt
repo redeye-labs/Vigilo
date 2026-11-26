@@ -230,6 +230,23 @@ class Backend(private val baseUrl: String, private val token: String) {
         return send("PUT", "/api/v2/modules", body)
     }
 
+    fun v2ManualParameterCommand(action: String, value: Double): String {
+        require(value.isFinite())
+        require(
+            when (action) {
+                "charge_limit" -> value in 50.0..100.0 && value % 1.0 == 0.0
+                "climate_temperature" -> value in 15.0..30.0
+                "charging_amps" -> value in 5.0..32.0 && value % 1.0 == 0.0
+                else -> false
+            }
+        ) { "Parametro Tesla non valido." }
+        val body = """{"command":"$action","value":$value}""".toRequestBody(JSON)
+        val response: CommandResponse = send(
+            "POST", "/api/v2/commands", body, slow = true, confirmed = true,
+        )
+        return response.message
+    }
+
     fun v2ManualCommand(action: String): String {
         require(action in setOf("climate_on", "climate_off", "charge_start", "charge_stop",
             "charge_port_open", "charge_port_close", "trunk_rear", "trunk_front"))
