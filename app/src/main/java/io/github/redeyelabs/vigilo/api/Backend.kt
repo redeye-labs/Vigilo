@@ -344,6 +344,22 @@ class Backend(private val baseUrl: String, private val token: String) {
         val element: kotlinx.serialization.json.JsonElement = get("/api/v2/backup/export")
         return element.toString()
     }
+    /** Read CSV directly; unlike all other endpoints, response is not JSON. */
+    fun v2SecurityCsv(): String {
+        require(baseUrl.startsWith("https://"))
+        val request = Request.Builder()
+            .url(baseUrl + "/api/v2/security/export.csv")
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "text/csv")
+            .get()
+            .build()
+        Http.client.newCall(request).execute().use { response ->
+            if (response.code == 401) throw ApiException(401, "Abbinamento Vigilo scaduto.")
+            if (!response.isSuccessful) throw ApiException(response.code, "CSV non disponibile.")
+            return response.body?.string().orEmpty()
+        }
+    }
+
 
     fun v2Automations(): V2AutomationsResponse = get("/api/v2/automations")
 
