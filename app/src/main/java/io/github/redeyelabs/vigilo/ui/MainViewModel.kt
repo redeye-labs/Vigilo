@@ -217,7 +217,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         actions.value = ActionsState.Loading
         Scheduler.applyPolling(getApplication())
         Scheduler.applyIntensive(getApplication(), restartLoop = true)
-        runCatching { Monitor.runOnce(getApplication(), force = true) }
+        Monitor.runOnce(getApplication(), force = true)
             .onSuccess { snapshot.value = it }
             .onFailure { toast(it.message ?: "Server non raggiungibile") }
         toast("Profilo Vigilo selezionato.")
