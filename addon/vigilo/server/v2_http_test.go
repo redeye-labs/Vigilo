@@ -57,8 +57,8 @@ func TestV2APIDiagnosticsAndCapabilities(t *testing.T) {
 func TestV2APISecurityDoesNotMixEvents(t *testing.T){
  api,token:=newTestV2PublicAPI(t)
  ts:=time.Now().Add(-time.Hour).UnixMilli()
- if _,err:=api.history.ImportLegacyEvents("other-vehicle",[]Event{{ID:100,TS:ts,Type:EvPanic}});err!=nil{t.Fatal(err)}
  if _,err:=api.history.ImportLegacyEvents(api.identity.ID("test-vehicle-1"),[]Event{{ID:101,TS:ts,Type:EvAware}});err!=nil{t.Fatal(err)}
+ if n,err:=api.history.ImportLegacyEvents("other-vehicle",[]Event{{ID:100,TS:ts,Type:EvPanic}});err!=nil||n!=0{t.Fatalf("legacy mixing: n=%d err=%v",n,err)}
  w:=v2Request(api,token,http.MethodGet,"/api/v2/security/incidents?limit=10")
  if w.Code!=http.StatusOK{t.Fatal(w.Code)}
  var out struct{ Incidents []V2IncidentSummary `json:"incidents"` }
