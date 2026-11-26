@@ -57,6 +57,25 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   }
   groups:=v.history.SecurityIncidents(vehicleID,5*time.Minute,limit)
   v.write(w,map[string]any{"ok":true,"vehicle_id":vehicleID,"incidents":groups,"scope":"legacy events available on this server"})
+ case "/api/v2/security/report":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if _,err:=v.history.ImportLegacyEvents(vehicleID,v.events.List(0,1000));err!=nil{
+   http.Error(w,"history unavailable",http.StatusServiceUnavailable);return
+  }
+  days:=7
+  if n,err:=strconv.Atoi(r.URL.Query().Get("days"));err==nil && n>=1 && n<=90{days=n}
+  now:=time.Now().UTC()
+  summary,err:=v.history.SecurityReport(vehicleID,now.AddDate(0,0,-days),now)
+  if err!=nil{http.Error(w,"report unavailable",http.StatusServiceUnavailable);return}
+  v.write(w,map[string]any{"ok":true,"report":summary})
+ case "/api/v2/security/export.csv":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if _,err:=v.history.ImportLegacyEvents(vehicleID,v.events.List(0,1000));err!=nil{
+   http.Error(w,"history unavailable",http.StatusServiceUnavailable);return
+  }
+  w.Header().Set("Content-Type","text/csv; charset=utf-8")
+  w.Header().Set("Content-Disposition","attachment; filename=\"vigilo-security.csv\"")
+  if err:=v.history.ExportSecurityCSV(w,vehicleID);err!=nil{return}
  case "/api/v2/diagnostics":
   last:=time.Time{}
   if s.Vehicle.LastTelemetry>0{last=time.UnixMilli(s.Vehicle.LastTelemetry)}
