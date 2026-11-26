@@ -291,6 +291,16 @@ class Backend(private val baseUrl: String, private val token: String) {
         val coverage: String = "",
     )
 
+    @Serializable
+    data class V2TiresResponse(
+        val ok: Boolean = false,
+        val readings: List<V2Measurement> = emptyList(),
+        val unit: String = "bar",
+    )
+
+    fun v2TireSamples(): List<V2Measurement> =
+        get<V2TiresResponse>("/api/v2/diagnostics/tires").readings
+
     fun v2BatterySummary(): V2BatteryObservations =
         get<V2BatteryResponse>("/api/v2/battery/summary").battery
 
