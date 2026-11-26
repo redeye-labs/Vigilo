@@ -140,7 +140,20 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	go app.tailnet.Run(ctx, app.PublicHandler())
+	// Le nuove API restano separate e di sola lettura. In caso di archivio
+	// V2 non disponibile, la vecchia API v1 continua a funzionare normalmente.
+	publicHandler := app.PublicHandler()
+	v2History, historyErr := OpenV2Archive(*dataDir)
+	v2Modules, modulesErr := OpenV2ModuleStore(*dataDir)
+	if historyErr != nil || modulesErr != nil {
+		log.Printf("Vigilo 2 moduli sperimentali non disponibili: archive=%v modules=%v", historyErr, modulesErr)
+	} else {
+		muxV2 := http.NewServeMux()
+		muxV2.Handle("/api/v2/", &V2PublicAPI{state: store, events: app.events, history: v2History, modules: v2Modules})
+		muxV2.Handle("/", publicHandler)
+		publicHandler = muxV2
+	}
+	go app.tailnet.Run(ctx, publicHandler)
 	go app.Loop(ctx)
 	go app.ScheduleLoop(ctx)
 
