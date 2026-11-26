@@ -52,9 +52,17 @@ func main() {
 	mode := flag.String("mode", "", "ha (componente aggiuntivo, predefinito) o standalone (Docker senza Home Assistant); anche VIGILO_MODE")
 	mosqBin := flag.String("mosquitto", "/usr/sbin/mosquitto", "binario mosquitto (broker interno, solo standalone)")
 	health := flag.String("healthcheck", "", "controlla l'URL indicato ed esce (per HEALTHCHECK di Docker)")
+	isolatedPreview := flag.Bool("isolated-preview", false, "avvia solo la pagina di collaudo HA, senza Tesla, MQTT e Tailscale")
 	flag.Parse()
 	if *health != "" {
 		os.Exit(healthcheck(*health))
+	}
+	if *isolatedPreview || os.Getenv("VIGILO_ISOLATED_PREVIEW") == "1" {
+		log.Printf("Vigilo %s: collaudo HA isolato, Tesla/MQTT/Tailscale disabilitati", version)
+		if err:=serveIsolatedPreview(*ingress);err!=nil {
+			log.Fatalf("collaudo isolato: %v",err)
+		}
+		return
 	}
 	if *mode == "" {
 		*mode = os.Getenv("VIGILO_MODE")
