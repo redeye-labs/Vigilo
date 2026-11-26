@@ -144,7 +144,7 @@ class Prefs private constructor(private val sp: SharedPreferences) {
         storeServerProfiles(remaining)
         sp.edit {
             remove("backend_url"); remove("backend_token"); remove("backend_last_event")
-            remove("last_snapshot")
+            remove("last_snapshot"); remove("vin"); remove("vehicle_name")
         }
     }
 
