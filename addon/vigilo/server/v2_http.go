@@ -93,6 +93,17 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   }
   samples:=v.metrics.Latest(vehicleID,signals)
   v.write(w,map[string]any{"ok":true,"vehicle_id":vehicleID,"samples":samples,"count":len(samples)})
+ case "/api/v2/battery/trend":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
+  readings:=v.metrics.History(vehicleID,"NominalFullPackEnergyKwh",time.Now().AddDate(-2,0,0),20000)
+  trend,available:=BatteryCapacityTrend(vehicleID,readings)
+  if !available{
+   v.write(w,map[string]any{"ok":true,"available":false,
+    "note":"Occorrono almeno sei misure BMS coerenti distribuite su 30 giorni; il SoH resta non determinabile."})
+   return
+  }
+  v.write(w,map[string]any{"ok":true,"available":true,"trend":trend})
  case "/api/v2/battery/summary":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
