@@ -19,6 +19,8 @@ type V2PublicAPI struct {
  history *V2Archive
  modules *V2ModuleStore
  tesla *Tesla
+ identity *V2VehicleIdentity
+ metrics *V2Metrics
 }
 
 func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
@@ -32,7 +34,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
  }
  w.Header().Set("Content-Type","application/json; charset=utf-8")
  s:=v.state.Get()
- vehicleID:=VehicleID(s.VIN)
+ vehicleID:=v.identity.ID(s.VIN)
  if r.Method==http.MethodPost && r.URL.Path=="/api/v2/commands" {
   v.command(w,r,s,vehicleID)
   return
@@ -57,6 +59,27 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
    })
   }
   v.write(w,map[string]any{"ok":true,"schema":1,"modules":list,"vehicle_configured":vehicleID!=""})
+ case "/api/v2/battery/latest", "/api/v2/charging/latest", "/api/v2/trips/latest":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if v.metrics==nil{http.Error(w,"measurement archive unavailable",http.StatusServiceUnavailable);return}
+  var module V2Module
+  var signals []string
+  switch r.URL.Path {
+  case "/api/v2/battery/latest":
+   module=ModuleBattery
+   signals=[]string{"Soc","RatedRange","NominalFullPackEnergyKwh"}
+  case "/api/v2/charging/latest":
+   module=ModuleCharging
+   signals=[]string{"LifetimeEnergyChargedKwh"}
+  case "/api/v2/trips/latest":
+   module=ModuleTrips
+   signals=[]string{"LifetimeEnergyUsedDrive","Odometer"}
+  }
+  if !v.modules.Enabled(vehicleID,module){
+   http.Error(w,"module disabled",http.StatusForbidden);return
+  }
+  samples:=v.metrics.Latest(vehicleID,signals)
+  v.write(w,map[string]any{"ok":true,"vehicle_id":vehicleID,"samples":samples,"count":len(samples)})
  case "/api/v2/security/incidents":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   // Import is idempotent; legacy event files are never modified.
