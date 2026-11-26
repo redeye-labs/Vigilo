@@ -39,8 +39,10 @@ func TestV2OdometerSegmentsUseRealMiles(t *testing.T){
   insightSample("a","Odometer",1012,start.Add(time.Hour)),
  }
  r:=TripObservations("a",ss)
- if len(r)!=1{t.Fatalf("unexpected segments: %+v",r)}
- if math.Abs(r[0].DistanceKm-9.66)>0.02{t.Fatalf("incorrect conversion %+v",r[0])}
+ if len(r)!=2{t.Fatalf("expected two observed movement segments: %+v",r)}
+ if math.Abs(r[0].DistanceKm-9.66)>0.02 || math.Abs(r[1].DistanceKm-9.66)>0.02 {
+  t.Fatalf("incorrect conversion %+v",r)
+ }
  if len(TripObservations("b",ss))!=0{t.Fatal("vehicle leak")}
 }
 
