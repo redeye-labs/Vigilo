@@ -262,6 +262,8 @@ class Backend(private val baseUrl: String, private val token: String) {
         @SerialName("rated_range_km") val ratedRangeKm: Double? = null,
         @SerialName("charge_percent") val chargePercent: Double? = null,
         @SerialName("health_percent") val healthPercent: Double? = null,
+        @SerialName("latest_received_at") val latestReceivedAt: String = "",
+        val stale: Boolean = false,
         val note: String = "",
     )
 
