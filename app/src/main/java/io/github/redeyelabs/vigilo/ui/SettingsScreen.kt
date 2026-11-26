@@ -106,6 +106,15 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             }
         }
 
+        if (paired) {
+            SettingsGroup("Vigilo 2 — Anteprima") {
+                Hint("Moduli sperimentali in sviluppo, separati dalle funzioni Sentinella esistenti.")
+                TextButton(onClick = { onOpen(Screen.V2_HUB) }) {
+                    Text("Apri moduli e diagnostica")
+                }
+            }
+        }
+
         SettingsGroup("Suoni") { SoundTests() }
 
         SettingsGroup("Schermata principale") {
