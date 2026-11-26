@@ -48,6 +48,7 @@ enum class Screen(val key: String) {
     V2_ENERGY("energia2"),
     V2_AUTOMATIONS("automazioni2"),
     V2_BACKUP("backup2"),
+    V2_DIAGNOSTICS("diagnostica2"),
 }
 
 @Composable
