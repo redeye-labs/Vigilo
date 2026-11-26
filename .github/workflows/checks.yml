@@ -95,7 +95,7 @@ jobs:
               c=t.extractfile("vigilo/config.yaml").read().decode()
               d=t.extractfile("vigilo/Dockerfile").read().decode()
               assert "slug: vigilo\\n" in c
-              assert "version: \\"2.0.0-beta.1\\"" in c
+              assert 'version: "2.0.0-beta.1"' in c
               assert "VIGILO_ISOLATED_PREVIEW=1" not in d
               assert t.getmember("vigilo/server/v2_upgrade_safety_test.go")
           PY
