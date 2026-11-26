@@ -41,6 +41,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var modules by remember { mutableStateOf<List<Backend.V2Module>>(emptyList()) }
     var battery by remember { mutableStateOf<Backend.V2BatteryObservations?>(null) }
+    var capacityTrend by remember { mutableStateOf<Backend.V2CapacityTrendResponse?>(null) }
     var charges by remember { mutableStateOf<List<Backend.V2ChargingSession>>(emptyList()) }
     var trips by remember { mutableStateOf<List<Backend.V2TripObservation>>(emptyList()) }
     var tariffInput by remember { mutableStateOf("") }
@@ -60,6 +61,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                 EnergyScreenData(
                     modules = capabilities,
                     battery = if (batteryOn) backend.v2BatterySummary() else null,
+                    trend = if (batteryOn) backend.v2CapacityTrend() else null,
                     charges = if (chargingOn) backend.v2ChargingSessions() else emptyList(),
                     trips = if (tripsOn) backend.v2TripObservations() else emptyList(),
                     tariff = if (chargingOn) backend.v2ChargingTariff() else null,
@@ -67,6 +69,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
             }
             modules = result.modules
             battery = result.battery
+            capacityTrend = result.trend
             charges = result.charges
             trips = result.trips
             tariffInput = result.tariff?.toString()?.replace('.', ',').orEmpty()
@@ -125,6 +128,19 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                             Text("Salute batteria: " + (b.healthPercent?.let { fmt(it, "%") } ?: "Non determinabile"))
                             Text(b.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } ?: Text("Nessuna misura disponibile.")
+                        capacityTrend?.let { observation ->
+                            if (observation.available && observation.trend != null) {
+                                val trend = observation.trend
+                                Text("Variazione capacità BMS nel periodo: " + fmt(trend.percentChange, "%"))
+                                Text("Capacità iniziale rilevata: " + fmt(trend.firstKWh, "kWh"))
+                                Text("Capacità recente: " + fmt(trend.latestKWh, "kWh"))
+                                Text(trend.note, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                Text(observation.note, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                     }
                     if (active && id == "charging") {
                         Text("Sessioni osservate: ${charges.size}")
@@ -190,6 +206,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
 private data class EnergyScreenData(
     val modules: List<Backend.V2Module>,
     val battery: Backend.V2BatteryObservations?,
+    val trend: Backend.V2CapacityTrendResponse?,
     val charges: List<Backend.V2ChargingSession>,
     val trips: List<Backend.V2TripObservation>,
     val tariff: Double?,
