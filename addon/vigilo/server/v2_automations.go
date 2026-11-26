@@ -1,6 +1,7 @@
 package main
 
 import (
+ "context"
  "encoding/json"
  "errors"
  "math"
@@ -165,4 +166,23 @@ func (e *V2RuleEngine) Evaluate(vehicle VehicleID,kind string,value float64,at t
   if err:=e.persistLocked(next);err!=nil{return nil}
  }
  return result
+}
+
+func (a *App) triggerV2Automations(kind string,value float64) {
+ if a.v2Rules==nil||a.v2Modules==nil||a.v2Identity==nil{return}
+ current:=a.store.Get()
+ vehicle:=a.v2Identity.ID(current.VIN)
+ if vehicle==""||!a.v2Modules.Enabled(vehicle,ModuleAutomation){return}
+ actions:=a.v2Rules.Evaluate(vehicle,kind,value,time.Now().UTC())
+ for _,action:=range actions{
+  // Existing EventLog is also visible to Android's normal event polling.
+  a.events.Add(EvProblem,action.Title,action.Message)
+  go func(title,message string,targets []string){
+   ctx,cancel:=context.WithTimeout(context.Background(),20*time.Second)
+   defer cancel()
+   a.notifyAll(ctx,targets,title,message,map[string]any{
+    "tag":"vigilo-salute","priority":"high","channel":"Vigilo",
+   })
+  }(action.Title,action.Message,current.Settings.NotifyTargets)
+ }
 }
