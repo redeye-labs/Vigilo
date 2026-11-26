@@ -55,7 +55,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
    list=append(list,map[string]any{
     "id":m,"enabled":v.modules.Enabled(vehicleID,m),
     // Only capabilities truly implemented may be marked available.
-    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands,
+    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery,
    })
   }
   v.write(w,map[string]any{"ok":true,"schema":1,"modules":list,"vehicle_configured":vehicleID!=""})
