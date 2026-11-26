@@ -242,22 +242,36 @@ func (v *V2PublicAPI) command(w http.ResponseWriter,r *http.Request,s State,vehi
  if r.Header.Get("X-Vigilo-Confirm")!="yes"{
   http.Error(w,"explicit confirmation required",http.StatusBadRequest);return
  }
- var req struct{ Command string `json:"command"` }
+ var req struct{Command string `json:"command"`; Value *float64 `json:"value,omitempty"`}
  if err:=json.NewDecoder(io.LimitReader(r.Body,2048)).Decode(&req);err!=nil{
   http.Error(w,"invalid JSON",http.StatusBadRequest);return
  }
- spec,err:=ValidateV2AdvancedCommand(req.Command,true)
- if err!=nil{http.Error(w,"unknown command",http.StatusBadRequest);return}
+ var spec V2CommandSpec
+ if req.Value==nil{
+  var err error
+  spec,err=ValidateV2AdvancedCommand(req.Command,true)
+  if err!=nil{http.Error(w,"unknown command",http.StatusBadRequest);return}
+ }else{
+  if _,_,_,err:=ValidateV2ParameterCommand(req.Command,*req.Value,true);err!=nil{
+   http.Error(w,"invalid command value",http.StatusBadRequest);return
+  }
+ }
  if !s.Vehicle.Online{
   http.Error(w,"vehicle offline or sleeping; no automatic wake",http.StatusConflict);return
  }
- if spec.Sensitive && s.Vehicle.Gear!="P"{
-  http.Error(w,"vehicle must be parked to operate trunk",http.StatusConflict);return
+ if (spec.Sensitive || req.Value!=nil) && s.Vehicle.Gear!="P"{
+  http.Error(w,"vehicle must be parked",http.StatusConflict);return
  }
  if v.tesla==nil{http.Error(w,"commands unavailable",http.StatusServiceUnavailable);return}
  ctx,cancel:=context.WithTimeout(r.Context(),30*time.Second)
  defer cancel()
- result,err:=v.tesla.AdvancedCommand(ctx,s.VIN,req.Command,true)
+ var result string
+ var err error
+ if req.Value==nil{
+  result,err=v.tesla.AdvancedCommand(ctx,s.VIN,req.Command,true)
+ }else{
+  result,err=v.tesla.AdvancedParameterCommand(ctx,s.VIN,req.Command,*req.Value,true)
+ }
  if err!=nil{
   http.Error(w,"Tesla command not completed; check vehicle status",http.StatusBadGateway)
   return
