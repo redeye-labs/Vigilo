@@ -36,3 +36,19 @@ func TestV2TelemetryDoesNotRequestSemiOnlyEnergyField(t *testing.T){
  if _,ok:=fields["LifetimeEnergyUsed"];!ok{t.Fatal("Model 3 battery use counter missing")}
  if _,ok:=fields["Odometer"];!ok{t.Fatal("odometer missing")}
 }
+
+func TestHomeLocationOnlyWhenExplicitAwayRuleConfigured(t *testing.T){
+ store,err:=OpenV2ModuleStore(t.TempDir());if err!=nil{t.Fatal(err)}
+ vehicle:=VehicleID("car")
+ if err=store.Set(vehicle,ModuleAutomation,true);err!=nil{t.Fatal(err)}
+ if _,ok:=V2TelemetryFields(store,vehicle)["LocatedAtHome"];ok{
+  t.Fatal("location data requested for unrelated automations")
+ }
+ if _,ok:=V2TelemetryFields(store,vehicle,true)["LocatedAtHome"];!ok{
+  t.Fatal("home flag not requested for opted-in parked-away rule")
+ }
+ if err=store.Set(vehicle,ModuleAutomation,false);err!=nil{t.Fatal(err)}
+ if _,ok:=V2TelemetryFields(store,vehicle,true)["LocatedAtHome"];ok{
+  t.Fatal("disabled module still requesting home data")
+ }
+}
