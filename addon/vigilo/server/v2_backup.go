@@ -54,9 +54,11 @@ func CreateV2PortableExport(vehicle VehicleID,history *V2Archive,metrics *V2Metr
  since:=time.Time{}
  for _,signal:=range allowedPortableFields{
   for _,m:=range metrics.History(vehicle,signal,since,20000){
+   if len(snapshot.Measurements)>=20000{break}
    m.VehicleID="export_vehicle"
    snapshot.Measurements=append(snapshot.Measurements,m)
   }
+  if len(snapshot.Measurements)>=20000{break}
  }
  snapshot.Checksum=V2PortableChecksum(snapshot)
  return snapshot,nil
