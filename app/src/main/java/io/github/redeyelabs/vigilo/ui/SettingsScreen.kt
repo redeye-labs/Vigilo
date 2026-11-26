@@ -121,6 +121,9 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
                 TextButton(onClick = { onOpen(Screen.V2_BACKUP) }) {
                     Text("Backup e report")
                 }
+                TextButton(onClick = { onOpen(Screen.V2_DIAGNOSTICS) }) {
+                    Text("Diagnostica e pneumatici")
+                }
             }
         }
 
