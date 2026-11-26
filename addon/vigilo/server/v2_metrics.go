@@ -149,6 +149,10 @@ func (v *V2Metrics) Latest(vehicleID VehicleID, signals []string) []V2Measuremen
  for i:=len(v.entries)-1;i>=0;i--{
   x:=v.entries[i]
   if x.VehicleID!=vehicleID || !wanted[x.Signal] || seen[x.Signal]{continue}
+  if x.ReceivedAt.IsZero() || time.Since(x.ReceivedAt)>20*time.Minute {
+   // A saved sample is real historical evidence, not a live vehicle status.
+   x.Quality=QualityStale
+  }
   out=append(out,x)
   seen[x.Signal]=true
  }
