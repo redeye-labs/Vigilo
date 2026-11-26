@@ -51,7 +51,7 @@ func TestIsolatedPreviewServesInformationalPage(t *testing.T){
  w:=httptest.NewRecorder()
  isolatedPreviewHandler().ServeHTTP(w,req)
  if w.Code!=http.StatusOK {t.Fatal(w.Code)}
- if !strings.Contains(w.Body.String(),"Collaudo isolato") || !strings.Contains(w.Body.String(),"non accede alla Tesla") {
+ if !strings.Contains(w.Body.String(),"Collaudo isolato") || !strings.Contains(w.Body.String(),"Non accede alla Tesla") {
   t.Fatalf("unexpected UI: %s",w.Body.String())
  }
  if w.Header().Get("Content-Security-Policy")==""{t.Fatal("missing CSP")}
