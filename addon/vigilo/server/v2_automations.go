@@ -15,7 +15,7 @@ type V2AlertRule struct{
  ID string `json:"id"`
  VehicleID VehicleID `json:"vehicle_id"`
  Enabled bool `json:"enabled"`
- Condition string `json:"condition"` // soc_below or sentry_panic
+ Condition string `json:"condition"` // soc_below, sentry_panic or away_from_home
  Threshold float64 `json:"threshold,omitempty"`
  CooldownSec int `json:"cooldown_sec"`
  LastFiredAt time.Time `json:"last_fired_at,omitempty"`
@@ -65,8 +65,8 @@ func validV2Rule(rule V2AlertRule) error{
   if math.IsNaN(rule.Threshold)||math.IsInf(rule.Threshold,0)||rule.Threshold<5||rule.Threshold>60{
    return errors.New("SOC threshold must be 5-60%")
   }
- case "sentry_panic":
-  if rule.Threshold!=0{return errors.New("panic does not take a threshold")}
+ case "sentry_panic", "away_from_home":
+  if rule.Threshold!=0{return errors.New("event condition does not take a threshold")}
  default:return errors.New("unknown automation condition")
  }
  return nil
@@ -128,6 +128,7 @@ func (e *V2RuleEngine) Delete(vehicle VehicleID,id string) error{
 // A panic event must be passed only on a genuine Sentry state transition.
 func (e *V2RuleEngine) Evaluate(vehicle VehicleID,kind string,value float64,at time.Time) []V2RuleResult{
  if vehicle==""||at.IsZero()||!finiteNumber(value){return nil}
+ if kind=="away_from_home" && value!=0 && value!=1{return nil}
  e.mu.Lock()
  defer e.mu.Unlock()
  next:=append([]V2AlertRule(nil),e.rules...)
@@ -148,6 +149,17 @@ func (e *V2RuleEngine) Evaluate(vehicle VehicleID,kind string,value float64,at t
    }
   case "sentry_panic":
    shouldFire=true
+  case "away_from_home":
+   // 0 = explicitly reported away; 1 = explicitly reported at home.
+   // The caller must also verify the vehicle is parked. Unknown values
+   // never arm, disarm, or trigger notifications.
+   if value==1 {
+    if r.Armed {r.Armed=false;changed=true}
+   } else if value==0 && !r.Armed {
+    shouldFire=true
+    r.Armed=true
+    changed=true
+   }
   }
   if !shouldFire{continue}
   if !r.LastFiredAt.IsZero()&&at.Sub(r.LastFiredAt)<time.Duration(r.CooldownSec)*time.Second{continue}
@@ -159,6 +171,9 @@ func (e *V2RuleEngine) Evaluate(vehicle VehicleID,kind string,value float64,at t
    message="Livello batteria inferiore alla soglia selezionata."
   }else if kind=="sentry_panic"{
    title="Vigilo: allarme Sentinella"
+  }else if kind=="away_from_home"{
+   title="Vigilo: parcheggio fuori casa"
+   message="La Tesla risulta parcheggiata fuori casa. Controlla che la Sentinella sia attiva."
   }
   result=append(result,V2RuleResult{ID:r.ID,Vehicle:vehicle,Title:title,Message:message})
  }
