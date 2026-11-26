@@ -21,12 +21,12 @@ func TestV2ArchiveLegacyMigrationIsIdempotentAndIsolated(t *testing.T) {
  n, err = archive.ImportLegacyEvents("car-1", legacy)
  if err != nil || n != 0 { t.Fatalf("duplicate import n=%d err=%v", n, err) }
  n, err = archive.ImportLegacyEvents("car-2", legacy[:1])
- if err != nil || n != 1 { t.Fatalf("other vehicle n=%d err=%v", n, err) }
+ if err != nil || n != 0 { t.Fatalf("legacy events were wrongly assigned to another vehicle: n=%d err=%v", n, err) }
  if got := len(archive.Snapshot("car-1", 100)); got != 2 { t.Fatalf("vehicle 1 got %d", got) }
- if got := len(archive.Snapshot("car-2", 100)); got != 1 { t.Fatalf("vehicle 2 got %d", got) }
+ if got := len(archive.Snapshot("car-2", 100)); got != 0 { t.Fatalf("vehicle 2 leaked %d events", got) }
  archive2, err := OpenV2Archive(dir)
  if err != nil { t.Fatal(err) }
- if len(archive2.Snapshot("", 100)) != 3 { t.Fatal("archive not persistent") }
+ if len(archive2.Snapshot("", 100)) != 2 { t.Fatal("archive not persistent") }
  if fi, err := os.Stat(filepath.Join(dir, "v2-history.json")); err != nil || fi.Mode().Perm() != 0600 {
   t.Fatalf("archive must have mode 0600: %v %v", fi, err)
  }
