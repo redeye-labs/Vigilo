@@ -43,6 +43,9 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
     var diagnostic by remember { mutableStateOf<Backend.V2Diagnostics?>(null) }
     var security by remember { mutableStateOf<Backend.V2Security?>(null) }
     var report by remember { mutableStateOf<Backend.V2Report?>(null) }
+    var batterySamples by remember { mutableStateOf<List<Backend.V2Measurement>>(emptyList()) }
+    var batteryBusy by remember { mutableStateOf(false) }
+    var batteryMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     var confirmCommand by remember { mutableStateOf<String?>(null) }
     var commandBusy by remember { mutableStateOf(false) }
@@ -54,18 +57,24 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
         diagnostic = null
         security = null
         report = null
+        batterySamples = emptyList()
         error = null
         loading = paired
         if (paired) {
             try {
                 val result = withContext(Dispatchers.IO) {
                     val b = Backend(vm.prefs)
-                    Pair(Triple(b.v2Capabilities(), b.v2Diagnostics(), b.v2Security()), b.v2SecurityReport())
+                    val caps = b.v2Capabilities()
+                    val samples = if (caps.modules.any { it.id == "battery" && it.enabled }) {
+                        b.v2BatterySamples()
+                    } else emptyList()
+                    Pair(Triple(caps, b.v2Diagnostics(), b.v2Security()), Pair(b.v2SecurityReport(), samples))
                 }
                 capabilities = result.first.first
                 diagnostic = result.first.second
                 security = result.first.third
-                report = result.second
+                report = result.second.first
+                batterySamples = result.second.second
             } catch (e: Exception) {
                 error = if (Backend.isUnsupported(e)) {
                     "Il server Vigilo non supporta ancora queste funzionalità. Non è necessario cambiare l'app attuale."
@@ -177,6 +186,54 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit) {
                             )
                         }
                     }
+                }
+            }
+            capabilities?.modules?.firstOrNull { it.id == "battery" }?.let { batteryModule ->
+                VigiloCard {
+                    Text("Batteria e autonomia", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Solo misure ricevute da Tesla. La salute batteria non viene stimata senza un riferimento BMS confrontabile.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        enabled = !batteryBusy,
+                        onClick = {
+                            batteryBusy = true
+                            scope.launch {
+                                try {
+                                    withContext(Dispatchers.IO) {
+                                        Backend(vm.prefs).v2SetModule("battery", !batteryModule.enabled)
+                                    }
+                                    refresh++
+                                } catch (e: Exception) {
+                                    batteryMessage = e.message ?: "Impossibile cambiare il modulo batteria."
+                                } finally {
+                                    batteryBusy = false
+                                }
+                            }
+                        },
+                    ) { Text(if (batteryModule.enabled) "Disattiva raccolta" else "Attiva raccolta batteria") }
+                    if (batteryModule.enabled) {
+                        if (batterySamples.isEmpty()) {
+                            Text("Nessuna misura disponibile: Vigilo non inventa valori mancanti.")
+                        } else {
+                            val labels = mapOf(
+                                "Soc" to "Stato di carica",
+                                "RatedRange" to "Autonomia nominale",
+                                "NominalFullPackEnergyKwh" to "Capacità nominale BMS",
+                            )
+                            batterySamples.forEach { sample ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp)) {
+                                    Text(labels[sample.signal] ?: sample.signal, Modifier.weight(1f))
+                                    Text("${"%.1f".format(sample.value)} ${sample.unit}")
+                                }
+                            }
+                        }
+                    }
+                    batteryMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
             }
             capabilities?.modules?.firstOrNull { it.id == "commands" }?.let { commandModule ->
