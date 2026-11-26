@@ -714,6 +714,12 @@ var telemetryFields = map[string]any{
 // SendTelemetryConfig firma (Schnorr/P-256, come tesla-jws) e invia la configurazione: l'auto la riceve
 // alla prossima connessione, quindi NON serve svegliarla.
 func (t *Tesla) SendTelemetryConfig(ctx context.Context, vin, host string, port int, caPEM string) (string, error) {
+	return t.SendTelemetryConfigWithFields(ctx, vin, host, port, caPEM, telemetryFields)
+}
+
+// SendTelemetryConfigWithFields preserves legacy telemetry and requests only
+// the extra signals chosen by the installed module preferences.
+func (t *Tesla) SendTelemetryConfigWithFields(ctx context.Context, vin, host string, port int, caPEM string, fields map[string]any) (string, error) {
 	exp := time.Now().Add(364 * 24 * time.Hour).Unix()
 	config := jwt.MapClaims{
 		"hostname":    host,
