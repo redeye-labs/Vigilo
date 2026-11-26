@@ -87,9 +87,9 @@ func (v *V2Metrics) Latest(vehicleID VehicleID, signals []string) []V2Measuremen
 }
 
 func (a *App) recordV2Telemetry(field string,val any){
- if a.v2Metrics==nil || a.v2Modules==nil{return}
+ if a.v2Metrics==nil || a.v2Modules==nil || a.v2Identity==nil{return}
  s:=a.store.Get()
- vin:=VehicleID(s.VIN)
+ vin:=a.v2Identity.ID(s.VIN)
  if vin==""{return}
  var module V2Module
  var unit string
