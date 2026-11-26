@@ -1,6 +1,7 @@
 package main
 
 import (
+ "bufio"
  "encoding/json"
  "errors"
  "math"
@@ -10,37 +11,89 @@ import (
  "time"
 )
 
-const v2MetricRetention=50000
+const v2MetricRetention=60000
+const v2MetricKeep=30000
 const v2MetricMinimumInterval=5*time.Minute
 
-// V2Metrics is a transitional, non-secret store for sampled Tesla values.
-// Only explicit supported fields are recorded. Disabled modules store nothing.
+// V2Metrics uses a newline-delimited append-only journal and an atomic
+// compacted snapshot. Unlike a full JSON rewrite, this is bounded work per
+// Tesla telemetry update, suitable for modest HA/Docker installations.
 type V2Metrics struct {
  mu sync.Mutex
  path string
+ journal string
+ seq uint64
  entries []V2Measurement
 }
 
 type v2MetricsData struct {
  Schema int `json:"schema"`
+ LastSeq uint64 `json:"last_seq,omitempty"`
  Entries []V2Measurement `json:"entries"`
+}
+
+type v2MetricLogRecord struct{
+ Seq uint64 `json:"seq"`
+ Reading V2Measurement `json:"reading"`
 }
 
 func OpenV2Metrics(dir string)(*V2Metrics,error){
  if err:=os.MkdirAll(dir,0700);err!=nil{return nil,err}
- v:=&V2Metrics{path:filepath.Join(dir,"v2-measurements.json")}
+ v:=&V2Metrics{path:filepath.Join(dir,"v2-measurements.json"),
+              journal:filepath.Join(dir,"v2-measurements.ndjson")}
  b,err:=os.ReadFile(v.path)
+ if err==nil{
+  var data v2MetricsData
+  if err=json.Unmarshal(b,&data);err!=nil{return nil,err}
+  if data.Schema!=1{return nil,errors.New("versione dati telemetrici non supportata")}
+  v.entries=data.Entries
+  v.seq=data.LastSeq
+ }else if !errors.Is(err,os.ErrNotExist){return nil,err}
+
+ logFile,err:=os.Open(v.journal)
  if errors.Is(err,os.ErrNotExist){return v,nil}
  if err!=nil{return nil,err}
- var data v2MetricsData
- if err=json.Unmarshal(b,&data);err!=nil{return nil,err}
- if data.Schema!=1{return nil,errors.New("versione dati telemetrici non supportata")}
- v.entries=data.Entries
+ defer logFile.Close()
+ scanner:=bufio.NewScanner(logFile)
+ scanner.Buffer(make([]byte,4096),1<<20)
+ for scanner.Scan(){
+  var record v2MetricLogRecord
+  if err=json.Unmarshal(scanner.Bytes(),&record);err!=nil{
+   // Malformed journal is never discarded silently: the operator must
+   // restore the protected snapshot before allowing more writes.
+   return nil,errors.New("registro misure Vigilo 2 danneggiato")
+  }
+  if record.Seq>v.seq{
+   if err=record.Reading.Validate();err!=nil{return nil,err}
+   v.entries=append(v.entries,record.Reading)
+   v.seq=record.Seq
+  }
+ }
+ if err=scanner.Err();err!=nil{return nil,err}
  return v,nil
 }
 
-// Add updates the archive only for genuine new samples, never inventing
-// missing signals. Changes inside the deduplication window are retained.
+func (v *V2Metrics) compactLocked() error{
+ if len(v.entries)<v2MetricRetention{return nil}
+ keep:=append([]V2Measurement(nil),v.entries[len(v.entries)-v2MetricKeep:]...)
+ data,err:=json.Marshal(v2MetricsData{Schema:1,LastSeq:v.seq,Entries:keep})
+ if err!=nil{return err}
+ f,err:=os.CreateTemp(filepath.Dir(v.path),".v2-metrics-*.tmp")
+ if err!=nil{return err}
+ temp:=f.Name()
+ defer os.Remove(temp)
+ if err=f.Chmod(0600);err!=nil{f.Close();return err}
+ if _,err=f.Write(data);err!=nil{f.Close();return err}
+ if err=f.Sync();err!=nil{f.Close();return err}
+ if err=f.Close();err!=nil{return err}
+ if err=os.Rename(temp,v.path);err!=nil{return err}
+ // Snapshot is already durable. If truncation fails, startup replay skips
+ // journal entries at or below LastSeq, avoiding duplicates.
+ if err=os.WriteFile(v.journal,nil,0600);err!=nil{return err}
+ v.entries=keep
+ return nil
+}
+
 func (v *V2Metrics) Add(m V2Measurement)(bool,error){
  if err:=m.Validate();err!=nil{return false,err}
  if math.IsNaN(m.Value)||math.IsInf(m.Value,0){return false,errors.New("valore non finito")}
@@ -53,25 +106,25 @@ func (v *V2Metrics) Add(m V2Measurement)(bool,error){
    break
   }
  }
- next:=append(append([]V2Measurement(nil),v.entries...),m)
- if len(next)>v2MetricRetention{next=next[len(next)-v2MetricRetention:]}
- b,err:=json.Marshal(v2MetricsData{Schema:1,Entries:next})
+ record:=v2MetricLogRecord{Seq:v.seq+1,Reading:m}
+ line,err:=json.Marshal(record)
  if err!=nil{return false,err}
- f,err:=os.CreateTemp(filepath.Dir(v.path),".v2-measurements-*.tmp")
+ file,err:=os.OpenFile(v.journal,os.O_WRONLY|os.O_APPEND|os.O_CREATE,0600)
  if err!=nil{return false,err}
- temp:=f.Name()
- defer os.Remove(temp)
- if err=f.Chmod(0600);err!=nil{f.Close();return false,err}
- if _,err=f.Write(b);err!=nil{f.Close();return false,err}
- if err=f.Sync();err!=nil{f.Close();return false,err}
- if err=f.Close();err!=nil{return false,err}
- if err=os.Rename(temp,v.path);err!=nil{return false,err}
- v.entries=next
+ line=append(line,'\n')
+ _,err=file.Write(line)
+ if err==nil{err=file.Sync()}
+ if closing:=file.Close();err==nil{err=closing}
+ if err!=nil{return false,err}
+ v.seq++
+ v.entries=append(v.entries,m)
+ if err:=v.compactLocked();err!=nil{
+  // The complete journal remains available after a failed compaction.
+  return true,err
+ }
  return true,nil
 }
 
-// History returns chronological, per-vehicle readings for one allowlisted signal.
-// Reports may derive statistics only from readings actually received.
 func (v *V2Metrics) History(vehicleID VehicleID, signal string, since time.Time, limit int) []V2Measurement {
  v.mu.Lock()
  defer v.mu.Unlock()
