@@ -329,6 +329,12 @@ class Backend(private val baseUrl: String, private val token: String) {
     @Serializable
     private data class V2Operation(val ok: Boolean = false)
 
+    /** Portable non-secret export. This is not a full Home Assistant/Docker backup. */
+    fun v2BackupExportJson(): String {
+        val element: kotlinx.serialization.json.JsonElement = get("/api/v2/backup/export")
+        return element.toString()
+    }
+
     fun v2Automations(): V2AutomationsResponse = get("/api/v2/automations")
 
     fun v2SaveAutomation(rule: V2AutomationRule) {
