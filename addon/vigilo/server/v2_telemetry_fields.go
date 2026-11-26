@@ -9,7 +9,7 @@ import (
 // V2TelemetryFields only requests additional fields when their module is enabled.
 // Existing Sentry monitoring fields are always retained. Unsupported readings
 // are simply absent; no synthetic values or extra polling are used.
-func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID) map[string]any {
+func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID, needHomeFlag ...bool) map[string]any {
  fields:=make(map[string]any,len(telemetryFields)+16)
  for name,cfg:=range telemetryFields{fields[name]=cfg}
  if prefs==nil || vehicle==""{return fields}
@@ -30,8 +30,8 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID) map[string]any {
  if prefs.Enabled(vehicle,ModuleDiagnostics){
   add(900,"TpmsPressureFl","TpmsPressureFr","TpmsPressureRl","TpmsPressureRr")
  }
- if prefs.Enabled(vehicle,ModuleAutomation){
-  // Boolean Tesla indication: no GPS coordinates are stored for this rule.
+ if prefs.Enabled(vehicle,ModuleAutomation) && len(needHomeFlag)>0 && needHomeFlag[0]{
+  // Only request this signal when the explicit away-from-home rule is enabled.
   add(60,"LocatedAtHome")
  }
  return fields
