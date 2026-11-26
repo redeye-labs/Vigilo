@@ -28,6 +28,9 @@ type App struct {
 	ft         *FleetTelemetry
 	bus        *Bus
 	version    string
+	v2Metrics *V2Metrics
+	v2Modules *V2ModuleStore
+	v2Identity *V2VehicleIdentity
 
 	mu            sync.Mutex
 	auto          automation
@@ -101,6 +104,7 @@ func (a *App) OnTelemetryField(field string, val any) {
 	if sentryChange != "" {
 		a.onSentry(prevSentry, sentryChange)
 	}
+	a.recordV2Telemetry(field,val)
 	a.bus.PublishState()
 }
 
