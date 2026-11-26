@@ -175,6 +175,27 @@ class Backend(private val baseUrl: String, private val token: String) {
         val scope: String = "",
     )
 
+    @Serializable
+    data class V2Report(
+        @SerialName("vehicle_id") val vehicleID: String = "",
+        val from: String = "",
+        val to: String = "",
+        @SerialName("total_events") val totalEvents: Int = 0,
+        @SerialName("aware_events") val awareEvents: Int = 0,
+        @SerialName("panic_events") val panicEvents: Int = 0,
+        @SerialName("grouped_incidents") val groupedIncidents: Int = 0,
+        val coverage: String = "",
+    )
+
+    @Serializable
+    data class V2ReportResponse(
+        val ok: Boolean = false,
+        val report: V2Report = V2Report(),
+    )
+
+    fun v2SecurityReport(days: Int = 7): V2Report =
+        get<V2ReportResponse>("/api/v2/security/report?days=${days.coerceIn(1, 90)}").report
+
     fun v2Capabilities(): V2Capabilities = get("/api/v2/capabilities")
     fun v2Diagnostics(): V2Diagnostics = get("/api/v2/diagnostics")
     fun v2Security(limit: Int = 200): V2Security =
