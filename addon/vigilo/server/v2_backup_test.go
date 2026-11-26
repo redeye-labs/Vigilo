@@ -26,6 +26,10 @@ func TestV2PortableExportExcludesSecretsAndOriginalVIN(t *testing.T){
   if strings.Contains(string(jsonBytes),secret){t.Fatalf("secret %s exposed in backup",secret)}
  }
  if len(snap.Events)!=1||len(snap.Measurements)!=1{t.Fatalf("missing data %+v",snap)}
+ if original:=hist.Snapshot(vehicle,10);len(original)!=1||original[0].Message!=""||
+    strings.Contains(original[0].Title,"5YJ3E1EA") {
+  t.Fatalf("raw event metadata persisted in V2 archive: %+v",original)
+ }
  snap.Events[0].Message="tampered"
  if err=VerifyV2PortableExport(snap);err==nil{t.Fatal("altered backup accepted")}
 }
