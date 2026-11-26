@@ -112,6 +112,9 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
                 TextButton(onClick = { onOpen(Screen.V2_HUB) }) {
                     Text("Apri moduli e diagnostica")
                 }
+                TextButton(onClick = { onOpen(Screen.V2_ENERGY) }) {
+                    Text("Batteria, ricariche e viaggi")
+                }
             }
         }
 
