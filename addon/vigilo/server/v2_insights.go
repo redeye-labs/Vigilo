@@ -120,13 +120,18 @@ type V2BatteryObservations struct {
  RatedRangeKm *float64 `json:"rated_range_km,omitempty"`
  ChargePercent *float64 `json:"charge_percent,omitempty"`
  HealthPercent *float64 `json:"health_percent,omitempty"`
+ LatestReceivedAt time.Time `json:"latest_received_at,omitempty"`
+ Stale bool `json:"stale"`
  Note string `json:"note"`
 }
 
 func BatteryObservations(vehicle VehicleID,latest []V2Measurement) V2BatteryObservations {
  out:=V2BatteryObservations{Note:"Valori forniti dalla telemetria Tesla. SoH non disponibile senza una misura iniziale BMS validata."}
+ allStale:=true
  for _,m:=range latest{
   if m.VehicleID!=vehicle||!finiteNumber(m.Value)||m.Value<0{continue}
+  if m.ReceivedAt.After(out.LatestReceivedAt){out.LatestReceivedAt=m.ReceivedAt}
+  if m.Quality!=QualityStale{allStale=false}
   value:=m.Value
   switch m.Signal{
   case "NominalFullPackEnergyKwh":out.NominalFullPackKWh=&value
@@ -135,6 +140,10 @@ func BatteryObservations(vehicle VehicleID,latest []V2Measurement) V2BatteryObse
   case "Soc":
    if value<=100{out.ChargePercent=&value}
   }
+ }
+ out.Stale=allStale
+ if allStale && !out.LatestReceivedAt.IsZero(){
+  out.Note="Ultime letture Tesla non recenti: valori storici, non aggiornati in tempo reale. SoH non disponibile senza riferimento BMS validato."
  }
  return out
 }
