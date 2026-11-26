@@ -43,6 +43,10 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   v.configureModule(w,r,vehicleID)
   return
  }
+ if r.Method==http.MethodPut && r.URL.Path=="/api/v2/charging/tariff" {
+  v.configureTariff(w,r,vehicleID)
+  return
+ }
  if r.Method!=http.MethodGet {
   w.Header().Set("Allow","GET")
   http.Error(w,"method not allowed",http.StatusMethodNotAllowed)
@@ -55,7 +59,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
    list=append(list,map[string]any{
     "id":m,"enabled":v.modules.Enabled(vehicleID,m),
     // Only capabilities truly implemented may be marked available.
-    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery,
+    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery||m==ModuleCharging||m==ModuleTrips,
    })
   }
   v.write(w,map[string]any{"ok":true,"schema":1,"modules":list,"vehicle_configured":vehicleID!=""})
@@ -67,19 +71,48 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   switch r.URL.Path {
   case "/api/v2/battery/latest":
    module=ModuleBattery
-   signals=[]string{"Soc","RatedRange","NominalFullPackEnergyKwh"}
+   signals=[]string{"Soc","RatedRange","NominalFullPackEnergyKwh","EnergyRemaining"}
   case "/api/v2/charging/latest":
    module=ModuleCharging
-   signals=[]string{"LifetimeEnergyChargedKwh"}
+   signals=[]string{"LifetimeEnergyChargedKwh","DCChargingEnergyIn","ACChargingEnergyIn","DCChargingPower"}
   case "/api/v2/trips/latest":
    module=ModuleTrips
-   signals=[]string{"LifetimeEnergyUsedDrive","Odometer"}
+   signals=[]string{"LifetimeEnergyUsed","Odometer"}
   }
   if !v.modules.Enabled(vehicleID,module){
    http.Error(w,"module disabled",http.StatusForbidden);return
   }
   samples:=v.metrics.Latest(vehicleID,signals)
   v.write(w,map[string]any{"ok":true,"vehicle_id":vehicleID,"samples":samples,"count":len(samples)})
+ case "/api/v2/battery/summary":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
+  latest:=v.metrics.Latest(vehicleID,[]string{"Soc","RatedRange","EnergyRemaining","NominalFullPackEnergyKwh"})
+  v.write(w,map[string]any{"ok":true,"battery":BatteryObservations(vehicleID,latest)})
+ case "/api/v2/charging/sessions":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleCharging){http.Error(w,"module disabled",http.StatusForbidden);return}
+  since:=time.Now().AddDate(0,0,-90)
+  observations:=v.metrics.History(vehicleID,"DCChargingEnergyIn",since,20000)
+  tariff:=v.modules.Tariff(vehicleID)
+  v.write(w,map[string]any{"ok":true,"sessions":ChargingSessions(vehicleID,observations,tariff),
+   "coverage":"observed_samples_only; energy_received_by_battery_excludes_charger_losses"})
+ case "/api/v2/charging/tariff":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  v.write(w,map[string]any{"ok":true,"price_eur_per_kwh":v.modules.Tariff(vehicleID),
+    "source":"user_entered"})
+ case "/api/v2/trips/observations":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleTrips){http.Error(w,"module disabled",http.StatusForbidden);return}
+  since:=time.Now().AddDate(0,0,-90)
+  observations:=v.metrics.History(vehicleID,"Odometer",since,20000)
+  v.write(w,map[string]any{"ok":true,"observations":TripObservations(vehicleID,observations),
+   "coverage":"odometer_movements_only_no_route_or_exact_trip_boundaries"})
+ case "/api/v2/diagnostics/tires":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleDiagnostics){http.Error(w,"module disabled",http.StatusForbidden);return}
+  latest:=v.metrics.Latest(vehicleID,[]string{"TpmsPressureFl","TpmsPressureFr","TpmsPressureRl","TpmsPressureRr"})
+  v.write(w,map[string]any{"ok":true,"readings":latest,"unit":"bar","coverage":"latest_reported_tire_pressures"})
  case "/api/v2/security/incidents":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   // Import is idempotent; legacy event files are never modified.
@@ -139,6 +172,19 @@ func (v *V2PublicAPI) configureModule(w http.ResponseWriter,r *http.Request,vehi
   http.Error(w,"module configuration failed",http.StatusServiceUnavailable);return
  }
  v.write(w,map[string]any{"ok":true,"module":req.Module,"enabled":req.Enabled})
+}
+
+func (v *V2PublicAPI) configureTariff(w http.ResponseWriter,r *http.Request,vehicle VehicleID){
+ if vehicle==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+ if !v.modules.Enabled(vehicle,ModuleCharging){http.Error(w,"charging module disabled",http.StatusForbidden);return}
+ var req struct {Price *float64 `json:"price_eur_per_kwh"`}
+ if err:=json.NewDecoder(io.LimitReader(r.Body,1024)).Decode(&req);err!=nil{
+  http.Error(w,"invalid JSON",http.StatusBadRequest);return
+ }
+ if err:=v.modules.SetTariff(vehicle,req.Price);err!=nil{
+  http.Error(w,"invalid tariff",http.StatusBadRequest);return
+ }
+ v.write(w,map[string]any{"ok":true,"price_eur_per_kwh":req.Price})
 }
 
 func (v *V2PublicAPI) command(w http.ResponseWriter,r *http.Request,s State,vehicleID VehicleID){
