@@ -445,7 +445,17 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 	// field set actually changes; the original Sentry fields are retained.
 	fields := telemetryFields
 	if a.v2Modules != nil && a.v2Identity != nil {
-		fields = V2TelemetryFields(a.v2Modules, a.v2Identity.ID(s.VIN))
+		vehicle := a.v2Identity.ID(s.VIN)
+		needHome := false
+		if a.v2Rules != nil {
+			for _, rule := range a.v2Rules.Rules(vehicle) {
+				if rule.Enabled && rule.Condition == "away_from_home" {
+					needHome = true
+					break
+				}
+			}
+		}
+		fields = V2TelemetryFields(a.v2Modules, vehicle, needHome)
 	}
 	configHash := V2TelemetryFieldsHash(fields)
 	need := force || s.TelemetryFieldsVersion < 3 || s.TelemetryConfigHash != configHash ||
