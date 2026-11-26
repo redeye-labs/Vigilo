@@ -32,6 +32,8 @@ type App struct {
 	v2Modules *V2ModuleStore
 	v2Identity *V2VehicleIdentity
 	v2Rules *V2RuleEngine
+	v2HomeKnown bool
+	v2AtHome bool
 
 	mu            sync.Mutex
 	auto          automation
@@ -110,6 +112,27 @@ func (a *App) OnTelemetryField(field string, val any) {
 		if soc,ok:=num(val);ok&&soc>=0&&soc<=100{a.triggerV2Automations("soc_below",soc)}
 	}
 	if sentryChange=="Panic"{a.triggerV2Automations("sentry_panic",1)}
+	// Tesla's boolean LocatedAtHome indicates an existing vehicle home
+	// setting. Never infer a home location from GPS coordinates.
+	if field=="LocatedAtHome" {
+		if home,ok:=val.(bool);ok {
+			a.mu.Lock()
+			a.v2HomeKnown,a.v2AtHome=true,home
+			a.mu.Unlock()
+		}
+	}
+	if field=="LocatedAtHome"||field=="Gear"{
+		a.mu.Lock()
+		known,home:=a.v2HomeKnown,a.v2AtHome
+		a.mu.Unlock()
+		if known{
+			if home{
+				a.triggerV2Automations("away_from_home",1)
+			}else if a.store.Get().Vehicle.Gear=="P"{
+				a.triggerV2Automations("away_from_home",0)
+			}
+		}
+	}
 	a.bus.PublishState()
 }
 
