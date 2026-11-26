@@ -65,7 +65,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   sleeping:=strings.EqualFold(s.Vehicle.ConnState,"asleep")
   status:=DiagnoseConnection(true,true,sleeping,last,time.Now(),10*time.Minute)
   v.write(w,map[string]any{
-   "ok":true,"vehicle_id":vehicleID,"server_version":s.TelemetryFieldsVersion,
+   "ok":true,"vehicle_id":vehicleID,"telemetry_config_version":s.TelemetryFieldsVersion,
    "telemetry":status,"permission_status":"not_verified",
    "server_reachable":true,
   })
