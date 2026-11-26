@@ -44,6 +44,11 @@ enum class Screen(val key: String) {
     SETTINGS("impostazioni"),
     GUIDE("guida"),
     LICENSES("licenze"),
+    V2_HUB("vigilo2"),
+    V2_ENERGY("energia2"),
+    V2_AUTOMATIONS("automazioni2"),
+    V2_BACKUP("backup2"),
+    V2_DIAGNOSTICS("diagnostica2"),
 }
 
 @Composable
@@ -102,6 +107,11 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.SETTINGS -> SettingsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.GUIDE -> GuideScreen(vm, onBack = { screen = if (loggedIn) Screen.HOME else Screen.SETTINGS })
                     Screen.LICENSES -> LicensesScreen(onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_HUB -> V2HubScreen(vm, onBack = { screen = Screen.SETTINGS }, onOpen = { screen = it })
+                    Screen.V2_ENERGY -> V2EnergyScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_BACKUP -> V2BackupScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_DIAGNOSTICS -> V2DiagnosticsScreen(vm, onBack = { screen = Screen.SETTINGS })
                 }
                 if (busy && !progress.isNullOrBlank()) {
                     Surface(

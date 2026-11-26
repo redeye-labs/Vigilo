@@ -5,6 +5,9 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
 
 /**
  * Tutte le impostazioni e i token, cifrati con EncryptedSharedPreferences (chiave nel Keystore Android).
@@ -75,7 +78,75 @@ class Prefs private constructor(private val sp: SharedPreferences) {
     }
     /** Se acceso insieme a [notifyAlarmsFromApp], la notifica usa il volume della sveglia (anche in silenzioso). Acceso di default. */
     var alarmBypassSilent: Boolean get() = sp.getBoolean("alarm_bypass_silent", true); set(v) = sp.edit { putBoolean("alarm_bypass_silent", v) }
-    fun unpairBackend() = sp.edit { remove("backend_url"); remove("backend_token"); remove("backend_last_event"); remove("last_snapshot") }
+    data class ServerProfile(
+        val id: String, val url: String, val token: String, val vin: String, val name: String,
+    )
+
+    /** Profiles are stored exclusively in Android EncryptedSharedPreferences. */
+    fun listServerProfiles(): List<ServerProfile> {
+        val all = runCatching { JSONArray(str("server_profiles_json")) }.getOrNull() ?: JSONArray()
+        return (0 until all.length()).mapNotNull { i ->
+            runCatching {
+                val item = all.getJSONObject(i)
+                ServerProfile(
+                    item.optString("id"), item.optString("url"), item.optString("token"),
+                    item.optString("vin"), item.optString("name"),
+                )
+            }.getOrNull()?.takeIf {
+                it.id.isNotBlank() && it.url.startsWith("https://") && it.token.isNotBlank()
+            }
+        }.take(12)
+    }
+
+    private fun storeServerProfiles(profiles: List<ServerProfile>) {
+        val array = JSONArray()
+        profiles.take(12).forEach { p ->
+            array.put(JSONObject().put("id", p.id).put("url", p.url).put("token", p.token)
+                .put("vin", p.vin).put("name", p.name))
+        }
+        putStr("server_profiles_json", array.toString())
+    }
+
+    fun rememberActiveServer() {
+        if (!backendMode) return
+        val list = listServerProfiles().toMutableList()
+        val found = list.indexOfFirst { it.url == backendUrl }
+        val profile = ServerProfile(
+            id = if (found >= 0) list[found].id else UUID.randomUUID().toString(),
+            url = backendUrl, token = backendToken, vin = vin, name = vehicleName,
+        )
+        if (found >= 0) list[found] = profile else if (list.size < 12) list.add(profile)
+        storeServerProfiles(list)
+    }
+
+    /**
+     * One Vigilo server per active vehicle. Local event IDs are server-specific:
+     * reset the cursor and cached state whenever the active profile changes.
+     */
+    fun switchServerProfile(id: String): Boolean {
+        val target = listServerProfiles().firstOrNull { it.id == id } ?: return false
+        if (target.url == backendUrl && target.token == backendToken) return true
+        rememberActiveServer()
+        sp.edit {
+            putString("backend_url", target.url)
+            putString("backend_token", target.token)
+            putString("vin", target.vin)
+            putString("vehicle_name", target.name)
+            putLong("backend_last_event", 0L)
+            remove("last_snapshot")
+            remove("exp_sentry")
+        }
+        return true
+    }
+
+    fun unpairBackend() {
+        val remaining = listServerProfiles().filterNot { it.url == backendUrl }
+        storeServerProfiles(remaining)
+        sp.edit {
+            remove("backend_url"); remove("backend_token"); remove("backend_last_event")
+            remove("last_snapshot"); remove("vin"); remove("vehicle_name")
+        }
+    }
 
     // --- Veicolo ---
     var vin: String get() = str("vin"); set(v) = putStr("vin", v)
