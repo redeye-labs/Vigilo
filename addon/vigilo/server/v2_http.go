@@ -21,6 +21,7 @@ type V2PublicAPI struct {
  tesla *Tesla
  identity *V2VehicleIdentity
  metrics *V2Metrics
+ rules *V2RuleEngine
 }
 
 func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
@@ -47,6 +48,14 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   v.configureTariff(w,r,vehicleID)
   return
  }
+ if r.Method==http.MethodPut && r.URL.Path=="/api/v2/automations" {
+  v.configureAutomation(w,r,vehicleID)
+  return
+ }
+ if r.Method==http.MethodDelete && r.URL.Path=="/api/v2/automations" {
+  v.deleteAutomation(w,r,vehicleID)
+  return
+ }
  if r.Method!=http.MethodGet {
   w.Header().Set("Allow","GET")
   http.Error(w,"method not allowed",http.StatusMethodNotAllowed)
@@ -59,7 +68,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
    list=append(list,map[string]any{
     "id":m,"enabled":v.modules.Enabled(vehicleID,m),
     // Only capabilities truly implemented may be marked available.
-    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery||m==ModuleCharging||m==ModuleTrips||m==ModuleBackup,
+    "available":m==ModuleSecurity||m==ModuleDiagnostics||m==ModuleCommands||m==ModuleBattery||m==ModuleCharging||m==ModuleTrips||m==ModuleBackup||m==ModuleAutomation,
    })
   }
   v.write(w,map[string]any{"ok":true,"schema":1,"modules":list,"vehicle_configured":vehicleID!=""})
@@ -143,6 +152,10 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   w.Header().Set("Content-Type","text/csv; charset=utf-8")
   w.Header().Set("Content-Disposition","attachment; filename=\"vigilo-security.csv\"")
   if err:=v.history.ExportSecurityCSV(w,vehicleID);err!=nil{return}
+ case "/api/v2/automations":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if v.rules==nil{http.Error(w,"automation unavailable",http.StatusServiceUnavailable);return}
+  v.write(w,map[string]any{"ok":true,"enabled":v.modules.Enabled(vehicleID,ModuleAutomation),"rules":v.rules.Rules(vehicleID)})
  case "/api/v2/backup/export":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBackup){http.Error(w,"backup module disabled",http.StatusForbidden);return}
@@ -182,6 +195,30 @@ func (v *V2PublicAPI) configureModule(w http.ResponseWriter,r *http.Request,vehi
   http.Error(w,"module configuration failed",http.StatusServiceUnavailable);return
  }
  v.write(w,map[string]any{"ok":true,"module":req.Module,"enabled":req.Enabled})
+}
+
+func (v *V2PublicAPI) configureAutomation(w http.ResponseWriter,r *http.Request,vehicle VehicleID){
+ if vehicle==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+ if v.rules==nil{http.Error(w,"automation unavailable",http.StatusServiceUnavailable);return}
+ var rule V2AlertRule
+ if err:=json.NewDecoder(io.LimitReader(r.Body,4096)).Decode(&rule);err!=nil{
+  http.Error(w,"invalid rule",http.StatusBadRequest);return
+ }
+ // Never trust caller-supplied vehicle identity, timestamps or latch state.
+ rule.VehicleID=vehicle
+ rule.LastFiredAt=time.Time{}
+ rule.Armed=false
+ if err:=v.rules.Put(vehicle,rule);err!=nil{http.Error(w,err.Error(),http.StatusBadRequest);return}
+ v.write(w,map[string]any{"ok":true,"id":rule.ID})
+}
+
+func (v *V2PublicAPI) deleteAutomation(w http.ResponseWriter,r *http.Request,vehicle VehicleID){
+ if vehicle==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+ if v.rules==nil{http.Error(w,"automation unavailable",http.StatusServiceUnavailable);return}
+ id:=r.URL.Query().Get("id")
+ if id==""{http.Error(w,"rule id required",http.StatusBadRequest);return}
+ if err:=v.rules.Delete(vehicle,id);err!=nil{http.Error(w,"delete failed",http.StatusServiceUnavailable);return}
+ v.write(w,map[string]any{"ok":true})
 }
 
 func (v *V2PublicAPI) configureTariff(w http.ResponseWriter,r *http.Request,vehicle VehicleID){
