@@ -77,3 +77,34 @@ jobs:
             dist/vigilo2-ha-smoke.sha256
           if-no-files-found: error
           retention-days: 14
+
+  ha-upgrade-candidate:
+    name: Home Assistant in-place upgrade candidate (no deploy)
+    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vigilo-2-foundations' }}
+    needs: [backend, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare source-only Vigilo upgrade candidate
+        run: |
+          python3 scripts/package_ha_upgrade_candidate.py --out dist/vigilo2-ha-upgrade-candidate.tar.gz
+          sha256sum dist/vigilo2-ha-upgrade-candidate.tar.gz > dist/vigilo2-ha-upgrade-candidate.sha256
+          python3 - <<'PY'
+          import tarfile
+          with tarfile.open("dist/vigilo2-ha-upgrade-candidate.tar.gz", "r:gz") as t:
+              c=t.extractfile("vigilo/config.yaml").read().decode()
+              d=t.extractfile("vigilo/Dockerfile").read().decode()
+              assert "slug: vigilo\\n" in c
+              assert "version: \\"2.0.0-beta.1\\"" in c
+              assert "VIGILO_ISOLATED_PREVIEW=1" not in d
+              assert t.getmember("vigilo/server/v2_upgrade_safety_test.go")
+          PY
+      - name: Upload non-installing upgrade candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vigilo2-HA-InPlace-Candidate
+          path: |
+            dist/vigilo2-ha-upgrade-candidate.tar.gz
+            dist/vigilo2-ha-upgrade-candidate.sha256
+          if-no-files-found: error
+          retention-days: 14
