@@ -193,6 +193,27 @@ class Backend(private val baseUrl: String, private val token: String) {
         val report: V2Report = V2Report(),
     )
 
+    @Serializable
+    data class V2Measurement(
+        @SerialName("vehicle_id") val vehicleID: String = "",
+        val signal: String = "",
+        val value: Double = 0.0,
+        val unit: String = "",
+        val source: String = "",
+        val quality: String = "",
+        @SerialName("received_at") val receivedAt: String = "",
+    )
+
+    @Serializable
+    data class V2MeasurementsResponse(
+        val ok: Boolean = false,
+        val samples: List<V2Measurement> = emptyList(),
+        val count: Int = 0,
+    )
+
+    fun v2BatterySamples(): List<V2Measurement> =
+        get<V2MeasurementsResponse>("/api/v2/battery/latest").samples
+
     fun v2SecurityReport(days: Int = 7): V2Report =
         get<V2ReportResponse>("/api/v2/security/report?days=${days.coerceIn(1, 90)}").report
 
