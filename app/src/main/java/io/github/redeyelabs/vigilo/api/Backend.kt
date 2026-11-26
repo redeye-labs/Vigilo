@@ -238,6 +238,77 @@ class Backend(private val baseUrl: String, private val token: String) {
         return response.message
     }
 
+    @Serializable
+    data class V2BatteryObservations(
+        @SerialName("nominal_full_pack_kwh") val fullPackKWh: Double? = null,
+        @SerialName("energy_remaining_kwh") val remainingKWh: Double? = null,
+        @SerialName("rated_range_km") val ratedRangeKm: Double? = null,
+        @SerialName("charge_percent") val chargePercent: Double? = null,
+        @SerialName("health_percent") val healthPercent: Double? = null,
+        val note: String = "",
+    )
+
+    @Serializable
+    data class V2BatteryResponse(
+        val ok: Boolean = false, val battery: V2BatteryObservations = V2BatteryObservations(),
+    )
+
+    @Serializable
+    data class V2ChargingSession(
+        @SerialName("first_seen") val firstSeen: String = "",
+        @SerialName("last_seen") val lastSeen: String = "",
+        @SerialName("battery_energy_kwh") val batteryKWh: Double = 0.0,
+        @SerialName("energy_source") val energySource: String = "",
+        val coverage: String = "",
+        @SerialName("estimated_cost_eur") val costEUR: Double? = null,
+        @SerialName("price_source") val priceSource: String? = null,
+    )
+
+    @Serializable
+    data class V2ChargingResponse(
+        val ok: Boolean = false, val sessions: List<V2ChargingSession> = emptyList(),
+        val coverage: String = "",
+    )
+
+    @Serializable
+    data class V2TariffResponse(
+        val ok: Boolean = false, @SerialName("price_eur_per_kwh") val price: Double? = null,
+        val source: String = "",
+    )
+
+    @Serializable
+    data class V2TripObservation(
+        @SerialName("first_seen") val firstSeen: String = "",
+        @SerialName("last_seen") val lastSeen: String = "",
+        @SerialName("distance_km") val distanceKm: Double = 0.0,
+        val method: String = "",
+        val coverage: String = "",
+    )
+
+    @Serializable
+    data class V2TripResponse(
+        val ok: Boolean = false, val observations: List<V2TripObservation> = emptyList(),
+        val coverage: String = "",
+    )
+
+    fun v2BatterySummary(): V2BatteryObservations =
+        get<V2BatteryResponse>("/api/v2/battery/summary").battery
+
+    fun v2ChargingSessions(): List<V2ChargingSession> =
+        get<V2ChargingResponse>("/api/v2/charging/sessions").sessions
+
+    fun v2TripObservations(): List<V2TripObservation> =
+        get<V2TripResponse>("/api/v2/trips/observations").observations
+
+    fun v2ChargingTariff(): Double? = get<V2TariffResponse>("/api/v2/charging/tariff").price
+
+    fun v2SetChargingTariff(price: Double?): Double? {
+        require(price == null || (price.isFinite() && price in 0.0..10.0))
+        val value = price?.toString() ?: "null"
+        val body = """{"price_eur_per_kwh":$value}""".toRequestBody(JSON)
+        return send<V2TariffResponse>("PUT", "/api/v2/charging/tariff", body).price
+    }
+
     fun v2Capabilities(): V2Capabilities = get("/api/v2/capabilities")
     fun v2Diagnostics(): V2Diagnostics = get("/api/v2/diagnostics")
     fun v2Security(limit: Int = 200): V2Security =
