@@ -31,6 +31,7 @@ type App struct {
 	v2Metrics *V2Metrics
 	v2Modules *V2ModuleStore
 	v2Identity *V2VehicleIdentity
+	v2Rules *V2RuleEngine
 
 	mu            sync.Mutex
 	auto          automation
@@ -105,6 +106,10 @@ func (a *App) OnTelemetryField(field string, val any) {
 		a.onSentry(prevSentry, sentryChange)
 	}
 	a.recordV2Telemetry(field,val)
+	if field=="Soc" || field=="BatteryLevel" {
+		if soc,ok:=num(val);ok&&soc>=0&&soc<=100{a.triggerV2Automations("soc_below",soc)}
+	}
+	if sentryChange=="Panic"{a.triggerV2Automations("sentry_panic",1)}
 	a.bus.PublishState()
 }
 
