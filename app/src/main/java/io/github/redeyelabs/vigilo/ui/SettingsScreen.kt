@@ -127,6 +127,35 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             }
         }
 
+        if (paired) {
+            SettingsGroup("Veicoli e server collegati") {
+                Hint("Ogni profilo utilizza il proprio server Vigilo Home Assistant o Docker. " +
+                    "Solo un profilo è attivo alla volta; cambiandolo lo storico locale viene ricaricato dal server selezionato.")
+                val known = p.listServerProfiles()
+                if (known.size <= 1) {
+                    Hint("Profilo attuale: " + p.displayVehicleName().ifBlank { p.backendUrl })
+                } else {
+                    known.forEach { profile ->
+                        val active = profile.url == p.backendUrl
+                        TextButton(onClick = {
+                            if (!active) {
+                                vm.switchServerProfile(profile.id)
+                                onOpen(Screen.HOME)
+                            }
+                        }) {
+                            Text((if (active) "• " else "") +
+                                profile.name.ifBlank { profile.url } + if (active) " (attiva)" else "")
+                        }
+                    }
+                }
+                TextButton(onClick = { onOpen(Screen.GUIDE) }) {
+                    Text("Abbina un altro server Vigilo")
+                }
+                Hint("Il server corrente gestisce un VIN: per un'altra auto usa un'altra installazione Vigilo. " +
+                    "Il supporto multi-auto sullo stesso server sarà disponibile dopo il collaudo.")
+            }
+        }
+
         SettingsGroup("Suoni") { SoundTests() }
 
         SettingsGroup("Schermata principale") {
