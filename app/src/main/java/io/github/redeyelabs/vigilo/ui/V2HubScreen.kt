@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -48,6 +49,10 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
     var batteryMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     var confirmCommand by remember { mutableStateOf<String?>(null) }
+    var confirmedValue by remember { mutableStateOf<Double?>(null) }
+    var chargeLimit by remember { mutableStateOf("80") }
+    var cabinTemp by remember { mutableStateOf("21") }
+    var chargeAmps by remember { mutableStateOf("16") }
     var commandBusy by remember { mutableStateOf(false) }
     var commandMessage by remember { mutableStateOf<String?>(null) }
 
@@ -290,12 +295,51 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                         )
                         actions.forEach { (action, label) ->
                             OutlinedButton(
-                                onClick = { confirmCommand = action },
+                                onClick = { confirmedValue = null; confirmCommand = action },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !commandBusy,
                             ) { Text(label) }
                         }
                     }
+                    OutlinedTextField(
+                        value = chargeLimit,
+                        onValueChange = { chargeLimit = it.filter(Char::isDigit).take(3) },
+                        label = { Text("Limite carica % (50–100)") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedButton(
+                        enabled = !commandBusy && chargeLimit.toDoubleOrNull()?.let { it in 50.0..100.0 } == true,
+                        onClick = {
+                            confirmedValue = chargeLimit.toDouble()
+                            confirmCommand = "charge_limit"
+                        },
+                    ) { Text("Imposta limite carica") }
+                    OutlinedTextField(
+                        value = cabinTemp,
+                        onValueChange = { cabinTemp = it.filter { ch -> ch.isDigit() || ch == ',' || ch == '.' }.take(5) },
+                        label = { Text("Temperatura clima °C (15–30)") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedButton(
+                        enabled = !commandBusy && cabinTemp.replace(',', '.').toDoubleOrNull()?.let { it in 15.0..30.0 } == true,
+                        onClick = {
+                            confirmedValue = cabinTemp.replace(',', '.').toDouble()
+                            confirmCommand = "climate_temperature"
+                        },
+                    ) { Text("Imposta temperatura") }
+                    OutlinedTextField(
+                        value = chargeAmps,
+                        onValueChange = { chargeAmps = it.filter(Char::isDigit).take(2) },
+                        label = { Text("Corrente ricarica A (5–32)") },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedButton(
+                        enabled = !commandBusy && chargeAmps.toDoubleOrNull()?.let { it in 5.0..32.0 } == true,
+                        onClick = {
+                            confirmedValue = chargeAmps.toDouble()
+                            confirmCommand = "charging_amps"
+                        },
+                    ) { Text("Imposta corrente") }
                     commandMessage?.let { text ->
                         Spacer(Modifier.height(6.dp))
                         Text(text, style = MaterialTheme.typography.bodySmall)
@@ -313,7 +357,8 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
             onDismissRequest = { if (!commandBusy) confirmCommand = null },
             title = { Text("Conferma comando Tesla") },
             text = {
-                Text("Vuoi inviare \"$action\" all'auto? Il veicolo deve essere online e alcuni comandi possono azionare parti fisiche.")
+                Text("Vuoi inviare \"$action\" ${confirmedValue?.let { "($it)" }.orEmpty()} all'auto? " +
+                    "Deve essere online e parcheggiata per le regolazioni.")
             },
             confirmButton = {
                 TextButton(
@@ -323,13 +368,17 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                         scope.launch {
                             try {
                                 commandMessage = withContext(Dispatchers.IO) {
-                                    Backend(vm.prefs).v2ManualCommand(action)
+                                    val api = Backend(vm.prefs)
+                                    val value = confirmedValue
+                                    if (value == null) api.v2ManualCommand(action)
+                                    else api.v2ManualParameterCommand(action, value)
                                 }
                             } catch (e: Exception) {
                                 commandMessage = e.message ?: "Il comando non è stato completato."
                             } finally {
                                 commandBusy = false
                                 confirmCommand = null
+                                confirmedValue = null
                             }
                         }
                     },
@@ -337,7 +386,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
             },
             dismissButton = {
                 TextButton(
-                    onClick = { confirmCommand = null },
+                    onClick = { confirmCommand = null; confirmedValue = null },
                     enabled = !commandBusy,
                 ) { Text("Annulla") }
             },
