@@ -70,6 +70,22 @@ func (v *V2Metrics) Add(m V2Measurement)(bool,error){
  return true,nil
 }
 
+// History returns chronological, per-vehicle readings for one allowlisted signal.
+// Reports may derive statistics only from readings actually received.
+func (v *V2Metrics) History(vehicleID VehicleID, signal string, since time.Time, limit int) []V2Measurement {
+ v.mu.Lock()
+ defer v.mu.Unlock()
+ if vehicleID=="" || signal=="" {return nil}
+ if limit<=0 || limit>20000 {limit=2000}
+ out:=make([]V2Measurement,0)
+ for i:=len(v.entries)-1;i>=0&&len(out)<limit;i--{
+  m:=v.entries[i]
+  if m.VehicleID==vehicleID&&m.Signal==signal&&!m.ReceivedAt.Before(since){out=append(out,m)}
+ }
+ for i,j:=0,len(out)-1;i<j;i,j=i+1,j-1{out[i],out[j]=out[j],out[i]}
+ return out
+}
+
 func (v *V2Metrics) Latest(vehicleID VehicleID, signals []string) []V2Measurement{
  v.mu.Lock()
  defer v.mu.Unlock()
@@ -96,10 +112,12 @@ func (a *App) recordV2Telemetry(field string,val any){
  switch field{
  case "Soc":module,unit=ModuleBattery,"percent"
  case "RatedRange":module,unit=ModuleBattery,"km"
- case "NominalFullPackEnergyKwh":module,unit=ModuleBattery,"kWh"
- case "LifetimeEnergyChargedKwh":module,unit=ModuleCharging,"kWh"
- case "LifetimeEnergyUsedDrive":module,unit=ModuleTrips,"kWh"
+ case "NominalFullPackEnergyKwh", "EnergyRemaining":module,unit=ModuleBattery,"kWh"
+ case "LifetimeEnergyChargedKwh", "ACChargingEnergyIn", "DCChargingEnergyIn":module,unit=ModuleCharging,"kWh"
+ case "DCChargingPower":module,unit=ModuleCharging,"kW"
  case "Odometer":module,unit=ModuleTrips,"mile"
+ case "LifetimeEnergyUsed":module,unit=ModuleTrips,"kWh"
+ case "TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr":module,unit=ModuleDiagnostics,"bar"
  default:return
  }
  if !a.v2Modules.Enabled(vin,module){return}
