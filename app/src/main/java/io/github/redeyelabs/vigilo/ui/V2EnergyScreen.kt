@@ -126,6 +126,13 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                             Text("Capacità BMS: " + (b.fullPackKWh?.let { fmt(it, "kWh") } ?: "Non disponibile"))
                             Text("Energia residua: " + (b.remainingKWh?.let { fmt(it, "kWh") } ?: "Non disponibile"))
                             Text("Salute batteria: " + (b.healthPercent?.let { fmt(it, "%") } ?: "Non determinabile"))
+                            if (b.stale) {
+                                Text("Dati precedenti: la Tesla non ha trasmesso letture recenti.",
+                                    color = MaterialTheme.colorScheme.error)
+                            }
+                            if (b.latestReceivedAt.isNotBlank()) {
+                                Text("Ultima lettura: ${b.latestReceivedAt}", style = MaterialTheme.typography.bodySmall)
+                            }
                             Text(b.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } ?: Text("Nessuna misura disponibile.")
                         capacityTrend?.let { observation ->
