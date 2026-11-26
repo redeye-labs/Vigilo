@@ -70,9 +70,11 @@ android {
 
     buildTypes {
         debug {
-            // Keep the production package ID for a clean reinstall during testing.
-            // GitHub Actions signs this debug build with its ephemeral debug key.
-            versionNameSuffix = "-test"
+            // Vigilo 2 beta installs NEXT TO the user's working Vigilo release.
+            // Its Android data, notifications and credentials stay isolated.
+            // CI debug certificates are ephemeral: reinstall beta if key changes.
+            applicationIdSuffix = ".beta"
+            versionNameSuffix = "-v2-preview"
         }
         release {
             // Non minificare: R8 può toccare serialization/Room/WorkManager/widget.
