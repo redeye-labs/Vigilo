@@ -27,8 +27,8 @@ Il sistema conserva la configurazione v1 in `state.json` e `events.json`. I dati
 | Sicurezza intelligente | Eventi Aware/Panic, raggruppamento temporale, riepilogo, CSV privato | Solo eventi archiviati, non filmati o copertura completa |
 | Diagnostica generale | Stato connessione, sleep/stale, letture TPMS se supportate | Nessuna diagnosi meccanica certificata |
 | Backup e report | Esportazione JSON con checksum, CSV senza messaggi, report settimanale | Non ripristina token e chiavi; backup completo tramite HA/Docker |
-| Comandi avanzati | Clima, carica, sportellino, frunk/bagagliaio, limite SOC, temperatura, corrente | Richiedono conferma, chiave Tesla, permessi, auto online e compatibilità veicolo |
-| Batteria | SOC, autonomia RatedRange, EnergyRemaining, capacità NominalFullPackEnergyKwh, variazione BMS solo con >=30 giorni di dati coerenti | **SoH assoluto non determinabile** senza baseline di capacità nuova documentata |
+| Comandi avanzati | Clima, carica, sportellino, frunk/bagagliaio, limite SOC, temperatura, corrente | Conferma, permessi Tesla, auto dichiarata online, cambio `P` e telemetria aggiornata entro 2 minuti; nessun risveglio automatico |
+| Batteria | SOC, autonomia RatedRange, EnergyRemaining, capacità NominalFullPackEnergyKwh, variazione BMS solo con >=30 giorni di dati coerenti | Etichette di freschezza e timestamp; **SoH assoluto non determinabile** senza baseline di capacità nuova documentata |
 | Ricariche e costi | Contatore reale sessione, tariffa utente, costo stimato | Non equivale ai kWh e importi fatturati; storico potenzialmente parziale |
 | Automazioni avanzate | Avviso sotto SOC, Panic e parcheggio fuori casa (segnale LocatedAtHome), anti-spam, regole server | Solo notifiche; non attiva funzioni fisiche Tesla automaticamente |
 | Viaggi e consumi | Distanze ricavate da Odometer e archivio energia totale | Non sono percorsi GPS completi; consumo medio viaggio non disponibile senza misure di energia riferite allo stesso intervallo |
