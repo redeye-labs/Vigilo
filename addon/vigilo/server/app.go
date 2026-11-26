@@ -419,6 +419,18 @@ func (a *App) setupMsg(m string) {
 
 // EnsureTelemetryConfig invia la configurazione se manca, se è per un altro host o se scade entro 30 giorni.
 // Non sveglia mai l'auto: Tesla la consegna alla prossima connessione.
+// v2TelemetryFieldsRequireUpdate keeps the existing valid V1 telemetry
+// configuration when the upgrade requests no additional Tesla signals.
+// Disabling previously enabled modules still sends the original baseline to
+// Tesla, which stops collecting optional fields.
+func v2TelemetryFieldsRequireUpdate(s State, desiredHash string) bool {
+ baselineHash:=V2TelemetryFieldsHash(telemetryFields)
+ if desiredHash==baselineHash && s.TelemetryConfigHash==""{
+  return s.TelemetryFieldsVersion<2
+ }
+ return s.TelemetryFieldsVersion<3 || s.TelemetryConfigHash!=desiredHash
+}
+
 func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, error) {
 	s := a.store.Get()
 	host := a.tailnet.Host()
@@ -458,7 +470,11 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 		fields = V2TelemetryFields(a.v2Modules, vehicle, needHome)
 	}
 	configHash := V2TelemetryFieldsHash(fields)
-	need := force || s.TelemetryFieldsVersion < 3 || s.TelemetryConfigHash != configHash ||
+	// Upgrading a stable Vigilo 1.x server MUST NOT resend Fleet Telemetry
+	// merely because V2 was installed. Existing Sentry field selection stays
+	// untouched until the user explicitly enables a new module.
+	upgradeRequired := v2TelemetryFieldsRequireUpdate(s, configHash)
+	need := force || upgradeRequired ||
 		err != nil || ts.Missing || ts.Hostname != host ||
 		(ts.Exp > 0 && time.Until(time.Unix(ts.Exp, 0)) < 30*24*time.Hour)
 	if !need {
