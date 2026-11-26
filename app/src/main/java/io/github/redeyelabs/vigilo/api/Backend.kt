@@ -364,8 +364,8 @@ class Backend(private val baseUrl: String, private val token: String) {
     fun v2Automations(): V2AutomationsResponse = get("/api/v2/automations")
 
     fun v2SaveAutomation(rule: V2AutomationRule) {
-        require(rule.id in setOf("soc-low", "sentry-panic"))
-        require(rule.condition in setOf("soc_below", "sentry_panic"))
+        require(rule.id in setOf("soc-low", "sentry-panic", "parked-away"))
+        require(rule.condition in setOf("soc_below", "sentry_panic", "away_from_home"))
         require(rule.cooldownSec in 300..86400)
         val body = json.encodeToString(V2AutomationRule.serializer(), rule).toRequestBody(JSON)
         val result: V2Operation = send("PUT", "/api/v2/automations", body)
