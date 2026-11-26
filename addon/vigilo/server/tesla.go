@@ -727,7 +727,7 @@ func (t *Tesla) SendTelemetryConfigWithFields(ctx context.Context, vin, host str
 		"ca":          caPEM,
 		"exp":         exp,
 		"alert_types": []string{"service"},
-		"fields":      telemetryFields,
+		"fields":      fields,
 	}
 	// Firma locale (Schnorr/P-256, identica al proxy ufficiale e a tesla-jws) e invio diretto a
 	// /api/1/vehicles/fleet_telemetry_config_jws sullo stesso server regionale usato per le altre chiamate.
