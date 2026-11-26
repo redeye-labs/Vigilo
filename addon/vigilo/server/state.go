@@ -28,6 +28,7 @@ type VehicleState struct {
 	WindowsOpen   *bool    `json:"windows_open"`
 	Battery       *float64 `json:"battery"`
 	RangeKm       *float64 `json:"range_km"`
+	RangeRated    bool     `json:"range_rated,omitempty"` // preferisce la fonte nominale Tesla
 	InsideTemp    *float64 `json:"inside_temp"`  // °C, da climate_state (stessa lettura, nessuna chiamata in più)
 	OutsideTemp   *float64 `json:"outside_temp"` // °C
 	OdometerKm    *float64 `json:"odometer_km"`
@@ -62,6 +63,7 @@ type State struct {
 	TelemetryExp        int64        `json:"telemetry_exp"`
 	TelemetryHost       string       `json:"telemetry_host"`
 	TelemetrySent       int64        `json:"telemetry_sent"`
+	TelemetryFieldsVersion int       `json:"telemetry_fields_version,omitempty"`
 	KeyPaired           *bool        `json:"key_paired"`
 	TelemetrySynced     *bool        `json:"telemetry_synced"`
 	LastHealthOK        int64        `json:"last_health_ok"`
