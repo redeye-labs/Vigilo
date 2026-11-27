@@ -281,6 +281,8 @@ class Backend(private val baseUrl: String, private val token: String) {
         @SerialName("first_seen") val firstSeen: String = "",
         @SerialName("last_seen") val lastSeen: String = "",
         @SerialName("battery_energy_kwh") val batteryKWh: Double = 0.0,
+        @SerialName("average_observed_power_kw") val averageObservedPowerKW: Double? = null,
+        @SerialName("observed_charging_minutes") val observedChargingMinutes: Double? = null,
         @SerialName("energy_source") val energySource: String = "",
         val coverage: String = "",
         @SerialName("estimated_cost_eur") val costEUR: Double? = null,

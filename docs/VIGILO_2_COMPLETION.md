@@ -10,8 +10,9 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 - Il modulo Viaggi richiede campioni periodici durante lo streaming attivo per correlare energia, odometro e stato. Tesla documenta `resend_interval_seconds` da firmware 2024.44.32. La raccolta resta opt-in e richiede una verifica di compatibilità e volume sul veicolo.
 - Storico persistente degli avvisi automatici attivati, limitato agli ultimi 500 eventi e filtrato per veicolo. La soglia SOC configurata si può aggiornare mantenendo attiva la regola. L’avviso fuori casa richiede posizione relativa e cambio freschi per lo stesso veicolo.
 - La rotta legacy dei comandi v2 apre la schermata Comandi unica. Da Automazioni si accede al programma Sentinella.
+- Palette Material 3 monocromatica anche sui filtri selezionati e sulle superfici secondarie.
 - Diagnostica mostra le temperature interne ed esterne già raccolte e usa una vista dall'alto originale per le quattro pressioni.
-- Grafico con mediane settimanali BMS e filtri ricarica fino a 365 giorni di campioni ancora presenti nell’archivio a capacità limitata. Le righe mostrano la finestra osservata quando misurabile.
+- Grafico con mediane settimanali BMS e filtri ricarica fino a 365 giorni di campioni ancora presenti nell’archivio a capacità limitata. Le righe mostrano finestra osservata e potenza media stimata quando misurabili.
 - Aggiunte regressioni per il caso di autonomia in miglia e per gli intervalli di sosta incompleti.
 
 ## Inventario e lavoro residuo
@@ -19,7 +20,7 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 | Area | Presente | Da completare e collaudare |
 | --- | --- | --- |
 | Batteria | SOC, autonomia nominale, stima dai consumi, capacità e temperature BMS, energia residua, cicli stimati, indicazione freschezza | Segmentazione dello storico BMS al cambio pacco. SoH assoluto richiede una misura iniziale confrontabile e documentata |
-| Ricariche | Contatore batteria, sessioni osservate, storico, tariffa manuale e grafico | Potenza e durata effettiva delle sessioni, in aggiunta alla finestra osservata. L'energia in batteria è distinta dalla misura del caricatore e dagli importi fatturati |
+| Ricariche | Contatore batteria, sessioni osservate, storico, tariffa manuale e grafico | Durata effettiva delle sessioni con telemetria parziale. La potenza media stimata usa la variazione del contatore su campioni distanti al massimo 10 minuti. L'energia in batteria è distinta dalla misura del caricatore e dagli importi fatturati |
 | Viaggi | Odometro e consumo su intervalli osservati, grafico delle distanze | Confronti tra periodi e ricostruzione di percorrenze più estese nei limiti della copertura. Il contatore di scarica include i carichi del veicolo e non misura il consumo netto dopo rigenerazione |
 | Parcheggi | Schermata dedicata, grafico e intervalli osservati, consumo orario e distinzione Sentinella | SOC comparabile ai confini e distinzione affidabile delle soste in ricarica. I periodi senza campioni rimangono scoperti |
 | Salute veicolo | Connessione, stato telemetria, pneumatici e temperature | Cronologia firmware, anomalie documentate e collaudo visuale |

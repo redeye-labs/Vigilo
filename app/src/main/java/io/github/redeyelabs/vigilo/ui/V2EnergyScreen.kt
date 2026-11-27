@@ -249,6 +249,12 @@ internal fun EnergyScreenContent(
                         EnergyBars(visibleCharges.takeLast(12).map { it.batteryKWh }, accent, "kWh", visibleCharges.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleCharges.takeLast(8).asReversed().forEach { session ->
                             MetricPair(shortDate(session.lastSeen), fmt(session.batteryKWh, "kWh"), "Costo stimato", session.costEUR?.let { fmt(it, "€") } ?: "—", accent)
+                            val power = session.averageObservedPowerKW
+                            val observed = session.observedChargingMinutes
+                            if (power != null && observed != null) {
+                                Text("Potenza stimata in batteria: ${fmt(power, "kW")} su ${observed.toInt()} min osservati",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
                             observedMinutes(session.firstSeen, session.lastSeen)?.let { minutes ->
                                 Text("Finestra osservata: $minutes min", style = MaterialTheme.typography.bodySmall)
                             }
@@ -369,17 +375,18 @@ private fun EnergyBars(values: List<Double>, accent: Color, unit: String, labels
         val slot = size.width / clean.size
         clean.forEachIndexed { index, value ->
             val h = (value / peak).toFloat() * size.height
+            val barWidth = minOf(slot * 0.7f, 48.dp.toPx())
             drawRoundRect(
                 color = accent.copy(alpha = if (index == clean.lastIndex) 1f else 0.65f),
-                topLeft = androidx.compose.ui.geometry.Offset(index * slot + slot * 0.15f, size.height - h),
-                size = androidx.compose.ui.geometry.Size(slot * 0.7f, h),
+                topLeft = androidx.compose.ui.geometry.Offset(index * slot + (slot - barWidth) / 2, size.height - h),
+                size = androidx.compose.ui.geometry.Size(barWidth, h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
             )
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(labels.firstOrNull().orEmpty(), style = MaterialTheme.typography.labelSmall)
-        Text(labels.lastOrNull().orEmpty(), style = MaterialTheme.typography.labelSmall)
+        if (labels.size > 1) Text(labels.last(), style = MaterialTheme.typography.labelSmall)
     }
 }
 

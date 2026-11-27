@@ -66,3 +66,22 @@ func TestLegacyRatedRangeMislabeledMiles(t *testing.T){
   if r.RatedRangeKm==nil||math.Abs(*r.RatedRangeKm-262.323072)>0.001{t.Fatalf("range conversion failed: %+v",r)}
  }
 }
+
+func TestChargingSessionPowerSkipsTelemetryGaps(t *testing.T) {
+	start := time.Date(2026, 11, 27, 10, 0, 0, 0, time.UTC)
+	sample := func(minutes int, kWh float64) V2Measurement {
+		return V2Measurement{VehicleID: "car", Signal: "DCChargingEnergyIn",
+			Value: kWh, ReceivedAt: start.Add(time.Duration(minutes) * time.Minute)}
+	}
+	sessions := ChargingSessions("car", []V2Measurement{
+		sample(0, 0), sample(5, 0.5), sample(45, 20), sample(50, 20.5),
+	}, nil)
+	if len(sessions) != 1 {
+		t.Fatalf("sessions = %+v", sessions)
+	}
+	s := sessions[0]
+	if s.AverageObservedPowerKW == nil || *s.AverageObservedPowerKW != 6 ||
+		s.ObservedChargingMinutes == nil || *s.ObservedChargingMinutes != 10 {
+		t.Fatalf("observed power = %+v", s)
+	}
+}

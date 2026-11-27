@@ -195,7 +195,7 @@ class ScreenshotsTest {
     fun batteria() = energyScreenshot("batteria", "battery")
 
     @Test
-    fun saluteBatteria() = energyScreenshot("salute_batteria", "battery", scroll = 900)
+    fun saluteBatteria() = energyScreenshot("salute_batteria", "battery", scroll = 1200)
 
     @Test
     fun ricariche() = energyScreenshot("ricariche", "charging")
@@ -226,10 +226,10 @@ class ScreenshotsTest {
                 },
             ),
             charges = listOf(
-                Backend.V2ChargingSession(firstSeen = "2026-11-26T07:55:00Z",
-                    lastSeen = "2026-11-26T08:25:00Z", batteryKWh = 14.2, costEUR = 4.26),
                 Backend.V2ChargingSession(firstSeen = "2026-11-24T06:10:00Z",
                     lastSeen = "2026-11-24T07:35:00Z", batteryKWh = 10.5, costEUR = 3.15),
+                Backend.V2ChargingSession(firstSeen = "2026-11-26T07:55:00Z",
+                    lastSeen = "2026-11-26T08:25:00Z", batteryKWh = 14.2, costEUR = 4.26),
             ),
             trips = listOf(Backend.V2TripObservation(firstSeen = first, lastSeen = last, distanceKm = 17.0)),
         )
