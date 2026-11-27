@@ -87,6 +87,8 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             onClick = { vm.command("honk", backend = "honk") },
         )
 
+        Spacer(Modifier.height(12.dp))
+        MenuRow(Icons.Filled.FlashOn, "Comandi avanzati", subtitle = "Climatizzazione, ricarica e aperture", onClick = { onOpen(Screen.V2_COMMANDS) })
         Spacer(Modifier.height(20.dp))
         VigiloCard {
             Row2("Porte", yesNo(s?.doorsOpen, "Aperte", "Chiuse"))
