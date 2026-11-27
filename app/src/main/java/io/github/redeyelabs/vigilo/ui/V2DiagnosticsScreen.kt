@@ -1,6 +1,15 @@
 package io.github.redeyelabs.vigilo.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -69,8 +78,16 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 VigiloCard {
                     Text("Connessione", style = MaterialTheme.typography.titleMedium)
                     Text(d.telemetry.details)
-                    Text("Stato: ${d.telemetry.status}")
-                    Text("Permessi Tesla: ${d.permissionStatus}")
+                    val status = when (d.telemetry.status) {
+                        "ok" -> "Aggiornata"
+                        "vehicle_asleep" -> "Auto addormentata"
+                        "telemetry_stale" -> "Dati non recenti"
+                        "server_offline" -> "Server offline"
+                        "missing_permission" -> "Permessi mancanti"
+                        else -> "Non disponibile"
+                    }
+                    MetricPair("Telemetria", status, "Server", if (d.serverReachable) "Raggiungibile" else "Offline", Color(0xFF38BDF8))
+                    Text("Permessi Tesla: " + if (d.permissionStatus == "not_verified") "Non verificati" else d.permissionStatus)
                     Text(
                         "Un'auto addormentata non equivale a un errore. L'assenza di un segnale può dipendere dal firmware.",
                         style = MaterialTheme.typography.bodySmall,
@@ -102,17 +119,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     },
                 ) { Text(if (enabled) "Disattiva raccolta pneumatici" else "Attiva raccolta pneumatici") }
                 if (enabled) {
-                    val names = mapOf(
-                        "TpmsPressureFl" to "Anteriore sinistra",
-                        "TpmsPressureFr" to "Anteriore destra",
-                        "TpmsPressureRl" to "Posteriore sinistra",
-                        "TpmsPressureRr" to "Posteriore destra",
-                    )
-                    for (name in names.keys) {
-                        val measure = tires.firstOrNull { it.signal == name }
-                        Text("${names[name]}: " +
-                            (measure?.let { String.format(Locale.ITALY, "%.2f bar", it.value) } ?: "Dato non disponibile"))
-                    }
+                    TireLayout(tires)
                     if (tires.isNotEmpty()) {
                         Text(
                             "Ultimo aggiornamento: ${tires.maxByOrNull { it.receivedAt }?.receivedAt.orEmpty()}",
@@ -128,4 +135,27 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
             ) { Text("Aggiorna diagnostica") }
         }
     }
+}
+
+@Composable
+private fun TireLayout(tires: List<Backend.V2Measurement>) {
+    val accent = Color(0xFF38BDF8)
+    fun reading(signal: String): String {
+        val m = tires.firstOrNull { it.signal == signal } ?: return "—"
+        return String.format(Locale.ITALY, "%.2f bar", m.value) + if (m.quality == "stale") " *" else ""
+    }
+    MetricPair("Ant. sinistra", reading("TpmsPressureFl"), "Ant. destra", reading("TpmsPressureFr"), accent)
+    Box(Modifier.fillMaxWidth().height(164.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxWidth().height(156.dp)) {
+            val w = size.width
+            val h = size.height
+            drawRoundRect(Color(0xFF454550), Offset(w * .37f, h * .03f), Size(w * .26f, h * .94f), CornerRadius(23.dp.toPx()))
+            drawRoundRect(Color(0xFF16161D), Offset(w * .40f, h * .24f), Size(w * .20f, h * .52f), CornerRadius(12.dp.toPx()))
+            for (x in listOf(.31f, .63f)) for (y in listOf(.17f, .67f)) {
+                drawRoundRect(Color(0xFF22222B), Offset(w * x, h * y), Size(w * .06f, h * .16f), CornerRadius(4.dp.toPx()))
+            }
+        }
+    }
+    MetricPair("Post. sinistra", reading("TpmsPressureRl"), "Post. destra", reading("TpmsPressureRr"), accent)
+    if (tires.any { it.quality == "stale" }) Text("* Lettura non recente", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
 }
