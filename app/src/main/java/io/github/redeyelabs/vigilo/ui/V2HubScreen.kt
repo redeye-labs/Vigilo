@@ -283,24 +283,25 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                         enabled = !commandBusy,
                     ) { Text(if (commandModule.enabled) "Disattiva comandi" else "Abilita comandi") }
                     if (commandModule.enabled) {
-                        val actions = listOf(
-                            "climate_on" to "Accendi clima",
-                            "climate_off" to "Spegni clima",
-                            "charge_start" to "Avvia ricarica",
-                            "charge_stop" to "Ferma ricarica",
-                            "charge_port_open" to "Apri sportellino",
-                            "charge_port_close" to "Chiudi sportellino",
-                            "trunk_rear" to "Aziona bagagliaio",
-                            "trunk_front" to "Aziona frunk",
+                        val groups = listOf(
+                            "Climatizzazione" to listOf("climate_on" to "Accendi", "climate_off" to "Spegni"),
+                            "Ricarica" to listOf("charge_start" to "Avvia", "charge_stop" to "Interrompi"),
+                            "Sportellino" to listOf("charge_port_open" to "Apri", "charge_port_close" to "Chiudi"),
+                            "Bagagliai" to listOf("trunk_rear" to "Posteriore", "trunk_front" to "Anteriore"),
                         )
-                        actions.forEach { (action, label) ->
-                            OutlinedButton(
-                                onClick = { confirmedValue = null; confirmCommand = action },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = !commandBusy,
-                            ) { Text(label) }
+                        groups.forEach { (heading, actions) ->
+                            Spacer(Modifier.height(12.dp))
+                            Text(heading, style = MaterialTheme.typography.titleSmall)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                actions.forEach { (action, label) ->
+                                    OutlinedButton(
+                                        onClick = { confirmedValue = null; confirmCommand = action },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = !commandBusy,
+                                    ) { Text(label) }
+                                }
+                            }
                         }
-                    }
                     OutlinedTextField(
                         value = chargeLimit,
                         onValueChange = { chargeLimit = it.filter(Char::isDigit).take(3) },
@@ -340,6 +341,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                             confirmCommand = "charging_amps"
                         },
                     ) { Text("Imposta corrente") }
+                    }
                     commandMessage?.let { text ->
                         Spacer(Modifier.height(6.dp))
                         Text(text, style = MaterialTheme.typography.bodySmall)

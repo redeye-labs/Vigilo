@@ -463,7 +463,18 @@ class Backend(private val baseUrl: String, private val token: String) {
         if (code == 401) throw ApiException(401, "Abbinamento non valido: genera un nuovo QR nella pagina di configurazione di Vigilo e inquadralo.")
         if (code !in 200..299) {
             val msg = runCatching { json.decodeFromString(ErrorBody.serializer(), text).error }.getOrNull()
-            throw ApiException(code, msg?.takeIf { it.isNotBlank() } ?: "Errore del server Vigilo ($code)")
+            val detail = msg?.takeIf { it.isNotBlank() } ?: text.trim().takeIf { code == 409 && it.length <= 200 && it in setOf(
+                "vehicle not configured", "vehicle offline or sleeping; no automatic wake",
+                "vehicle must report parked gear P; no automatic wake", "vehicle telemetry is not recent; no automatic wake",
+            ) }
+            val localized = when (detail) {
+                "vehicle not configured" -> "Auto non configurata."
+                "vehicle offline or sleeping; no automatic wake" -> "Auto offline o addormentata. Risvegliala prima di riprovare."
+                "vehicle must report parked gear P; no automatic wake" -> "Posizione P non confermata dal veicolo."
+                "vehicle telemetry is not recent; no automatic wake" -> "Telemetria non recente. Attendi dati aggiornati prima di riprovare."
+                else -> detail
+            }
+            throw ApiException(code, localized ?: "Errore del server Vigilo ($code)")
         }
         return json.decodeFromString(text)
     }

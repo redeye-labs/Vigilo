@@ -20,15 +20,15 @@ import androidx.core.view.WindowCompat
 val VigiloOk = Color(0xFF30D158)
 val VigiloDanger = Color(0xFFFF453A)
 val VigiloIconGray = Color(0xFFC7C7CC)
-private val NearBlack = Color(0xFF171717)
-private val Surface = Color(0xFF1C1C1C)
-private val SurfaceHigh = Color(0xFF2C2C2E)
+private val NearBlack = Color(0xFF08080A)
+private val Surface = Color(0xFF15151A)
+private val SurfaceHigh = Color(0xFF24242B)
 private val Ivory = Color(0xFFFFFFFF)
-private val Muted = Color(0xFF8E8E93)
+private val Muted = Color(0xFFB0B0BA)
 
 private val Dark = darkColorScheme(
-    primary = Ivory,
-    onPrimary = Color.Black,
+    primary = Color(0xFFFF4160),
+    onPrimary = Color(0xFF210008),
     primaryContainer = SurfaceHigh,
     onPrimaryContainer = Ivory,
     secondary = Color(0xFFD1D1D6),
