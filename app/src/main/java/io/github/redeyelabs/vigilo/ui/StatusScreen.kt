@@ -5,7 +5,18 @@ import io.github.redeyelabs.vigilo.work.BatteryOpt
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -143,7 +154,7 @@ fun StatusScreenContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 4.dp),
         ) {
-            CompactHeader(
+            VehicleDashboard(
                 name = name,
                 s = snapshot,
                 ready = ready,
@@ -151,6 +162,7 @@ fun StatusScreenContent(
                 onRefresh = { if (ready) onRefresh() },
                 onSettings = { onOpen(Screen.SETTINGS) },
                 onCommands = { onOpen(Screen.COMMANDS) },
+                onMap = { onOpen(Screen.MAP) },
             )
 
             if (showHero) {
@@ -171,7 +183,10 @@ fun StatusScreenContent(
             }
 
             Spacer(Modifier.height(16.dp))
-            VigiloCard {
+            Column(
+                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
                 SentryStatusRow(
                     active = snapshot?.sentry,
                     ready = ready,
@@ -193,10 +208,6 @@ fun StatusScreenContent(
                 )
             }
 
-            HomeModuleGroup("Controllo") {
-                MenuRow(Icons.Filled.LocationOn, "Posizione attuale", onClick = { onOpen(Screen.MAP) })
-                MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
-            }
             HomeModuleGroup("Energia e percorrenze") {
                 MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Autonomia e capacità BMS", onClick = { onOpen(Screen.V2_BATTERY) })
                 MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
@@ -210,7 +221,8 @@ fun StatusScreenContent(
                 MenuRow(Icons.Filled.FlashOn, "Azioni automatiche", subtitle = actionsSubtitle, onClick = { onOpen(Screen.ACTIONS) })
                 MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
             }
-            HomeModuleGroup("Dati e impostazioni") {
+            HomeModuleGroup("Veicolo e dati") {
+                MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
                 MenuRow(Icons.Filled.History, "Storico eventi", onClick = { onOpen(Screen.HISTORY) })
                 MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
                 MenuRow(Icons.Filled.Settings, "Impostazioni", onClick = { onOpen(Screen.SETTINGS) })
@@ -222,14 +234,16 @@ fun StatusScreenContent(
 
 @Composable
 private fun HomeModuleGroup(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
-    Spacer(Modifier.height(24.dp))
-    Text(title, style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(28.dp))
+    Text(title, style = MaterialTheme.typography.headlineSmall)
     Spacer(Modifier.height(8.dp))
-    VigiloCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp), content = content)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    Column(content = content)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
 @Composable
-private fun CompactHeader(
+private fun VehicleDashboard(
     name: String,
     s: Snapshot?,
     ready: Boolean,
@@ -237,39 +251,68 @@ private fun CompactHeader(
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
     onCommands: () -> Unit,
+    onMap: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text("Vigilo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(name, style = MaterialTheme.typography.headlineLarge)
-        }
+    Row(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
         IconButton(onClick = onRefresh, enabled = ready) {
-            Icon(Icons.Filled.Refresh, contentDescription = "Aggiorna stato", tint = VigiloIconGray)
+            Icon(Icons.Filled.Refresh, contentDescription = "Aggiorna stato")
         }
         IconButton(onClick = onSettings) {
-            Icon(Icons.Filled.Settings, contentDescription = "Impostazioni", tint = VigiloIconGray)
+            Icon(Icons.Filled.Settings, contentDescription = "Impostazioni")
         }
     }
-    VigiloCard {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.weight(1f)) {
-                Text("Carica", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(s?.batteryLevel?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displayMedium)
-            }
-            Column(Modifier.weight(1f)) {
-                Text("Autonomia", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(s?.rangeKm?.let { "%.0f km".format(Locale.ITALY, it) } ?: "—", style = MaterialTheme.typography.headlineSmall)
+    val charge = s?.batteryLevel?.takeIf { it in 0..100 }
+    val dialTrack = MaterialTheme.colorScheme.outlineVariant
+    val dialFill = MaterialTheme.colorScheme.onSurface
+    Box(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp).aspectRatio(1.38f),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.matchParentSize()) {
+            val stroke = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round)
+            val diameter = size.height - stroke.width * 2
+            val origin = Offset((size.width - diameter) / 2, stroke.width)
+            val bounds = Size(diameter, diameter)
+            drawArc(dialTrack, 144f, 252f, false, origin, bounds, style = stroke)
+            if (charge != null && charge > 0) {
+                drawArc(dialFill, 144f, 252f * charge / 100f, false, origin, bounds, style = stroke)
             }
         }
-        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        MenuRow(
-            Icons.Filled.Tune, "Comandi", subtitle = commandSubtitle(s), onClick = onCommands,
-        )
-        Text(
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(charge?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displayLarge)
+            Text(
+                s?.rangeKm?.let { "%.0f km di autonomia".format(Locale.ITALY, it) } ?: "Autonomia non disponibile",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    Text(
+        listOfNotNull(
+            commandSubtitle(s),
             if (ready) formatUpdatedAgo(s?.timestamp, now) else "Server da collegare",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        ).joinToString(" · "),
+        modifier = Modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+    )
+    Spacer(Modifier.height(14.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = onCommands, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+            Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Comandi")
+        }
+        OutlinedButton(onClick = onMap, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+            Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Posizione")
+        }
     }
 }
 

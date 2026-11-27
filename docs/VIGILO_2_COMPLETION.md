@@ -1,8 +1,10 @@
 # Vigilo 2 · Stato di completamento
 
-Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0-beta.5 build 36, add-on 2.0.0-beta.5. Punto di ripristino dei sorgenti: `vigilo-2-completion-base-7eb9d4c`. Il backup dei dati privati è separato. Il candidato di collaudo allinea APK e add-on alla 2.0.0-beta.8. L’APK firmato usa il package originale e versionCode 39. Il workflow manuale sul ramo genera un artefatto senza pubblicare una release.
+Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0-beta.5 build 36, add-on 2.0.0-beta.5. Punto di ripristino dei sorgenti: `vigilo-2-completion-base-7eb9d4c`. Il backup dei dati privati è separato. Il candidato di collaudo allinea APK e add-on alla 2.0.0-beta.9. L’APK firmato usa il package originale e versionCode 40. Il workflow manuale sul ramo genera un artefatto senza pubblicare una release.
 
 ## Changelog del ramo
+
+- Quadro strumenti centrale con indicatore di carica, accessi diretti a Comandi e Posizione e lista dei moduli senza schede sovrapposte.
 
 - Comandi nella scheda del veicolo, aggiornamento dello stato esplicito e un unico pannello per Sentinella e monitoraggio degli avvisi.
 
