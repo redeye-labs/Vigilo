@@ -1,6 +1,16 @@
 package io.github.redeyelabs.vigilo.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -83,6 +93,11 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
         }
     }
 
+    var days by remember { mutableIntStateOf(30) }
+    val cutoff = Instant.now().minus(days.toLong(), ChronoUnit.DAYS)
+    val visibleCharges = charges.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
+    val visibleTrips = trips.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
+
     fun enabled(id: String) = modules.any { it.id == id && it.enabled }
 
     Column(
@@ -102,7 +117,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
             ).filter { onlyModule == null || it.first == onlyModule }.forEach { (id, title, description) ->
                 val active = enabled(id)
                 VigiloCard {
-                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    val accent = when (id) { "battery" -> Color(0xFF30D158); "charging" -> Color(0xFF38BDF8); else -> Color(0xFFA78BFA) }
+                    Text(title, style = MaterialTheme.typography.titleLarge, color = accent)
                     Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(
                         enabled = !loading && !working,
@@ -123,12 +139,10 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
 
                     if (active && id == "battery") {
                         battery?.let { b ->
-                            Text(b.chargePercent?.let { fmt(it, "%") } ?: "—", style = MaterialTheme.typography.displayMedium)
-                            Text("Stato di carica")
-                            Text("Autonomia: " + (b.ratedRangeKm?.let { fmt(it, "km") } ?: "Non disponibile"))
-                            Text("Capacità BMS: " + (b.fullPackKWh?.let { fmt(it, "kWh") } ?: "Non disponibile"))
-                            Text("Energia residua: " + (b.remainingKWh?.let { fmt(it, "kWh") } ?: "Non disponibile"))
-                            Text("Salute batteria: " + (b.healthPercent?.let { fmt(it, "%") } ?: "Non determinabile"))
+                            Spacer(Modifier.height(16.dp))
+                            BatteryGauge(b.chargePercent, accent)
+                            MetricPair("Autonomia nominale", b.ratedRangeKm?.let { fmt(it, "km") } ?: "—", "Energia residua", b.remainingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
+                            MetricPair("Capacità BMS", b.fullPackKWh?.let { fmt(it, "kWh") } ?: "—", "Salute batteria", b.healthPercent?.let { fmt(it, "%") } ?: "N/D", accent)
                             if (b.stale) {
                                 Text("Dati precedenti: la Tesla non ha trasmesso letture recenti.",
                                     color = MaterialTheme.colorScheme.error)
@@ -144,7 +158,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                                 Text("Variazione capacità BMS nel periodo: " + fmt(trend.percentChange, "%"))
                                 Text("Capacità iniziale rilevata: " + fmt(trend.firstKWh, "kWh"))
                                 Text("Capacità recente: " + fmt(trend.latestKWh, "kWh"))
-                                EnergyBars(listOf(trend.firstKWh, trend.latestKWh))
+                                EnergyBars(listOf(trend.firstKWh, trend.latestKWh), accent, "kWh", listOf("Iniziale", "Recente"))
                                 Text(trend.note, style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
@@ -154,15 +168,14 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         }
                     }
                     if (active && id == "charging") {
-                        Text(fmt(charges.sumOf { it.batteryKWh }, "kWh"), style = MaterialTheme.typography.displayMedium)
-                        Text("Sessioni osservate: ${charges.size}")
-                        if (charges.isNotEmpty()) EnergyBars(charges.takeLast(12).map { it.batteryKWh })
-                        if (charges.isNotEmpty() && charges.all { it.costEUR != null }) Text("Costo stimato: " + fmt(charges.sumOf { it.costEUR ?: 0.0 }, "€"))
-                        charges.takeLast(8).asReversed().forEach { session ->
-                            Text("${fmt(session.batteryKWh, "kWh")} nella batteria · " +
-                                (session.costEUR?.let { fmt(it, "€ stimati") } ?: "Costo non disponibile"))
+                        PeriodPicker(days) { days = it }
+                        MetricPair("Energia osservata", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.sumOf { it.batteryKWh }, "kWh"), "Costo stimato", if (visibleCharges.isNotEmpty() && visibleCharges.all { it.costEUR != null }) fmt(visibleCharges.sumOf { it.costEUR ?: 0.0 }, "€") else "—", accent)
+                        Text("Sessioni osservate: ${visibleCharges.size}", style = MaterialTheme.typography.titleMedium)
+                        EnergyBars(visibleCharges.takeLast(12).map { it.batteryKWh }, accent, "kWh", visibleCharges.takeLast(12).map { shortDate(it.lastSeen) })
+                        visibleCharges.takeLast(8).asReversed().forEach { session ->
+                            MetricPair(shortDate(session.lastSeen), fmt(session.batteryKWh, "kWh"), "Costo stimato", session.costEUR?.let { fmt(it, "€") } ?: "—", accent)
                         }
-                        if (charges.isEmpty()) Text("Nessuna ricarica ancora rilevata.")
+                        if (visibleCharges.isEmpty()) Text("Nessuna ricarica osservata nel periodo.")
                         Text(
                             "La telemetria può essere incompleta. I kWh nella batteria non coincidono necessariamente con quelli fatturati.",
                             style = MaterialTheme.typography.bodySmall,
@@ -197,13 +210,13 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         ) { Text(if (tariffSaved) "Tariffa salvata" else "Salva tariffa") }
                     }
                     if (active && id == "trips") {
-                        Text(fmt(trips.sumOf { it.distanceKm }, "km"), style = MaterialTheme.typography.displayMedium)
-                        Text("Tratti osservati: ${trips.size}")
-                        if (trips.isNotEmpty()) EnergyBars(trips.takeLast(12).map { it.distanceKm })
-                        trips.takeLast(8).asReversed().forEach { trip ->
-                            Text(fmt(trip.distanceKm, "km") + " · Distanza da contachilometri")
+                        PeriodPicker(days) { days = it }
+                        MetricPair("Distanza osservata", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.sumOf { it.distanceKm }, "km"), "Tratti osservati", visibleTrips.size.toString(), accent)
+                        EnergyBars(visibleTrips.takeLast(12).map { it.distanceKm }, accent, "km", visibleTrips.takeLast(12).map { shortDate(it.lastSeen) })
+                        visibleTrips.takeLast(8).asReversed().forEach { trip ->
+                            MetricPair(shortDate(trip.lastSeen), fmt(trip.distanceKm, "km"), "Fonte", "Odometro", accent)
                         }
-                        if (trips.isEmpty()) Text("Nessun tratto ancora rilevato.")
+                        if (visibleTrips.isEmpty()) Text("Nessun tratto osservato nel periodo.")
                         Text(
                             "Non sono viaggi GPS completi. Consumo in kWh/100 km non calcolato senza energia misurata sullo stesso intervallo.",
                             style = MaterialTheme.typography.bodySmall,
@@ -232,11 +245,11 @@ private fun fmt(n: Double, unit: String): String =
     String.format(Locale.ITALY, "%.1f %s", n, unit)
 
 @Composable
-private fun EnergyBars(values: List<Double>) {
+private fun EnergyBars(values: List<Double>, accent: Color, unit: String, labels: List<String>) {
     val clean = values.filter { it.isFinite() && it >= 0.0 }
     val peak = clean.maxOrNull() ?: return
     if (peak <= 0.0) return
-    val accent = MaterialTheme.colorScheme.primary
+    Text("Ultime osservazioni · massimo " + fmt(peak, unit), style = MaterialTheme.typography.bodySmall)
     Canvas(Modifier.fillMaxWidth().height(112.dp).padding(vertical = 8.dp)) {
         val slot = size.width / clean.size
         clean.forEachIndexed { index, value ->
@@ -247,6 +260,56 @@ private fun EnergyBars(values: List<Double>) {
                 size = androidx.compose.ui.geometry.Size(slot * 0.7f, h),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
             )
+        }
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(labels.firstOrNull().orEmpty(), style = MaterialTheme.typography.labelSmall)
+        Text(labels.lastOrNull().orEmpty(), style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+private fun inDashboardPeriod(timestamp: String, days: Int, cutoff: Instant): Boolean =
+    days == 0 || runCatching { !Instant.parse(timestamp).isBefore(cutoff) }.getOrDefault(false)
+
+private fun shortDate(timestamp: String): String =
+    runCatching { java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm", Locale.ITALY).withZone(java.time.ZoneId.systemDefault()).format(Instant.parse(timestamp)) }.getOrDefault(timestamp.take(16))
+
+@Composable
+private fun PeriodPicker(days: Int, onChange: (Int) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(7 to "7g", 30 to "30g", 90 to "90g", 0 to "Tutto").forEach { (value, label) ->
+            FilterChip(selected = value == days, onClick = { onChange(value) }, label = { Text(label) })
+        }
+    }
+}
+
+@Composable
+internal fun MetricPair(leftLabel: String, left: String, rightLabel: String, right: String, accent: Color) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(leftLabel to left, rightLabel to right).forEach { (label, value) ->
+            Column(Modifier.weight(1f).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(14.dp)).padding(12.dp)) {
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.titleMedium, color = accent)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryGauge(percent: Double?, accent: Color) {
+    val valid = percent?.takeIf { it.isFinite() && it in 0.0..100.0 }
+    Box(Modifier.fillMaxWidth().height(174.dp), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(156.dp)) {
+            val width = 12.dp.toPx()
+            val offset = androidx.compose.ui.geometry.Offset(width / 2, width / 2)
+            val arcSize = androidx.compose.ui.geometry.Size(size.width - width, size.height - width)
+            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            drawArc(Color(0xFF37373F), 135f, 270f, false, offset, arcSize, style = stroke)
+            if (valid != null && valid > 0) drawArc(accent, 135f, (270 * valid / 100).toFloat(), false, offset, arcSize, style = stroke)
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(valid?.let { fmt(it, "%") } ?: "—", style = MaterialTheme.typography.headlineSmall)
+            Text("Carica residua", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
