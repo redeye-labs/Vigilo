@@ -1,9 +1,6 @@
 package io.github.redeyelabs.vigilo.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +9,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,14 +41,14 @@ fun ScreenHeader(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
 ) {
-    Column(modifier.fillMaxWidth().padding(top = 4.dp, bottom = 20.dp)) {
+    Column(modifier.padding(top = 8.dp, bottom = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = VigiloIconGray)
                 }
             }
-            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text(title, style = MaterialTheme.typography.titleLarge)
         }
         if (!subtitle.isNullOrBlank()) {
             Spacer(Modifier.height(4.dp))
@@ -65,18 +61,18 @@ fun ScreenHeader(
 fun VigiloCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(20.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     if (onClick != null) {
-        Card(onClick = onClick, modifier = modifier.fillMaxWidth(), colors = colors, elevation = elevation, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-            Column(Modifier.padding(contentPadding), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+        Card(onClick = onClick, modifier = modifier.fillMaxWidth(), colors = colors, elevation = elevation) {
+            Column(Modifier.padding(contentPadding), content = content)
         }
     } else {
-        Card(modifier = modifier.fillMaxWidth(), colors = colors, elevation = elevation, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-            Column(Modifier.padding(contentPadding), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+        Card(modifier = modifier.fillMaxWidth(), colors = colors, elevation = elevation) {
+            Column(Modifier.padding(contentPadding), content = content)
         }
     }
 }
@@ -91,7 +87,7 @@ fun SentryIcon(active: Boolean, modifier: Modifier = Modifier, size: Dp = 28.dp)
         val r = size.toPx() / 2f
         val c = center
         if (active) {
-            drawCircle(color = VigiloDanger.copy(alpha = 0.20f), radius = r * 0.98f, center = c)
+            drawCircle(color = Color(0x55FF453A), radius = r * 0.98f, center = c)
             drawCircle(color = VigiloDanger, radius = r * 0.62f, center = c)
         } else {
             drawCircle(
@@ -117,10 +113,8 @@ fun QuickAction(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .heightIn(min = 56.dp)
-            .clip(MaterialTheme.shapes.small)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 6.dp, vertical = 6.dp),
+            .padding(horizontal = 4.dp, vertical = 2.dp),
     ) {
         Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
             when {
@@ -163,10 +157,8 @@ fun MenuRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 64.dp)
-            .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 12.dp),
+            .padding(vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null) {
@@ -207,7 +199,7 @@ fun VigiloSwitch(
         modifier = modifier,
         enabled = enabled,
         colors = androidx.compose.material3.SwitchDefaults.colors(
-            checkedThumbColor = SwitchOnThumb,
+            checkedThumbColor = if (danger) VigiloDanger else SwitchOnThumb,
             checkedTrackColor = Color.White,
             checkedBorderColor = Color.White,
             checkedIconColor = Color.White,
@@ -215,7 +207,7 @@ fun VigiloSwitch(
             uncheckedTrackColor = SwitchOffTrack,
             uncheckedBorderColor = VigiloIconGray,
             uncheckedIconColor = SwitchOffTrack,
-            disabledCheckedThumbColor = SwitchOnThumb.copy(alpha = 0.6f),
+            disabledCheckedThumbColor = (if (danger) VigiloDanger else SwitchOnThumb).copy(alpha = 0.6f),
             disabledCheckedTrackColor = Color.White.copy(alpha = 0.35f),
             disabledCheckedBorderColor = Color.White.copy(alpha = 0.35f),
             disabledUncheckedThumbColor = VigiloIconGray.copy(alpha = 0.4f),

@@ -64,7 +64,6 @@ type State struct {
 	TelemetryHost       string       `json:"telemetry_host"`
 	TelemetrySent       int64        `json:"telemetry_sent"`
 	TelemetryFieldsVersion int       `json:"telemetry_fields_version,omitempty"`
-	TelemetryConfigHash string `json:"telemetry_config_hash,omitempty"`
 	KeyPaired           *bool        `json:"key_paired"`
 	TelemetrySynced     *bool        `json:"telemetry_synced"`
 	LastHealthOK        int64        `json:"last_health_ok"`

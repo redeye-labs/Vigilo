@@ -5,11 +5,11 @@ import (
     "testing"
 )
 
-func TestTelemetryRangeConvertsMilesToKilometers(t *testing.T) {
+func TestTelemetryRangeUsesKilometersWithoutDoubleConversion(t *testing.T) {
     var v VehicleState
     updateRangeFromTelemetry(&v, "EstBatteryRange", float64(243.6))
-    if v.RangeKm == nil || math.Abs(*v.RangeKm-243.6*1.609344) > 0.01 {
-        t.Fatalf("estimated range must be converted to km, got %v", v.RangeKm)
+    if v.RangeKm == nil || math.Abs(*v.RangeKm-243.6) > 0.01 {
+        t.Fatalf("estimated range must remain in km, got %v", v.RangeKm)
     }
 }
 
@@ -18,8 +18,8 @@ func TestRatedRangePreferredOverEstimatedRange(t *testing.T) {
     updateRangeFromTelemetry(&v, "EstBatteryRange", float64(243.6))
     updateRangeFromTelemetry(&v, "RatedRange", float64(278))
     updateRangeFromTelemetry(&v, "EstBatteryRange", float64(250))
-    if v.RangeKm == nil || math.Abs(*v.RangeKm-278*1.609344)>0.01 || !v.RangeRated {
-        t.Fatalf("expected Tesla rated 278 miles converted to km to take priority, got %+v", v)
+    if v.RangeKm == nil || *v.RangeKm != 278 || !v.RangeRated {
+        t.Fatalf("expected Tesla rated 278 km to take priority, got %+v", v)
     }
 }
 
