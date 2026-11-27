@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 /** Vigilo 2 preview. Never substitutes demo values for missing telemetry. */
 @Composable
-fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit) {
+fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit, onlyModule: String? = null) {
     val paired by vm.backendMode.collectAsState()
     var refresh by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
@@ -57,7 +57,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
     var commandMessage by remember { mutableStateOf<String?>(null) }
 
 
-    LaunchedEffect(paired, refresh) {
+    LaunchedEffect(paired, refresh, onlyModule) {
         capabilities = null
         diagnostic = null
         security = null
@@ -97,7 +97,8 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
             .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeader("Vigilo 2", "Anteprima dei moduli sul server personale.", onBack = onBack)
+        ScreenHeader(when (onlyModule) { "security" -> "Sicurezza"; "commands" -> "Comandi avanzati"; else -> "Vigilo 2" }, "Dati dal server personale.", onBack = onBack)
+        if (onlyModule == null) {
         VigiloCard {
             Text("Versione sperimentale", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
@@ -121,6 +122,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                 }
             }
         }
+        }
         if (!paired) {
             VigiloCard { Text("Collega prima Vigilo al server dalla Guida.") }
         } else if (loading) {
@@ -132,7 +134,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                 OutlinedButton(onClick = { refresh++ }) { Text("Riprova") }
             }
         } else {
-            diagnostic?.let { d ->
+            diagnostic?.takeIf { onlyModule == null }?.let { d ->
                 VigiloCard {
                     Text("Diagnostica", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -153,7 +155,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                     )
                 }
             }
-            security?.let { s ->
+            security?.takeIf { onlyModule == null || onlyModule == "security" }?.let { s ->
                 VigiloCard {
                     Text("Sicurezza intelligente", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -169,7 +171,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                     )
                 }
             }
-            report?.let { r ->
+            report?.takeIf { onlyModule == null || onlyModule == "security" }?.let { r ->
                 VigiloCard {
                     Text("Report degli ultimi 7 giorni", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -184,7 +186,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                     )
                 }
             }
-            capabilities?.let { c ->
+            capabilities?.takeIf { onlyModule == null }?.let { c ->
                 VigiloCard {
                     Text("Moduli", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
@@ -206,7 +208,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                     }
                 }
             }
-            capabilities?.modules?.firstOrNull { it.id == "battery" }?.let { batteryModule ->
+            capabilities?.modules?.firstOrNull { onlyModule == null && it.id == "battery" }?.let { batteryModule ->
                 VigiloCard {
                     Text("Batteria e autonomia", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
@@ -254,7 +256,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                     batteryMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 }
             }
-            capabilities?.modules?.firstOrNull { it.id == "commands" }?.let { commandModule ->
+            capabilities?.modules?.firstOrNull { (onlyModule == null || onlyModule == "commands") && it.id == "commands" }?.let { commandModule ->
                 VigiloCard {
                     Text("Comandi Tesla avanzati", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
