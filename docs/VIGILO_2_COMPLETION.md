@@ -1,8 +1,10 @@
 # Vigilo 2 · Stato di completamento
 
-Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0-beta.5 build 36, add-on 2.0.0-beta.5. Punto di ripristino dei sorgenti: `vigilo-2-completion-base-7eb9d4c`. Il backup dei dati privati è separato. Il candidato di collaudo allinea APK e add-on alla 2.0.0-beta.6. L’APK firmato usa il package originale e versionCode 37. Il workflow manuale sul ramo genera un artefatto senza pubblicare una release.
+Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0-beta.5 build 36, add-on 2.0.0-beta.5. Punto di ripristino dei sorgenti: `vigilo-2-completion-base-7eb9d4c`. Il backup dei dati privati è separato. Il candidato di collaudo allinea APK e add-on alla 2.0.0-beta.7. L’APK firmato usa il package originale e versionCode 38. Il workflow manuale sul ramo genera un artefatto senza pubblicare una release.
 
 ## Changelog del ramo
+
+- Home riorganizzata in quattro gruppi e nuova scheda riepilogativa del veicolo. Le schermate usano una testata comune e i comandi sono raccolti in schede per categoria.
 
 - Accesso a Parcheggi, Posizione attuale e Impostazioni dalla lista Home.
 - Parcheggi mostra intervalli osservati, costo energetico stimato, energia da fermo e distinzione fra Sentinella attiva, spenta o incerta. Il contatore rappresenta la scarica del veicolo durante la sosta. Una lacuna interrompe la cronologia.

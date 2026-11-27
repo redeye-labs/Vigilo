@@ -46,18 +46,18 @@ fun ScreenHeader(
     onBack: (() -> Unit)? = null,
 ) {
     Column(modifier.fillMaxWidth().padding(top = 4.dp, bottom = 20.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = VigiloIconGray)
-                }
+        if (onBack != null) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro", tint = VigiloIconGray)
             }
-            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         }
+        Text(title, style = MaterialTheme.typography.headlineLarge)
         if (!subtitle.isNullOrBlank()) {
-            Spacer(Modifier.height(4.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        Spacer(Modifier.height(14.dp))
+        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 

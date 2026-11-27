@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -33,7 +31,6 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Tune
@@ -190,49 +187,40 @@ fun StatusScreenContent(
                 onToggle = onToggleMonitoring,
             )
 
-            Spacer(Modifier.height(8.dp))
-            MenuRow(
-                Icons.Filled.Notifications,
-                "Notifiche",
-                subtitle = notificationsSubtitle,
-                onClick = { onOpen(Screen.NOTIFICATIONS) },
-            )
-            MenuRow(
-                Icons.Filled.FlashOn,
-                "Azioni automatiche",
-                subtitle = actionsSubtitle,
-                onClick = { onOpen(Screen.ACTIONS) },
-            )
-            MenuRow(
-                Icons.Filled.Schedule,
-                "Programma Sentinella",
-                subtitle = "Accendi e spegni la Sentinella in automatico",
-                onClick = { onOpen(Screen.SCHEDULE) },
-            )
-            MenuRow(
-                Icons.Filled.Tune,
-                "Comandi",
-                subtitle = commandSubtitle(snapshot),
-                onClick = { onOpen(Screen.COMMANDS) },
-            )
-            MenuRow(
-                Icons.Filled.History,
-                "Storico eventi",
-                onClick = { onOpen(Screen.HISTORY) },
-            )
-            MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Salute, capacità e autonomia", onClick = { onOpen(Screen.V2_BATTERY) })
-            MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
-            MenuRow(Icons.Filled.Route, "Viaggi", subtitle = "Percorrenze osservate", onClick = { onOpen(Screen.V2_TRIPS) })
-            MenuRow(Icons.Filled.LocalParking, "Parcheggi", subtitle = "Consumi osservati da fermo", onClick = { onOpen(Screen.V2_PARKING) })
-            MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
-            MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
-            MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
-            MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
-            MenuRow(Icons.Filled.LocationOn, "Posizione attuale", onClick = { onOpen(Screen.MAP) })
-            MenuRow(Icons.Filled.Settings, "Impostazioni", onClick = { onOpen(Screen.SETTINGS) })
+            HomeModuleGroup("Controllo") {
+                MenuRow(Icons.Filled.Tune, "Comandi", subtitle = commandSubtitle(snapshot), onClick = { onOpen(Screen.COMMANDS) })
+                MenuRow(Icons.Filled.LocationOn, "Posizione attuale", onClick = { onOpen(Screen.MAP) })
+                MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
+            }
+            HomeModuleGroup("Energia e percorrenze") {
+                MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Autonomia e capacità BMS", onClick = { onOpen(Screen.V2_BATTERY) })
+                MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
+                MenuRow(Icons.Filled.Route, "Viaggi", subtitle = "Distanza e consumi in marcia", onClick = { onOpen(Screen.V2_TRIPS) })
+                MenuRow(Icons.Filled.LocalParking, "Parcheggi", subtitle = "Consumi osservati da fermo", onClick = { onOpen(Screen.V2_PARKING) })
+            }
+            HomeModuleGroup("Sicurezza e automazioni") {
+                MenuRow(Icons.Filled.Notifications, "Notifiche", subtitle = notificationsSubtitle, onClick = { onOpen(Screen.NOTIFICATIONS) })
+                MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
+                MenuRow(Icons.Filled.Schedule, "Programma Sentinella", subtitle = "Orari di attivazione e spegnimento", onClick = { onOpen(Screen.SCHEDULE) })
+                MenuRow(Icons.Filled.FlashOn, "Azioni automatiche", subtitle = actionsSubtitle, onClick = { onOpen(Screen.ACTIONS) })
+                MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
+            }
+            HomeModuleGroup("Dati e impostazioni") {
+                MenuRow(Icons.Filled.History, "Storico eventi", onClick = { onOpen(Screen.HISTORY) })
+                MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
+                MenuRow(Icons.Filled.Settings, "Impostazioni", onClick = { onOpen(Screen.SETTINGS) })
+            }
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+@Composable
+private fun HomeModuleGroup(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Spacer(Modifier.height(24.dp))
+    Text(title, style = MaterialTheme.typography.titleMedium)
+    Spacer(Modifier.height(8.dp))
+    VigiloCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp), content = content)
 }
 
 @Composable
@@ -244,30 +232,34 @@ private fun CompactHeader(
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f).clickable(onClick = onRefresh)) {
-            Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1)
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (s?.locked == false) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                    contentDescription = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Chiusura" },
-                    tint = VigiloIconGray,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                MiniBattery(s)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                if (!ready) "Collega l'account in Impostazioni" else formatUpdatedAgo(s?.timestamp, now),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Vigilo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(name, style = MaterialTheme.typography.headlineLarge)
         }
         IconButton(onClick = onSettings) {
-            Icon(Icons.Outlined.Menu, contentDescription = "Impostazioni", tint = VigiloIconGray)
+            Icon(Icons.Filled.Settings, contentDescription = "Impostazioni", tint = VigiloIconGray)
         }
+    }
+    VigiloCard(onClick = if (ready) onRefresh else null) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Text("Carica", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(s?.batteryLevel?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displayMedium)
+            }
+            Column(Modifier.weight(1f)) {
+                Text("Autonomia", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(s?.rangeKm?.let { "%.0f km".format(Locale.ITALY, it) } ?: "—", style = MaterialTheme.typography.headlineSmall)
+            }
+        }
+        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        val lock = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Chiusura sconosciuta" }
+        Text(lock, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            if (ready) formatUpdatedAgo(s?.timestamp, now) else "Server da collegare",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -343,48 +335,6 @@ private fun MonitoringSummaryCard(
                 Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-    }
-}
-
-@Composable
-private fun MiniBattery(s: Snapshot?) {
-    val pct = s?.batteryLevel
-    val charging = s?.chargingState == "Charging"
-    val fill = when {
-        charging -> VigiloOk
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .width(26.dp)
-                .height(12.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(MaterialTheme.colorScheme.outline),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(((pct ?: 0).coerceIn(0, 100)) / 100f)
-                    .padding(1.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(if (pct != null) fill else MaterialTheme.colorScheme.outlineVariant),
-            )
-        }
-        Box(
-            Modifier
-                .padding(start = 1.dp)
-                .width(2.dp)
-                .height(5.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(MaterialTheme.colorScheme.outline),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            if (pct != null) "$pct%" else "—",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
     }
 }
 

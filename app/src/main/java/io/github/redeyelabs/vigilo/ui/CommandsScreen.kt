@@ -67,52 +67,59 @@ internal fun CommandsScreenContent(
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
         ScreenHeader("Comandi", "Ogni comando può svegliare l'auto se dorme.", onBack = onBack)
 
-        Text("Chiusura e apertura", style = MaterialTheme.typography.titleSmall)
-        ToggleRow(
-            title = "Chiusura",
-            subtitle = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Stato sconosciuto" },
-            checked = s?.locked == true,
-            enabled = ready && (!busyOther || pending == "lock"),
-            busy = pending == "lock",
-            onCheckedChange = { wantLocked ->
-                if (wantLocked && s?.locked != true) onCommand("lock", "lock")
-                else if (!wantLocked && s?.locked != false) onCommand("lock", "unlock")
-            },
-            leading = {
-                Icon(
-                    if (s?.locked == false) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                    contentDescription = null,
-                    tint = VigiloIconGray,
-                    modifier = Modifier.size(24.dp),
-                )
-            },
-        )
-        Text("Sicurezza", style = MaterialTheme.typography.titleSmall)
-        ToggleRow(
-            title = "Sentinella",
-            subtitle = when (s?.sentry) { true -> "Attiva"; false -> "Spenta"; null -> "Stato sconosciuto" },
-            checked = s?.sentry == true,
-            enabled = ready && (!busyOther || pending == "sentry"),
-            busy = pending == "sentry",
-            onCheckedChange = onSetSentry,
-            leading = { SentryIcon(active = s?.sentry == true, size = 22.dp) },
-        )
-        Text("Luci e clacson", style = MaterialTheme.typography.titleSmall)
-        ActionRow(
-            icon = { Icon(Icons.Filled.FlashOn, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
-            title = "Lampeggia",
-            enabled = ready && (!busyOther || pending == "flash"),
-            busy = pending == "flash",
-            onClick = { onCommand("flash", "flash") },
-        )
-        ActionRow(
-            icon = { Icon(Icons.Filled.Campaign, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
-            title = "Clacson",
-            enabled = ready && (!busyOther || pending == "honk"),
-            busy = pending == "honk",
-            onClick = { onCommand("honk", "honk") },
-        )
-
+        VigiloCard {
+            Text("Chiusura e apertura", style = MaterialTheme.typography.titleMedium)
+            ToggleRow(
+                title = "Chiusura",
+                subtitle = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Stato sconosciuto" },
+                checked = s?.locked == true,
+                enabled = ready && (!busyOther || pending == "lock"),
+                busy = pending == "lock",
+                onCheckedChange = { wantLocked ->
+                    if (wantLocked && s?.locked != true) onCommand("lock", "lock")
+                    else if (!wantLocked && s?.locked != false) onCommand("lock", "unlock")
+                },
+                leading = {
+                    Icon(
+                        if (s?.locked == false) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                        contentDescription = null,
+                        tint = VigiloIconGray,
+                        modifier = Modifier.size(24.dp),
+                    )
+                },
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        VigiloCard {
+            Text("Sicurezza", style = MaterialTheme.typography.titleMedium)
+            ToggleRow(
+                title = "Sentinella",
+                subtitle = when (s?.sentry) { true -> "Attiva"; false -> "Spenta"; null -> "Stato sconosciuto" },
+                checked = s?.sentry == true,
+                enabled = ready && (!busyOther || pending == "sentry"),
+                busy = pending == "sentry",
+                onCheckedChange = onSetSentry,
+                leading = { SentryIcon(active = s?.sentry == true, size = 22.dp) },
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        VigiloCard {
+            Text("Luci e clacson", style = MaterialTheme.typography.titleMedium)
+            ActionRow(
+                icon = { Icon(Icons.Filled.FlashOn, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
+                title = "Lampeggia",
+                enabled = ready && (!busyOther || pending == "flash"),
+                busy = pending == "flash",
+                onClick = { onCommand("flash", "flash") },
+            )
+            ActionRow(
+                icon = { Icon(Icons.Filled.Campaign, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
+                title = "Clacson",
+                enabled = ready && (!busyOther || pending == "honk"),
+                busy = pending == "honk",
+                onClick = { onCommand("honk", "honk") },
+            )
+        }
         Spacer(Modifier.height(12.dp))
         additionalCommands()
         Spacer(Modifier.height(20.dp))
