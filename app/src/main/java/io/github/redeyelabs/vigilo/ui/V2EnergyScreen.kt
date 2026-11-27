@@ -34,7 +34,7 @@ import kotlinx.coroutines.withContext
 
 /** Analysis from Tesla readings only, hidden behind opt-in modules. */
 @Composable
-fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
+fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = null) {
     val paired by vm.backendMode.collectAsState()
     val scope = rememberCoroutineScope()
     var refresh by remember { mutableIntStateOf(0) }
@@ -49,7 +49,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
     var tariffInput by remember { mutableStateOf("") }
     var tariffSaved by remember { mutableStateOf(false) }
 
-    LaunchedEffect(paired, refresh) {
+    LaunchedEffect(paired, refresh, onlyModule) {
         if (!paired) return@LaunchedEffect
         loading = true
         error = null
@@ -57,9 +57,9 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
             val result = withContext(Dispatchers.IO) {
                 val backend = Backend(vm.prefs)
                 val capabilities = backend.v2Capabilities().modules
-                val batteryOn = capabilities.any { it.id == "battery" && it.enabled }
-                val chargingOn = capabilities.any { it.id == "charging" && it.enabled }
-                val tripsOn = capabilities.any { it.id == "trips" && it.enabled }
+                val batteryOn = (onlyModule == null || onlyModule == "battery") && capabilities.any { it.id == "battery" && it.enabled }
+                val chargingOn = (onlyModule == null || onlyModule == "charging") && capabilities.any { it.id == "charging" && it.enabled }
+                val tripsOn = (onlyModule == null || onlyModule == "trips") && capabilities.any { it.id == "trips" && it.enabled }
                 EnergyScreenData(
                     modules = capabilities,
                     battery = if (batteryOn) backend.v2BatterySummary() else null,
@@ -89,7 +89,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeader("Batteria e analisi", "Valori Tesla reali; stime sempre dichiarate.", onBack = onBack)
+        ScreenHeader(when (onlyModule) { "battery" -> "Batteria"; "charging" -> "Ricariche"; "trips" -> "Viaggi"; else -> "Batteria e analisi" }, "Valori Tesla reali; stime sempre dichiarate.", onBack = onBack)
         if (!paired) {
             VigiloCard { Text("Collega prima il server Vigilo.") }
         } else {
@@ -99,7 +99,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                 Triple("battery", "Salute batteria", "Capacità BMS, energia residua, autonomia"),
                 Triple("charging", "Ricariche e costi", "Energia immessa nella batteria e tariffa personale"),
                 Triple("trips", "Viaggi e consumi", "Distanze osservate dal contachilometri"),
-            ).forEach { (id, title, description) ->
+            ).filter { onlyModule == null || it.first == onlyModule }.forEach { (id, title, description) ->
                 val active = enabled(id)
                 VigiloCard {
                     Text(title, style = MaterialTheme.typography.titleMedium)
