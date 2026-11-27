@@ -48,8 +48,8 @@ android {
         applicationId = "io.github.redeyelabs.vigilo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 36
-        versionName = "2.0.0-beta.5"
+        versionCode = 31
+        versionName = "1.3.10"
     }
 
     signingConfigs {
@@ -70,11 +70,9 @@ android {
 
     buildTypes {
         debug {
-            // Vigilo 2 beta installs NEXT TO the user's working Vigilo release.
-            // Its Android data, notifications and credentials stay isolated.
-            // CI debug certificates are ephemeral: reinstall beta if key changes.
-            applicationIdSuffix = ".beta"
-            versionNameSuffix = "-v2-preview"
+            // Keep the production package ID for a clean reinstall during testing.
+            // GitHub Actions signs this debug build with its ephemeral debug key.
+            versionNameSuffix = "-test"
         }
         release {
             // Non minificare: R8 può toccare serialization/Room/WorkManager/widget.

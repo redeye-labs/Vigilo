@@ -714,12 +714,6 @@ var telemetryFields = map[string]any{
 // SendTelemetryConfig firma (Schnorr/P-256, come tesla-jws) e invia la configurazione: l'auto la riceve
 // alla prossima connessione, quindi NON serve svegliarla.
 func (t *Tesla) SendTelemetryConfig(ctx context.Context, vin, host string, port int, caPEM string) (string, error) {
-	return t.SendTelemetryConfigWithFields(ctx, vin, host, port, caPEM, telemetryFields)
-}
-
-// SendTelemetryConfigWithFields preserves legacy telemetry and requests only
-// the extra signals chosen by the installed module preferences.
-func (t *Tesla) SendTelemetryConfigWithFields(ctx context.Context, vin, host string, port int, caPEM string, fields map[string]any) (string, error) {
 	exp := time.Now().Add(364 * 24 * time.Hour).Unix()
 	config := jwt.MapClaims{
 		"hostname":    host,
@@ -727,7 +721,7 @@ func (t *Tesla) SendTelemetryConfigWithFields(ctx context.Context, vin, host str
 		"ca":          caPEM,
 		"exp":         exp,
 		"alert_types": []string{"service"},
-		"fields":      fields,
+		"fields":      telemetryFields,
 	}
 	// Firma locale (Schnorr/P-256, identica al proxy ufficiale e a tesla-jws) e invio diretto a
 	// /api/1/vehicles/fleet_telemetry_config_jws sullo stesso server regionale usato per le altre chiamate.

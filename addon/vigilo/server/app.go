@@ -28,13 +28,6 @@ type App struct {
 	ft         *FleetTelemetry
 	bus        *Bus
 	version    string
-	v2Metrics *V2Metrics
-	v2Modules *V2ModuleStore
-	v2Identity *V2VehicleIdentity
-	v2Rules *V2RuleEngine
-	v2HomeKnown bool
-	v2AtHome bool
-	v2HomeVehicle string
 
 	mu            sync.Mutex
 	auto          automation
@@ -108,36 +101,10 @@ func (a *App) OnTelemetryField(field string, val any) {
 	if sentryChange != "" {
 		a.onSentry(prevSentry, sentryChange)
 	}
-	a.recordV2Telemetry(field,val)
-	if field=="Soc" || field=="BatteryLevel" {
-		if soc,ok:=num(val);ok&&soc>=0&&soc<=100{a.triggerV2Automations("soc_below",soc)}
-	}
-	if sentryChange=="Panic"{a.triggerV2Automations("sentry_panic",1)}
-	// Tesla's boolean LocatedAtHome indicates an existing vehicle home
-	// setting. Never infer a home location from GPS coordinates.
-	if field=="LocatedAtHome" {
-		if home,ok:=val.(bool);ok {
-			a.mu.Lock()
-			a.v2HomeKnown,a.v2AtHome,a.v2HomeVehicle=true,home,a.store.Get().VIN
-			a.mu.Unlock()
-		}
-	}
-	if field=="LocatedAtHome"||field=="Gear"{
-		a.mu.Lock()
-		known,home,owner:=a.v2HomeKnown,a.v2AtHome,a.v2HomeVehicle
-		a.mu.Unlock()
-		if known && owner==a.store.Get().VIN{
-			if home{
-				a.triggerV2Automations("away_from_home",1)
-			}else if a.store.Get().Vehicle.Gear=="P"{
-				a.triggerV2Automations("away_from_home",0)
-			}
-		}
-	}
 	a.bus.PublishState()
 }
 
-// Fleet Telemetry and Fleet API range readings are in miles; normalize once.
+// Fleet Telemetry fornisce i chilometri già convertiti; la Fleet API separata usa miglia.
 // RatedRange rappresenta l'autonomia nominale visualizzata da Tesla e ha priorità
 // su EstBatteryRange, la stima legata alle condizioni di guida.
 func updateRangeFromTelemetry(v *VehicleState, field string, val any) {
@@ -145,7 +112,6 @@ func updateRangeFromTelemetry(v *VehicleState, field string, val any) {
 	if !ok || f < 0 {
 		return
 	}
-	f *= 1.609344
 	switch field {
 	case "RatedRange":
 		v.RangeKm, v.RangeRated = &f, true
@@ -420,18 +386,6 @@ func (a *App) setupMsg(m string) {
 
 // EnsureTelemetryConfig invia la configurazione se manca, se è per un altro host o se scade entro 30 giorni.
 // Non sveglia mai l'auto: Tesla la consegna alla prossima connessione.
-// v2TelemetryFieldsRequireUpdate keeps the existing valid V1 telemetry
-// configuration when the upgrade requests no additional Tesla signals.
-// Disabling previously enabled modules still sends the original baseline to
-// Tesla, which stops collecting optional fields.
-func v2TelemetryFieldsRequireUpdate(s State, desiredHash string) bool {
- baselineHash:=V2TelemetryFieldsHash(telemetryFields)
- if desiredHash==baselineHash && s.TelemetryConfigHash==""{
-  return s.TelemetryFieldsVersion<2
- }
- return s.TelemetryFieldsVersion<3 || s.TelemetryConfigHash!=desiredHash
-}
-
 func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, error) {
 	s := a.store.Get()
 	host := a.tailnet.Host()
@@ -454,29 +408,7 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 			}
 		})
 	}
-	// Additional telemetry is opt-in. Only reconfigure Tesla when the selected
-	// field set actually changes; the original Sentry fields are retained.
-	fields := telemetryFields
-	if a.v2Modules != nil && a.v2Identity != nil {
-		vehicle := a.v2Identity.ID(s.VIN)
-		needHome := false
-		if a.v2Rules != nil {
-			for _, rule := range a.v2Rules.Rules(vehicle) {
-				if rule.Enabled && rule.Condition == "away_from_home" {
-					needHome = true
-					break
-				}
-			}
-		}
-		fields = V2TelemetryFields(a.v2Modules, vehicle, needHome)
-	}
-	configHash := V2TelemetryFieldsHash(fields)
-	// Upgrading a stable Vigilo 1.x server MUST NOT resend Fleet Telemetry
-	// merely because V2 was installed. Existing Sentry field selection stays
-	// untouched until the user explicitly enables a new module.
-	upgradeRequired := v2TelemetryFieldsRequireUpdate(s, configHash)
-	need := force || upgradeRequired ||
-		err != nil || ts.Missing || ts.Hostname != host ||
+	need := force || s.TelemetryFieldsVersion < 2 || err != nil || ts.Missing || ts.Hostname != host ||
 		(ts.Exp > 0 && time.Until(time.Unix(ts.Exp, 0)) < 30*24*time.Hour)
 	if !need {
 		a.setupMsg("") // configurazione presente sull'auto: un errore precedente non vale più
@@ -486,12 +418,12 @@ func (a *App) EnsureTelemetryConfig(ctx context.Context, force bool) (string, er
 	if cerr != nil {
 		return "", errors.New("certificati non ancora pronti")
 	}
-	msg, serr := a.tesla.SendTelemetryConfigWithFields(ctx, s.VIN, host, telemetryPort, ca, fields)
+	msg, serr := a.tesla.SendTelemetryConfig(ctx, s.VIN, host, telemetryPort, ca)
 	if serr != nil {
 		a.setupMsg(serr.Error())
 		return "", serr
 	}
-	_ = a.store.Update(func(st *State) { st.TelemetryFieldsVersion = 3; st.TelemetryConfigHash = configHash })
+	_ = a.store.Update(func(st *State) { st.TelemetryFieldsVersion = 2 })
 	a.setupMsg("")
 	a.events.Add(EvSetup, "Configurazione inviata all'auto", "Valida per 364 giorni, si rinnova da sola.")
 	return msg, nil

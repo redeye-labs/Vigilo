@@ -26,7 +26,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,16 +44,6 @@ enum class Screen(val key: String) {
     SETTINGS("impostazioni"),
     GUIDE("guida"),
     LICENSES("licenze"),
-    V2_HUB("vigilo2"),
-    V2_ENERGY("energia2"),
-    V2_BATTERY("batteria2"),
-    V2_CHARGING("ricariche2"),
-    V2_TRIPS("viaggi2"),
-    V2_SECURITY("sicurezza2"),
-    V2_COMMANDS("comandi2"),
-    V2_AUTOMATIONS("automazioni2"),
-    V2_BACKUP("backup2"),
-    V2_DIAGNOSTICS("diagnostica2"),
 }
 
 @Composable
@@ -68,7 +57,6 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
     val msg by vm.message.collectAsState()
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(msg) { msg?.let { snack.showSnackbar(it); vm.message.value = null } }
-    val screenState = rememberSaveableStateHolder()
     val goHome = { screen = Screen.HOME }
     // Senza server Vigilo l'app non può mostrare l'auto: si apre la guida di abbinamento.
     LaunchedEffect(loggedIn) {
@@ -103,7 +91,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
             }
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 when (screen) {
-                    Screen.HOME -> screenState.SaveableStateProvider(Screen.HOME.key) { StatusScreen(vm, onOpen = { screen = it }) }
+                    Screen.HOME -> StatusScreen(vm, onOpen = { screen = it })
                     Screen.NOTIFICATIONS -> NotificationsScreen(vm, onBack = goHome)
                     Screen.COMMANDS -> CommandsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.MAP -> MapScreen(vm, onBack = goHome)
@@ -114,16 +102,6 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.SETTINGS -> SettingsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.GUIDE -> GuideScreen(vm, onBack = { screen = if (loggedIn) Screen.HOME else Screen.SETTINGS })
                     Screen.LICENSES -> LicensesScreen(onBack = { screen = Screen.SETTINGS })
-                    Screen.V2_HUB -> V2HubScreen(vm, onBack = goHome, onOpen = { screen = it })
-                    Screen.V2_ENERGY -> V2EnergyScreen(vm, onBack = goHome)
-                    Screen.V2_BATTERY -> V2EnergyScreen(vm, onBack = goHome, onlyModule = "battery")
-                    Screen.V2_CHARGING -> V2EnergyScreen(vm, onBack = goHome, onlyModule = "charging")
-                    Screen.V2_TRIPS -> V2EnergyScreen(vm, onBack = goHome, onlyModule = "trips")
-                    Screen.V2_COMMANDS -> V2HubScreen(vm, onBack = { screen = Screen.COMMANDS }, onOpen = { screen = it }, onlyModule = "commands")
-                    Screen.V2_SECURITY -> V2HubScreen(vm, onBack = goHome, onOpen = { screen = it }, onlyModule = "security")
-                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = goHome)
-                    Screen.V2_BACKUP -> V2BackupScreen(vm, onBack = goHome)
-                    Screen.V2_DIAGNOSTICS -> V2DiagnosticsScreen(vm, onBack = goHome)
                 }
                 if (busy && !progress.isNullOrBlank()) {
                     Surface(

@@ -175,16 +175,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         runCatching { Backend(pairing.url, pairing.token).status() }
             .onSuccess { st ->
-                prefs.rememberActiveServer()
                 prefs.backendUrl = pairing.url
                 prefs.backendToken = pairing.token
                 prefs.backendLastEventId = 0
-                prefs.vin = st.vin
-                prefs.vehicleName = st.name
-                prefs.lastSnapshotJson = ""
-                prefs.rememberActiveServer()
-                // Server-local event IDs must not leak between cars.
-                db.events().clear()
+                if (st.vin.isNotBlank()) prefs.vin = st.vin
+                if (st.name.isNotBlank()) prefs.vehicleName = st.name
                 backendMode.value = true
                 backendUrl.value = prefs.backendUrl
                 loggedIn.value = true
@@ -196,31 +191,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 onDone(true)
             }
             .onFailure { toast(it.message ?: "Abbinamento non riuscito"); onDone(false) }
-    }
-
-    fun switchServerProfile(id: String) = io {
-        if (!prefs.switchServerProfile(id)) {
-            toast("Profilo non trovato.")
-            return@io
-        }
-        // Existing Room history is not vehicle-scoped; reload from selected server.
-        db.events().clear()
-        prefs.backendLastEventId = 0
-        snapshot.value = null
-        backendMode.value = prefs.backendMode
-        backendUrl.value = prefs.backendUrl
-        loggedIn.value = prefs.isLoggedIn
-        backendSettings.value = null
-        backendChecks.value = emptyList()
-        scheduleWhere.value = ScheduleWhere.LOADING
-        serverRules.value = emptyList()
-        actions.value = ActionsState.Loading
-        Scheduler.applyPolling(getApplication())
-        Scheduler.applyIntensive(getApplication(), restartLoop = true)
-        Monitor.runOnce(getApplication(), force = true)
-            .onSuccess { snapshot.value = it }
-            .onFailure { toast(it.message ?: "Server non raggiungibile") }
-        toast("Profilo Vigilo selezionato.")
     }
 
     fun unpairBackend() {

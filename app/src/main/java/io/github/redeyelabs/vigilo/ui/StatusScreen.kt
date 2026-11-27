@@ -22,11 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.ElectricalServices
-import androidx.compose.material.icons.filled.Route
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
@@ -217,13 +212,6 @@ fun StatusScreenContent(
                 "Storico eventi",
                 onClick = { onOpen(Screen.HISTORY) },
             )
-            MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Salute, capacità e autonomia", onClick = { onOpen(Screen.V2_BATTERY) })
-            MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
-            MenuRow(Icons.Filled.Route, "Viaggi", subtitle = "Percorrenze osservate", onClick = { onOpen(Screen.V2_TRIPS) })
-            MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
-            MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
-            MenuRow(Icons.Filled.MonitorHeart, "Diagnostica", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
-            MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
             Spacer(Modifier.height(24.dp))
         }
     }

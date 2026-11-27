@@ -87,8 +87,6 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             onClick = { vm.command("honk", backend = "honk") },
         )
 
-        Spacer(Modifier.height(12.dp))
-        V2HubScreen(vm, onBack = onBack, onOpen = onOpen, onlyModule = "commands", embedded = true)
         Spacer(Modifier.height(20.dp))
         VigiloCard {
             Row2("Porte", yesNo(s?.doorsOpen, "Aperte", "Chiuse"))
