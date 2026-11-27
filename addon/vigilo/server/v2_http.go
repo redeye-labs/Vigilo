@@ -286,7 +286,8 @@ func (v *V2PublicAPI) command(w http.ResponseWriter,r *http.Request,s State,vehi
  }
  if err:=validateV2CommandVehicle(s,time.Now().UTC());err!=nil{
   // Never wake the car automatically to execute an advanced command.
-  http.Error(w,err.Error()+"; no automatic wake",http.StatusConflict);return
+  w.WriteHeader(http.StatusConflict)
+  v.write(w,map[string]any{"ok":false,"error":err.Error()+"; no automatic wake"});return
  }
  if v.tesla==nil{http.Error(w,"commands unavailable",http.StatusServiceUnavailable);return}
  ctx,cancel:=context.WithTimeout(r.Context(),30*time.Second)
