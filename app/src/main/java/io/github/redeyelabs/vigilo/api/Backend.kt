@@ -416,7 +416,15 @@ class Backend(private val baseUrl: String, private val token: String) {
     )
 
     @Serializable
+    data class V2RuleExecution(
+        @SerialName("rule_id") val ruleId: String,
+        val condition: String,
+        val at: String,
+    )
+
+    @Serializable
     data class V2AutomationsResponse(
+        val executions: List<V2RuleExecution> = emptyList(),
         val ok: Boolean = false,
         val enabled: Boolean = false,
         val rules: List<V2AutomationRule> = emptyList(),

@@ -41,6 +41,8 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
     var parkedEnabled by remember { mutableStateOf(false) }
     var limit by remember { mutableStateOf("20") }
     var rulesLoaded by remember { mutableStateOf(false) }
+    var executions by remember { mutableStateOf(emptyList<Backend.V2RuleExecution>()) }
+    var savedLimit by remember { mutableStateOf("20") }
 
     LaunchedEffect(paired, refresh) {
         if (!paired) return@LaunchedEffect
@@ -56,6 +58,8 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
             panicEnabled = data.second.rules.firstOrNull { it.id == "sentry-panic" }?.enabled ?: false
             parkedEnabled = data.second.rules.firstOrNull { it.id == "parked-away" }?.enabled ?: false
             limit = (data.second.rules.firstOrNull { it.id == "soc-low" }?.threshold?.toInt() ?: 20).toString()
+            savedLimit = limit
+            executions = data.second.executions
             rulesLoaded = true
         } catch (e: Exception) {
             error = e.message ?: "Non riesco a caricare le regole."
@@ -107,6 +111,25 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                     ) { Text(if (moduleEnabled) "Disattiva automazioni" else "Attiva automazioni") }
                 }
                 VigiloCard {
+                    Text("Ultimi avvisi attivati", style = MaterialTheme.typography.titleMedium)
+                    if (executions.isEmpty()) Text("Nessuna esecuzione registrata.")
+                    executions.take(10).forEach { execution ->
+                        val label = when (execution.condition) {
+                            "soc_below" -> "Batteria sotto soglia"
+                            "sentry_panic" -> "Allarme Sentinella"
+                            "away_from_home" -> "Parcheggio fuori casa"
+                            else -> execution.ruleId
+                        }
+                        val time = runCatching {
+                            val instant = java.time.Instant.parse(execution.at)
+                            java.text.DateFormat.getDateTimeInstance().format(java.util.Date.from(instant))
+                        }.getOrDefault(execution.at)
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                        Text(time, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                VigiloCard {
                     Text("Batteria sotto soglia", style = MaterialTheme.typography.titleMedium)
                     Text(if (lowEnabled && moduleEnabled) "Attiva" else if (lowEnabled) "Configurata · servizio disattivo" else "Disattiva", style = MaterialTheme.typography.labelMedium, color = if (lowEnabled && moduleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
@@ -127,7 +150,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                             working = true
                             scope.launch {
                                 try {
-                                    val next = !lowEnabled
+                                    val next = !lowEnabled || limit != savedLimit
                                     withContext(Dispatchers.IO) {
                                         Backend(vm.prefs).v2SaveAutomation(Backend.V2AutomationRule(
                                             id = "soc-low", enabled = next, condition = "soc_below",
@@ -140,7 +163,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                                 } finally { working = false }
                             }
                         },
-                    ) { Text(if (lowEnabled) "Disattiva avviso batteria" else "Attiva avviso batteria") }
+                    ) { Text(when { !lowEnabled -> "Attiva avviso batteria"; limit != savedLimit -> "Salva soglia"; else -> "Disattiva avviso batteria" }) }
                 }
                 VigiloCard {
                     Text("Allarme Sentinella", style = MaterialTheme.typography.titleMedium)

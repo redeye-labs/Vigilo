@@ -8,6 +8,7 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 - Parcheggi mostra intervalli osservati, costo energetico stimato, energia da fermo e distinzione fra Sentinella attiva, spenta o incerta. Il contatore rappresenta la scarica del veicolo durante la sosta. Una lacuna interrompe la cronologia.
 - Viaggi mostra durata, energia, distanza, efficienza e costo stimato per i tratti con campioni compatibili.
 - Il modulo Viaggi richiede campioni periodici durante lo streaming attivo per correlare energia, odometro e stato. Tesla documenta `resend_interval_seconds` da firmware 2024.44.32. La raccolta resta opt-in e richiede una verifica di compatibilità e volume sul veicolo.
+- Storico persistente degli avvisi automatici attivati, limitato agli ultimi 500 eventi e filtrato per veicolo. La soglia SOC configurata si può aggiornare mantenendo attiva la regola.
 - La rotta legacy dei comandi v2 apre la schermata Comandi unica.
 - Diagnostica mostra le temperature interne ed esterne già raccolte e usa una vista dall'alto originale per le quattro pressioni.
 - Grafico con mediane settimanali BMS e filtri ricarica fino a 365 giorni. Le righe mostrano la finestra osservata quando misurabile.
@@ -23,7 +24,7 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 | Parcheggi | Schermata dedicata, grafico e intervalli osservati, consumo orario e distinzione Sentinella | SOC comparabile ai confini e distinzione affidabile delle soste in ricarica. I periodi senza campioni rimangono scoperti |
 | Salute veicolo | Connessione, stato telemetria, pneumatici e temperature | Cronologia firmware, anomalie documentate e collaudo visuale |
 | Comandi | Schermata con azioni esistenti e pannello comandi v2 integrato | Raggruppamento completo e collaudo guardie |
-| Automazioni | Programma Sentinella e regole server opt-in per SOC, Panic e parcheggio fuori casa | Pianificazioni e condizioni aggiuntive, storico esecuzioni, eliminazione duplicati e verifica stato |
+| Automazioni | Programma Sentinella e regole server opt-in per SOC, Panic e parcheggio fuori casa | Pianificazioni e condizioni aggiuntive, verifica delle notifiche consegnate e dei duplicati di canale |
 | Dati e rilascio | Widget, notifiche, report, backup, esportazione, flussi firma e API esistenti | Valutazione completa delle migrazioni, test Android, screenshot eseguiti, test Docker/HA, verifica aggiornamento e ripristino |
 
 ## Fonti e semantica

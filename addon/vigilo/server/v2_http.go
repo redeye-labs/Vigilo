@@ -178,7 +178,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/api/v2/automations":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if v.rules==nil{http.Error(w,"automation unavailable",http.StatusServiceUnavailable);return}
-  v.write(w,map[string]any{"ok":true,"enabled":v.modules.Enabled(vehicleID,ModuleAutomation),"rules":v.rules.Rules(vehicleID)})
+  v.write(w,map[string]any{"ok":true,"enabled":v.modules.Enabled(vehicleID,ModuleAutomation),"rules":v.rules.Rules(vehicleID),"executions":v.rules.Executions(vehicleID)})
  case "/api/v2/backup/export":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBackup){http.Error(w,"backup module disabled",http.StatusForbidden);return}
