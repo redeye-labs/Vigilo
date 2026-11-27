@@ -2,6 +2,7 @@ package io.github.redeyelabs.vigilo.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import app.cash.paparazzi.Paparazzi
 import io.github.redeyelabs.vigilo.api.Snapshot
 import io.github.redeyelabs.vigilo.data.EventEntity
 import io.github.redeyelabs.vigilo.data.EventType
+import java.time.Instant
 import org.junit.Rule
 import org.junit.Test
 
@@ -185,6 +187,69 @@ class ScreenshotsTest {
                     PrefToggle("Mostra la foto dell'auto", false) {}
                     PrefToggle("Esempio interruttore acceso", true) {}
                 }
+            }
+        }
+    }
+
+    @Test
+    fun batteria() = energyScreenshot("batteria", "battery")
+
+    @Test
+    fun saluteBatteria() = energyScreenshot("salute_batteria", "battery", scroll = 900)
+
+    @Test
+    fun ricariche() = energyScreenshot("ricariche", "charging")
+
+    @Test
+    fun viaggi() = energyScreenshot("viaggi", "trips")
+
+    @Test
+    fun parcheggi() = energyScreenshot("parcheggi", "parking")
+
+    private fun energyScreenshot(name: String, module: String, scroll: Int = 0) {
+        val now = Instant.parse("2026-11-27T12:00:00Z")
+        val readings = listOf(74.9, 75.2, 74.8, 74.6, 74.7, 74.6)
+        val first = "2026-11-27T09:10:00Z"
+        val last = "2026-11-27T09:25:00Z"
+        val data = EnergyScreenData(
+            modules = listOf("battery", "charging", "trips").map { Backend.V2Module(it, true, true) },
+            battery = Backend.V2BatteryObservations(
+                fullPackKWh = 74.6, remainingKWh = 46.1, ratedRangeKm = 263.3, chargePercent = 62.0,
+                tempMinC = 19.0, tempMaxC = 22.0, equivalentChargeCycles = 31.0,
+                ratedFullRangeKm = 424.7, latestReceivedAt = last,
+            ),
+            trend = Backend.V2CapacityTrendResponse(
+                available = true,
+                trend = Backend.V2CapacityTrend(firstKWh = 75.0, latestKWh = 74.6, percentChange = -0.53),
+                history = readings.mapIndexed { index, value ->
+                    Backend.V2BatteryHistoryPoint(now.minusSeconds((6L - index) * 604_800).toString(), value)
+                },
+            ),
+            charges = listOf(
+                Backend.V2ChargingSession(firstSeen = "2026-11-26T07:55:00Z",
+                    lastSeen = "2026-11-26T08:25:00Z", batteryKWh = 14.2, costEUR = 4.26),
+                Backend.V2ChargingSession(firstSeen = "2026-11-24T06:10:00Z",
+                    lastSeen = "2026-11-24T07:35:00Z", batteryKWh = 10.5, costEUR = 3.15),
+            ),
+            trips = listOf(Backend.V2TripObservation(firstSeen = first, lastSeen = last, distanceKm = 17.0)),
+        )
+        val report = Backend.V2ObservedEnergy(
+            driving = listOf(Backend.V2ObservedDrive(first, last, 2.8, 17.0)),
+            parking = listOf(Backend.V2ObservedParking(last, "2026-11-27T09:40:00Z", 0.2, "on")),
+            drivingKWh = 2.8, drivingKm = 17.0, whPerKm = 164.7,
+            parkedKWh = 0.2, parkedHours = 0.25, sentryKWh = 0.2, tariffEURPerKWh = 0.30,
+            note = "Consumi stimati sugli intervalli osservati.",
+        )
+        paparazzi.snapshot(name = name) {
+            PhoneShell {
+                EnergyScreenContent(
+                    data = data, energyReport = report, onlyModule = module,
+                    paired = true, days = 30, loading = false, working = false,
+                    error = null, energyError = null, tariffInput = "0,30", tariffSaved = true,
+                    onPeriodChange = {}, onEditTariff = {}, onSetModule = { _, _ -> },
+                    onSaveTariff = {}, onRefresh = {}, onBack = {}, now = now,
+                    scrollState = rememberScrollState(scroll),
+                )
             }
         }
     }

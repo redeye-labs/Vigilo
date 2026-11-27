@@ -51,11 +51,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
     var loading by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var modules by remember { mutableStateOf<List<Backend.V2Module>>(emptyList()) }
-    var battery by remember { mutableStateOf<Backend.V2BatteryObservations?>(null) }
-    var capacityTrend by remember { mutableStateOf<Backend.V2CapacityTrendResponse?>(null) }
-    var charges by remember { mutableStateOf<List<Backend.V2ChargingSession>>(emptyList()) }
-    var trips by remember { mutableStateOf<List<Backend.V2TripObservation>>(emptyList()) }
+    var data by remember { mutableStateOf(EnergyScreenData()) }
     var tariffInput by remember { mutableStateOf("") }
     var tariffSaved by remember { mutableStateOf(false) }
 
@@ -79,13 +75,11 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                     tariff = if (chargingOn) backend.v2ChargingTariff() else null,
                 )
             }
-            modules = result.modules
-            battery = result.battery
-            capacityTrend = result.trend
-            charges = result.charges
-            trips = result.trips
+            data = result
             tariffInput = result.tariff?.toString()?.replace('.', ',').orEmpty()
             tariffSaved = result.tariff != null
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             error = e.message ?: "Impossibile leggere le statistiche."
         } finally {
@@ -94,10 +88,9 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
     }
 
     var days by remember { mutableIntStateOf(30) }
-    var chargingDays by remember { mutableIntStateOf(30) }
     var energyReport by remember { mutableStateOf<Backend.V2ObservedEnergy?>(null) }
     var energyError by remember { mutableStateOf<String?>(null) }
-    val tripsEnabled = modules.any { it.id == "trips" && it.enabled }
+    val tripsEnabled = data.modules.any { it.id == "trips" && it.enabled }
     LaunchedEffect(paired, tripsEnabled, days, refresh, onlyModule) {
         energyReport = null
         energyError = null
@@ -108,15 +101,81 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
             catch (e: Exception) { energyError = e.message ?: "Impossibile leggere i consumi osservati." }
         }
     }
-    val cutoff = Instant.now().minus(days.toLong(), ChronoUnit.DAYS)
-    val chargingCutoff = Instant.now().minus(chargingDays.toLong(), ChronoUnit.DAYS)
+    EnergyScreenContent(
+        data = data, energyReport = energyReport, onlyModule = onlyModule,
+        paired = paired, days = days, loading = loading, working = working,
+        error = error, energyError = energyError, tariffInput = tariffInput, tariffSaved = tariffSaved,
+        onPeriodChange = { days = it },
+        onEditTariff = { tariffInput = it.take(12); tariffSaved = false },
+        onSetModule = { id, active ->
+            working = true
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetModule(id, active) }
+                    refresh++
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    error = e.message ?: "Impossibile modificare il modulo."
+                } finally {
+                    working = false
+                }
+            }
+        },
+        onSaveTariff = { tariff ->
+            working = true
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetChargingTariff(tariff) }
+                    tariffSaved = true
+                    refresh++
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    error = e.message ?: "Tariffa non salvata."
+                } finally {
+                    working = false
+                }
+            }
+        },
+        onRefresh = { refresh++ },
+        onBack = onBack,
+    )
+}
+
+@Composable
+internal fun EnergyScreenContent(
+    data: EnergyScreenData,
+    energyReport: Backend.V2ObservedEnergy?,
+    onlyModule: String?,
+    paired: Boolean,
+    days: Int,
+    loading: Boolean,
+    working: Boolean,
+    error: String?,
+    energyError: String?,
+    tariffInput: String,
+    tariffSaved: Boolean,
+    onPeriodChange: (Int) -> Unit,
+    onEditTariff: (String) -> Unit,
+    onSetModule: (String, Boolean) -> Unit,
+    onSaveTariff: (Double?) -> Unit,
+    onRefresh: () -> Unit,
+    onBack: () -> Unit,
+    now: Instant = Instant.now(),
+    scrollState: androidx.compose.foundation.ScrollState = rememberScrollState(),
+) {
+    var chargingDays by remember { mutableIntStateOf(30) }
+    val (modules, battery, capacityTrend, charges, trips) = data
+    val cutoff = now.minus(days.toLong(), ChronoUnit.DAYS)
+    val chargingCutoff = now.minus(chargingDays.toLong(), ChronoUnit.DAYS)
     val visibleCharges = charges.filter { inDashboardPeriod(it.lastSeen, chargingDays, chargingCutoff) }
     val visibleTrips = trips.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
 
     fun enabled(id: String) = modules.any { it.id == id && it.enabled }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+        Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ScreenHeader(when (onlyModule) { "battery" -> "Batteria"; "charging" -> "Ricariche"; "trips" -> "Viaggi"; "parking" -> "Parcheggi"; else -> "Batteria e analisi" }, "Valori Tesla reali; stime sempre dichiarate.", onBack = onBack)
@@ -139,19 +198,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                     Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(
                         enabled = !loading && !working,
-                        onClick = {
-                            working = true
-                            scope.launch {
-                                try {
-                                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetModule(moduleId, !active) }
-                                    refresh++
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Impossibile modificare il modulo."
-                                } finally {
-                                    working = false
-                                }
-                            }
-                        },
+                        onClick = { onSetModule(moduleId, !active) },
                     ) { Text(if (active) "Disattiva raccolta" else "Attiva raccolta") }
 
                     if (active && id == "battery") {
@@ -214,7 +261,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         )
                         OutlinedTextField(
                             value = tariffInput,
-                            onValueChange = { tariffInput = it.take(12); tariffSaved = false },
+                            onValueChange = onEditTariff,
                             label = { Text("Tariffa personale (€/kWh)") },
                             placeholder = { Text("Facoltativa") },
                             singleLine = true,
@@ -223,25 +270,11 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         OutlinedButton(
                             enabled = !working && (tariffInput.isBlank() ||
                                 tariffInput.replace(',', '.').toDoubleOrNull()?.let { it.isFinite() && it in 0.0..10.0 } == true),
-                            onClick = {
-                                working = true
-                                scope.launch {
-                                    try {
-                                        val tariff = tariffInput.replace(',', '.').toDoubleOrNull()
-                                        withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetChargingTariff(tariff) }
-                                        tariffSaved = true
-                                        refresh++
-                                    } catch (e: Exception) {
-                                        error = e.message ?: "Tariffa non salvata."
-                                    } finally {
-                                        working = false
-                                    }
-                                }
-                            },
+                            onClick = { onSaveTariff(tariffInput.replace(',', '.').toDoubleOrNull()) },
                         ) { Text(if (tariffSaved) "Tariffa salvata" else "Salva tariffa") }
                     }
                     if (active && id == "parking") {
-                        PeriodPicker(days, allowAll = false) { days = it }
+                        PeriodPicker(days, allowAll = false, onChange = onPeriodChange)
                         val report = energyReport
                         val average = report?.parkedHours?.takeIf { it > 0 }?.let { hours ->
                             report?.parkedKWh?.div(hours)
@@ -272,7 +305,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         }
                     }
                     if (active && id == "trips") {
-                        PeriodPicker(days) { days = it }
+                        PeriodPicker(days, onChange = onPeriodChange)
                         MetricPair("Distanza osservata", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.sumOf { it.distanceKm }, "km"), "Tratti osservati", visibleTrips.size.toString(), accent)
                         MetricPair("Distanza media per tratto", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.map { it.distanceKm }.average(), "km"), "Tratto più lungo", visibleTrips.maxOfOrNull { it.distanceKm }?.let { fmt(it, "km") } ?: "—", accent)
                         Text("Energia in marcia", style = MaterialTheme.typography.titleMedium)
@@ -307,20 +340,20 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                     }
                 }
             }
-            OutlinedButton(onClick = { refresh++ }, modifier = Modifier.fillMaxWidth(), enabled = !working) {
+            OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth(), enabled = !working) {
                 Text("Aggiorna statistiche")
             }
         }
     }
 }
 
-private data class EnergyScreenData(
-    val modules: List<Backend.V2Module>,
-    val battery: Backend.V2BatteryObservations?,
-    val trend: Backend.V2CapacityTrendResponse?,
-    val charges: List<Backend.V2ChargingSession>,
-    val trips: List<Backend.V2TripObservation>,
-    val tariff: Double?,
+internal data class EnergyScreenData(
+    val modules: List<Backend.V2Module> = emptyList(),
+    val battery: Backend.V2BatteryObservations? = null,
+    val trend: Backend.V2CapacityTrendResponse? = null,
+    val charges: List<Backend.V2ChargingSession> = emptyList(),
+    val trips: List<Backend.V2TripObservation> = emptyList(),
+    val tariff: Double? = null,
 )
 
 private fun fmt(n: Double, unit: String): String =
