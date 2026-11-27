@@ -350,7 +350,18 @@ class Backend(private val baseUrl: String, private val token: String) {
         get<V2ChargingResponse>("/api/v2/charging/sessions").sessions
 
     @Serializable
+    data class V2ObservedParking(
+        @SerialName("first_seen") val firstSeen: String,
+        @SerialName("last_seen") val lastSeen: String,
+        @SerialName("energy_kwh") val energyKWh: Double,
+        val sentry: String,
+    )
+
+    @Serializable
     data class V2ObservedEnergy(
+        val parking: List<V2ObservedParking> = emptyList(),
+        @SerialName("sentry_off_kwh") val sentryOffKWh: Double? = null,
+        @SerialName("sentry_off_hours") val sentryOffHours: Double? = null,
         @SerialName("driving_kwh") val drivingKWh: Double? = null,
         @SerialName("driving_km") val drivingKm: Double? = null,
         @SerialName("wh_per_km") val whPerKm: Double? = null,

@@ -95,14 +95,16 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
 
     var days by remember { mutableIntStateOf(30) }
     var energyReport by remember { mutableStateOf<Backend.V2ObservedEnergy?>(null) }
+    var energyError by remember { mutableStateOf<String?>(null) }
     val tripsEnabled = modules.any { it.id == "trips" && it.enabled }
     LaunchedEffect(paired, tripsEnabled, days, refresh, onlyModule) {
         energyReport = null
+        energyError = null
         if (paired && tripsEnabled && onlyModule != "charging") {
             try {
                 energyReport = withContext(Dispatchers.IO) { Backend(vm.prefs).v2ObservedEnergy(if (days == 0) 90 else days) }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-            catch (_: Exception) { }
+            catch (e: Exception) { energyError = e.message ?: "Impossibile leggere i consumi osservati." }
         }
     }
     val cutoff = Instant.now().minus(days.toLong(), ChronoUnit.DAYS)
@@ -115,7 +117,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeader(when (onlyModule) { "battery" -> "Batteria"; "charging" -> "Ricariche"; "trips" -> "Viaggi"; else -> "Batteria e analisi" }, "Valori Tesla reali; stime sempre dichiarate.", onBack = onBack)
+        ScreenHeader(when (onlyModule) { "battery" -> "Batteria"; "charging" -> "Ricariche"; "trips" -> "Viaggi"; "parking" -> "Parcheggi"; else -> "Batteria e analisi" }, "Valori Tesla reali; stime sempre dichiarate.", onBack = onBack)
         if (!paired) {
             VigiloCard { Text("Collega prima il server Vigilo.") }
         } else {
@@ -125,8 +127,10 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                 Triple("battery", "Salute batteria", "Capacità BMS, energia residua, autonomia"),
                 Triple("charging", "Ricariche e costi", "Energia immessa nella batteria e tariffa personale"),
                 Triple("trips", "Viaggi e consumi", "Distanze osservate dal contachilometri"),
+                Triple("parking", "Consumi da fermo", "Soste osservate con e senza Sentinella"),
             ).filter { onlyModule == null || it.first == onlyModule }.forEach { (id, title, description) ->
-                val active = enabled(id)
+                val moduleId = if (id == "parking") "trips" else id
+                val active = enabled(moduleId)
                 VigiloCard {
                     val accent = MaterialTheme.colorScheme.onSurface
                     Text(title, style = MaterialTheme.typography.titleLarge, color = accent)
@@ -137,7 +141,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             working = true
                             scope.launch {
                                 try {
-                                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetModule(id, !active) }
+                                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetModule(moduleId, !active) }
                                     refresh++
                                 } catch (e: Exception) {
                                     error = e.message ?: "Impossibile modificare il modulo."
@@ -226,15 +230,43 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             },
                         ) { Text(if (tariffSaved) "Tariffa salvata" else "Salva tariffa") }
                     }
+                    if (active && id == "parking") {
+                        PeriodPicker(days, allowAll = false) { days = it }
+                        val report = energyReport
+                        val average = report?.parkedHours?.takeIf { it > 0 }?.let { hours ->
+                            report?.parkedKWh?.div(hours)
+                        }
+                        MetricPair("Energia da fermo", report?.parkedKWh?.let { fmt(it, "kWh") } ?: "—",
+                            "Consumo orario", average?.let { fmt(it, "kWh/h") } ?: "—", accent)
+                        MetricPair("Sentinella attiva", report?.sentryKWh?.let { fmt(it, "kWh") } ?: "—",
+                            "Sentinella spenta", report?.sentryOffKWh?.let { fmt(it, "kWh") } ?: "—", accent)
+                        Text(energyError ?: report?.note ?: "Dati energetici non ancora disponibili.",
+                            style = MaterialTheme.typography.bodySmall)
+                        val recent = report?.parking.orEmpty().takeLast(12)
+                        if (recent.isNotEmpty()) {
+                            Text("Ultimi intervalli di sosta", style = MaterialTheme.typography.titleMedium)
+                            EnergyBars(recent.map { it.energyKWh }, accent, "kWh", recent.map { shortDate(it.lastSeen) })
+                            recent.asReversed().forEach { interval ->
+                                val sentry = when (interval.sentry) {
+                                    "on" -> "Sentinella attiva"
+                                    "off" -> "Sentinella spenta"
+                                    else -> "Stato Sentinella incerto"
+                                }
+                                val minutes = java.time.Duration.between(
+                                    Instant.parse(interval.firstSeen), Instant.parse(interval.lastSeen)
+                                ).toMinutes()
+                                MetricPair(shortDate(interval.lastSeen), fmt(interval.energyKWh, "kWh"),
+                                    sentry, "$minutes min", accent)
+                            }
+                        }
+                    }
                     if (active && id == "trips") {
                         PeriodPicker(days) { days = it }
                         MetricPair("Distanza osservata", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.sumOf { it.distanceKm }, "km"), "Tratti osservati", visibleTrips.size.toString(), accent)
                         MetricPair("Distanza media per tratto", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.map { it.distanceKm }.average(), "km"), "Tratto più lungo", visibleTrips.maxOfOrNull { it.distanceKm }?.let { fmt(it, "km") } ?: "—", accent)
-                        Text("Energia e soste osservate", style = MaterialTheme.typography.titleMedium)
+                        Text("Energia in marcia", style = MaterialTheme.typography.titleMedium)
                         MetricPair("Consumo in movimento", energyReport?.whPerKm?.let { fmt(it, "Wh/km") } ?: "—", "Energia in movimento", energyReport?.drivingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
-                        MetricPair("Energia da fermo (incl. Sentinella)", energyReport?.parkedKWh?.let { fmt(it, "kWh") } ?: "—", "Con Sentinella attiva", energyReport?.sentryKWh?.let { fmt(it, "kWh") } ?: "—", accent)
-                        MetricPair("Soste osservate", energyReport?.parkedHours?.let { fmt(it, "h") } ?: "—", "Sentinella osservata", energyReport?.sentryHours?.let { fmt(it, "h") } ?: "—", accent)
-                        Text(energyReport?.note ?: "Dati energetici non ancora disponibili.", style = MaterialTheme.typography.bodySmall)
+                        Text(energyError ?: energyReport?.note ?: "Dati energetici non ancora disponibili.", style = MaterialTheme.typography.bodySmall)
                         Text("Cronologia percorrenze", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleTrips.takeLast(12).map { it.distanceKm }, accent, "km", visibleTrips.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleTrips.takeLast(8).asReversed().forEach { trip ->
@@ -299,9 +331,9 @@ private fun shortDate(timestamp: String): String =
     runCatching { java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm", Locale.ITALY).withZone(java.time.ZoneId.systemDefault()).format(Instant.parse(timestamp)) }.getOrDefault(timestamp.take(16))
 
 @Composable
-private fun PeriodPicker(days: Int, onChange: (Int) -> Unit) {
+private fun PeriodPicker(days: Int, allowAll: Boolean = true, onChange: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(7 to "7g", 30 to "30g", 90 to "90g", 0 to "Tutto").forEach { (value, label) ->
+        listOf(7 to "7g", 30 to "30g", 90 to "90g", 0 to "Tutto").filter { allowAll || it.first != 0 }.forEach { (value, label) ->
             FilterChip(selected = value == days, onClick = { onChange(value) }, label = { Text(label) })
         }
     }

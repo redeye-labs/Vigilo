@@ -24,7 +24,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.ElectricalServices
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.FlashOn
@@ -220,10 +223,13 @@ fun StatusScreenContent(
             MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Salute, capacità e autonomia", onClick = { onOpen(Screen.V2_BATTERY) })
             MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
             MenuRow(Icons.Filled.Route, "Viaggi", subtitle = "Percorrenze osservate", onClick = { onOpen(Screen.V2_TRIPS) })
+            MenuRow(Icons.Filled.LocalParking, "Parcheggi", subtitle = "Consumi osservati da fermo", onClick = { onOpen(Screen.V2_PARKING) })
             MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
             MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
-            MenuRow(Icons.Filled.MonitorHeart, "Diagnostica", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
+            MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
             MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
+            MenuRow(Icons.Filled.LocationOn, "Posizione attuale", onClick = { onOpen(Screen.MAP) })
+            MenuRow(Icons.Filled.Settings, "Impostazioni", onClick = { onOpen(Screen.SETTINGS) })
             Spacer(Modifier.height(24.dp))
         }
     }

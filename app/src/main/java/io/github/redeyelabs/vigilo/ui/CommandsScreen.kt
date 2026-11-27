@@ -44,6 +44,7 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
         ScreenHeader("Comandi", "Ogni comando può svegliare l'auto se dorme.", onBack = onBack)
 
+        Text("Chiusura e apertura", style = MaterialTheme.typography.titleSmall)
         ToggleRow(
             title = "Chiusura",
             subtitle = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Stato sconosciuto" },
@@ -63,6 +64,7 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
                 )
             },
         )
+        Text("Sicurezza", style = MaterialTheme.typography.titleSmall)
         ToggleRow(
             title = "Sentinella",
             subtitle = when (s?.sentry) { true -> "Attiva"; false -> "Spenta"; null -> "Stato sconosciuto" },
@@ -72,6 +74,7 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             onCheckedChange = { vm.setSentry(it) },
             leading = { SentryIcon(active = s?.sentry == true, size = 22.dp) },
         )
+        Text("Luci e clacson", style = MaterialTheme.typography.titleSmall)
         ActionRow(
             icon = { Icon(Icons.Filled.FlashOn, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
             title = "Lampeggia",
