@@ -159,9 +159,8 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit,
                 VigiloCard {
                     Text("Sicurezza intelligente", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    Text("${s.incidents.size} episodi raggruppati nello storico disponibile")
                     val alarms = s.incidents.count { it.panic }
-                    Text("$alarms episodi con allarme Panic")
+                    MetricPair("Episodi osservati", s.incidents.size.toString(), "Allarmi Panic", alarms.toString(), MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "I conteggi dipendono dallo storico presente sul server. " +
@@ -175,9 +174,8 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit,
                 VigiloCard {
                     Text("Report degli ultimi 7 giorni", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(8.dp))
-                    Text("${r.totalEvents} eventi registrati")
-                    Text("${r.awareEvents} eventi Aware · ${r.panicEvents} allarmi Panic")
-                    Text("${r.groupedIncidents} episodi raggruppati")
+                    MetricPair("Eventi registrati", r.totalEvents.toString(), "Episodi raggruppati", r.groupedIncidents.toString(), MaterialTheme.colorScheme.primary)
+                    MetricPair("Aware", r.awareEvents.toString(), "Panic", r.panicEvents.toString(), MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(4.dp))
                     Text(
                         "Copertura parziale: eventi disponibili nell'archivio locale del server.",
