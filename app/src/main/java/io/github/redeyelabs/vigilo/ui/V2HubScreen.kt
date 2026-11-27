@@ -302,7 +302,6 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit)
                                 }
                             }
                         }
-                    if (commandModule.enabled) {
                     OutlinedTextField(
                         value = chargeLimit,
                         onValueChange = { chargeLimit = it.filter(Char::isDigit).take(3) },
