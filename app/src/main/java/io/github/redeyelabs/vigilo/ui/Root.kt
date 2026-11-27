@@ -12,6 +12,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -76,6 +86,39 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
         snackbarHost = { SnackbarHost(snack) },
+        bottomBar = {
+            if (loggedIn) {
+                val tabs = listOf(
+                    Triple(Screen.HOME, "Home", Icons.Filled.Home),
+                    Triple(Screen.COMMANDS, "Comandi", Icons.Filled.DirectionsCar),
+                    Triple(Screen.V2_ENERGY, "Statistiche", Icons.Filled.BarChart),
+                    Triple(Screen.V2_AUTOMATIONS, "Routine", Icons.Filled.Schedule),
+                    Triple(Screen.SETTINGS, "Altro", Icons.Filled.Settings),
+                )
+                val selected = when (screen) {
+                    Screen.V2_HUB, Screen.CHARGE, Screen.MAP -> Screen.COMMANDS
+                    Screen.V2_DIAGNOSTICS -> Screen.V2_ENERGY
+                    Screen.SCHEDULE, Screen.ACTIONS -> Screen.V2_AUTOMATIONS
+                    Screen.V2_BACKUP, Screen.GUIDE, Screen.LICENSES -> Screen.SETTINGS
+                    else -> screen
+                }
+                NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                    tabs.forEach { (target, label, icon) ->
+                        NavigationBarItem(
+                            selected = selected == target,
+                            onClick = { screen = target },
+                            icon = { Icon(icon, contentDescription = label) },
+                            label = { Text(label, maxLines = 1) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            ),
+                        )
+                    }
+                }
+            }
+        },
     ) { pad ->
         // safeDrawing copre barra di stato E foro della fotocamera/notch: l'intestazione non finisce più
         // sotto la fotocamera. La barra di avanzamento occupa una sua riga e non copre il titolo.
@@ -107,11 +150,11 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.SETTINGS -> SettingsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.GUIDE -> GuideScreen(vm, onBack = { screen = if (loggedIn) Screen.HOME else Screen.SETTINGS })
                     Screen.LICENSES -> LicensesScreen(onBack = { screen = Screen.SETTINGS })
-                    Screen.V2_HUB -> V2HubScreen(vm, onBack = { screen = Screen.SETTINGS }, onOpen = { screen = it })
-                    Screen.V2_ENERGY -> V2EnergyScreen(vm, onBack = { screen = Screen.SETTINGS })
-                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_HUB -> V2HubScreen(vm, onBack = { screen = Screen.COMMANDS }, onOpen = { screen = it })
+                    Screen.V2_ENERGY -> V2EnergyScreen(vm, onBack = goHome)
+                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = goHome)
                     Screen.V2_BACKUP -> V2BackupScreen(vm, onBack = { screen = Screen.SETTINGS })
-                    Screen.V2_DIAGNOSTICS -> V2DiagnosticsScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_DIAGNOSTICS -> V2DiagnosticsScreen(vm, onBack = goHome)
                 }
                 if (busy && !progress.isNullOrBlank()) {
                     Surface(
