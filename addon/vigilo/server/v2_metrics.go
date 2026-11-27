@@ -173,6 +173,7 @@ func (a *App) recordV2Telemetry(field string,val any){
  case "ModuleTempMin", "ModuleTempMax":module,unit=ModuleBattery,"celsius"
  case "LifetimeEnergyChargedKwh", "ACChargingEnergyIn", "DCChargingEnergyIn":module,unit=ModuleCharging,"kWh"
  case "DCChargingPower":module,unit=ModuleCharging,"kW"
+ case "Gear", "SentryMode":module,unit=ModuleTrips,"state"
  case "Odometer":module,unit=ModuleTrips,"mile"
  case "LifetimeEnergyUsed":module,unit=ModuleTrips,"kWh"
  case "TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr":module,unit=ModuleDiagnostics,"bar"
@@ -180,6 +181,8 @@ func (a *App) recordV2Telemetry(field string,val any){
  }
  if !a.v2Modules.Enabled(vin,module) && !(field=="LifetimeEnergyChargedKwh" && a.v2Modules.Enabled(vin,ModuleBattery)){return}
  value,ok:=num(val)
+ if field=="Gear" { switch normalizeEnum(val,"ShiftState"){case "P":value,ok=0,true;case "D","R":value,ok=1,true;default:value,ok=2,true} }
+ if field=="SentryMode" { switch normalizeEnum(val,"SentryModeState"){case "Off":value,ok=0,true;case "Armed","Aware","Panic":value,ok=1,true;default:value,ok=2,true} }
  if !ok || math.IsNaN(value)||math.IsInf(value,0){return}
  now:=time.Now().UTC()
  reading:=V2Measurement{

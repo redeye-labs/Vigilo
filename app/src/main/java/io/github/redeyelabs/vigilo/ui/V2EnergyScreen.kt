@@ -94,6 +94,17 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
     }
 
     var days by remember { mutableIntStateOf(30) }
+    var energyReport by remember { mutableStateOf<Backend.V2ObservedEnergy?>(null) }
+    val tripsEnabled = modules.any { it.id == "trips" && it.enabled }
+    LaunchedEffect(paired, tripsEnabled, days, refresh, onlyModule) {
+        energyReport = null
+        if (paired && tripsEnabled && onlyModule != "charging") {
+            try {
+                energyReport = withContext(Dispatchers.IO) { Backend(vm.prefs).v2ObservedEnergy(if (days == 0) 90 else days) }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { }
+        }
+    }
     val cutoff = Instant.now().minus(days.toLong(), ChronoUnit.DAYS)
     val visibleCharges = charges.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
     val visibleTrips = trips.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
@@ -143,6 +154,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             BatteryGauge(b.chargePercent, accent)
                             MetricPair("Autonomia nominale", b.ratedRangeKm?.let { fmt(it, "km") } ?: "—", "Energia residua", b.remainingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
                             BatteryHealthPanel(b.healthPercent, b.fullPackKWh, b.stale, accent)
+                            val efficiency = energyReport?.whPerKm?.takeIf { it > 0 }
+                            MetricPair("Autonomia dai consumi (stima)", if (efficiency != null && b.remainingKWh != null) fmt(b.remainingKWh * 1000 / efficiency, "km") else "—", "Consumo osservato", efficiency?.let { fmt(it, "Wh/km") } ?: "—", accent)
                             MetricPair("Autonomia nominale al 100% (stima)", b.ratedFullRangeKm?.let { fmt(it, "km") } ?: "—", "Cicli di carica equivalenti (stima)", b.equivalentChargeCycles?.let { fmt(it, "") } ?: "—", accent)
                             MetricPair("Temperatura minima batteria", b.tempMinC?.let { fmt(it, "°C") } ?: "—", "Temperatura massima batteria", b.tempMaxC?.let { fmt(it, "°C") } ?: "—", accent)
                             Text("Cicli stimati: energia totale caricata divisa per capacità BMS attuale; non sono cicli di fabbrica certificati.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -217,6 +230,11 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         PeriodPicker(days) { days = it }
                         MetricPair("Distanza osservata", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.sumOf { it.distanceKm }, "km"), "Tratti osservati", visibleTrips.size.toString(), accent)
                         MetricPair("Distanza media per tratto", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.map { it.distanceKm }.average(), "km"), "Tratto più lungo", visibleTrips.maxOfOrNull { it.distanceKm }?.let { fmt(it, "km") } ?: "—", accent)
+                        Text("Energia e soste osservate", style = MaterialTheme.typography.titleMedium)
+                        MetricPair("Consumo in movimento", energyReport?.whPerKm?.let { fmt(it, "Wh/km") } ?: "—", "Energia in movimento", energyReport?.drivingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
+                        MetricPair("Energia da fermo (incl. Sentinella)", energyReport?.parkedKWh?.let { fmt(it, "kWh") } ?: "—", "Con Sentinella attiva", energyReport?.sentryKWh?.let { fmt(it, "kWh") } ?: "—", accent)
+                        MetricPair("Soste osservate", energyReport?.parkedHours?.let { fmt(it, "h") } ?: "—", "Sentinella osservata", energyReport?.sentryHours?.let { fmt(it, "h") } ?: "—", accent)
+                        Text(energyReport?.note ?: "Dati energetici non ancora disponibili.", style = MaterialTheme.typography.bodySmall)
                         Text("Cronologia percorrenze", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleTrips.takeLast(12).map { it.distanceKm }, accent, "km", visibleTrips.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleTrips.takeLast(8).asReversed().forEach { trip ->
@@ -224,7 +242,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         }
                         if (visibleTrips.isEmpty()) Text("Nessun tratto osservato nel periodo.")
                         Text(
-                            "Non sono viaggi GPS completi. Consumo in kWh/100 km non calcolato senza energia misurata sullo stesso intervallo.",
+                            "Percorrenze da odometro. I consumi si riferiscono solo agli intervalli osservati e classificabili.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

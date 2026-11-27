@@ -48,8 +48,8 @@ android {
         applicationId = "io.github.redeyelabs.vigilo"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "2.0.0-beta.4"
+        versionCode = 36
+        versionName = "2.0.0-beta.5"
     }
 
     signingConfigs {

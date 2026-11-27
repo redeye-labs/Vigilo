@@ -122,6 +122,15 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   v.write(w,map[string]any{"ok":true,"price_eur_per_kwh":v.modules.Tariff(vehicleID),
     "source":"user_entered"})
+ case "/api/v2/trips/energy":
+  if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
+  if !v.modules.Enabled(vehicleID,ModuleTrips){http.Error(w,"module disabled",http.StatusForbidden);return}
+  if v.metrics==nil{http.Error(w,"measurement archive unavailable",http.StatusServiceUnavailable);return}
+  days:=30
+  if n,e:=strconv.Atoi(r.URL.Query().Get("days"));e==nil&&n>=1&&n<=90{days=n}
+  since:=time.Now().AddDate(0,0,-days)
+  report:=ObservedEnergy(vehicleID,v.metrics.History(vehicleID,"LifetimeEnergyUsed",since,20000),v.metrics.History(vehicleID,"Odometer",since,20000),v.metrics.History(vehicleID,"Gear",since,20000),v.metrics.History(vehicleID,"SentryMode",since,20000))
+  v.write(w,map[string]any{"ok":true,"report":report})
  case "/api/v2/trips/observations":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleTrips){http.Error(w,"module disabled",http.StatusForbidden);return}
