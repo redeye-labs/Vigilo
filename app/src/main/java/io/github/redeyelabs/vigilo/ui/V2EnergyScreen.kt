@@ -142,7 +142,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             Spacer(Modifier.height(16.dp))
                             BatteryGauge(b.chargePercent, accent)
                             MetricPair("Autonomia nominale", b.ratedRangeKm?.let { fmt(it, "km") } ?: "—", "Energia residua", b.remainingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
-                            MetricPair("Capacità BMS", b.fullPackKWh?.let { fmt(it, "kWh") } ?: "—", "Salute batteria", b.healthPercent?.let { fmt(it, "%") } ?: "N/D", accent)
+                            BatteryHealthPanel(b.healthPercent, b.fullPackKWh, b.stale, accent)
                             if (b.stale) {
                                 Text("Dati precedenti: la Tesla non ha trasmesso letture recenti.",
                                     color = MaterialTheme.colorScheme.error)
@@ -308,8 +308,31 @@ private fun BatteryGauge(percent: Double?, accent: Color) {
             if (valid != null && valid > 0) drawArc(accent, 135f, (270 * valid / 100).toFloat(), false, offset, arcSize, style = stroke)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(valid?.let { fmt(it, "%") } ?: "—", style = MaterialTheme.typography.headlineSmall)
+            Text(valid?.let { fmt(it, "%") } ?: "—", style = MaterialTheme.typography.headlineLarge)
             Text("Carica residua", style = MaterialTheme.typography.labelSmall)
         }
+    }
+}
+
+@Composable
+private fun BatteryHealthPanel(health: Double?, capacity: Double?, stale: Boolean, accent: Color) {
+    val valid = health?.takeIf { it.isFinite() && it >= 0.0 }
+    val tint = if (stale) MaterialTheme.colorScheme.onSurfaceVariant else accent
+    Column(
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(18.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("Salute batteria", style = MaterialTheme.typography.titleMedium)
+        Text(valid?.let { fmt(it, "%") } ?: "N/D", style = MaterialTheme.typography.headlineLarge, color = tint)
+        if (valid != null) {
+            LinearProgressIndicator(progress = { (valid / 100.0).coerceIn(0.0, 1.0).toFloat() }, modifier = Modifier.fillMaxWidth(), color = tint)
+        }
+        Text("Capacità nominale BMS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(capacity?.let { fmt(it, "kWh") } ?: "—", style = MaterialTheme.typography.titleLarge)
+        Text(
+            if (valid == null) "Riferimento BMS confrontabile non disponibile." else if (stale) "Ultima misura disponibile, non recente." else "Indicatore basato sui dati e sul riferimento disponibili.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
