@@ -94,6 +94,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
     }
 
     var days by remember { mutableIntStateOf(30) }
+    var chargingDays by remember { mutableIntStateOf(30) }
     var energyReport by remember { mutableStateOf<Backend.V2ObservedEnergy?>(null) }
     var energyError by remember { mutableStateOf<String?>(null) }
     val tripsEnabled = modules.any { it.id == "trips" && it.enabled }
@@ -108,7 +109,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
         }
     }
     val cutoff = Instant.now().minus(days.toLong(), ChronoUnit.DAYS)
-    val visibleCharges = charges.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
+    val chargingCutoff = Instant.now().minus(chargingDays.toLong(), ChronoUnit.DAYS)
+    val visibleCharges = charges.filter { inDashboardPeriod(it.lastSeen, chargingDays, chargingCutoff) }
     val visibleTrips = trips.filter { inDashboardPeriod(it.lastSeen, days, cutoff) }
 
     fun enabled(id: String) = modules.any { it.id == id && it.enabled }
@@ -173,12 +175,17 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             Text(b.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } ?: Text("Nessuna misura disponibile.")
                         capacityTrend?.let { observation ->
+                            val history = observation.history.takeLast(12)
+                            if (history.isNotEmpty()) {
+                                Text("Capacità BMS · mediane settimanali", style = MaterialTheme.typography.titleMedium)
+                                EnergyBars(history.map { it.capacityKWh }, accent, "kWh",
+                                    history.map { shortDate(it.week).substringBefore(' ') })
+                            }
                             if (observation.available && observation.trend != null) {
                                 val trend = observation.trend
                                 Text("Variazione capacità BMS nel periodo: " + fmt(trend.percentChange, "%"))
                                 Text("Capacità iniziale rilevata: " + fmt(trend.firstKWh, "kWh"))
                                 Text("Capacità recente: " + fmt(trend.latestKWh, "kWh"))
-                                EnergyBars(listOf(trend.firstKWh, trend.latestKWh), accent, "kWh", listOf("Iniziale", "Recente"))
                                 Text(trend.note, style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
@@ -188,13 +195,16 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         }
                     }
                     if (active && id == "charging") {
-                        PeriodPicker(days) { days = it }
+                        PeriodPicker(chargingDays, allowAll = false, charging = true) { chargingDays = it }
                         MetricPair("Energia osservata", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.sumOf { it.batteryKWh }, "kWh"), "Costo stimato", if (visibleCharges.isNotEmpty() && visibleCharges.all { it.costEUR != null }) fmt(visibleCharges.sumOf { it.costEUR ?: 0.0 }, "€") else "—", accent)
                         MetricPair("Sessioni osservate", visibleCharges.size.toString(), "Energia media", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.map { it.batteryKWh }.average(), "kWh"), accent)
                         Text("Cronologia ricariche", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleCharges.takeLast(12).map { it.batteryKWh }, accent, "kWh", visibleCharges.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleCharges.takeLast(8).asReversed().forEach { session ->
                             MetricPair(shortDate(session.lastSeen), fmt(session.batteryKWh, "kWh"), "Costo stimato", session.costEUR?.let { fmt(it, "€") } ?: "—", accent)
+                            observedMinutes(session.firstSeen, session.lastSeen)?.let { minutes ->
+                                Text("Finestra osservata: $minutes min", style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                         if (visibleCharges.isEmpty()) Text("Nessuna ricarica osservata nel periodo.")
                         Text(
@@ -252,11 +262,9 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                                     "off" -> "Sentinella spenta"
                                     else -> "Stato Sentinella incerto"
                                 }
-                                val minutes = java.time.Duration.between(
-                                    Instant.parse(interval.firstSeen), Instant.parse(interval.lastSeen)
-                                ).toMinutes()
+                                val minutes = observedMinutes(interval.firstSeen, interval.lastSeen)
                                 MetricPair(shortDate(interval.lastSeen), fmt(interval.energyKWh, "kWh"),
-                                    sentry, "$minutes min", accent)
+                                    sentry, minutes?.let { "$it min" } ?: "—", accent)
                             }
                         }
                     }
@@ -266,6 +274,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         MetricPair("Distanza media per tratto", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.map { it.distanceKm }.average(), "km"), "Tratto più lungo", visibleTrips.maxOfOrNull { it.distanceKm }?.let { fmt(it, "km") } ?: "—", accent)
                         Text("Energia in marcia", style = MaterialTheme.typography.titleMedium)
                         MetricPair("Consumo in movimento", energyReport?.whPerKm?.let { fmt(it, "Wh/km") } ?: "—", "Energia in movimento", energyReport?.drivingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
+                        MetricPair("Consumo osservato", energyReport?.whPerKm?.let { fmt(it / 10, "kWh/100 km") } ?: "—",
+                            "Distanza con misura energetica", energyReport?.drivingKm?.let { fmt(it, "km") } ?: "—", accent)
                         Text(energyError ?: energyReport?.note ?: "Dati energetici non ancora disponibili.", style = MaterialTheme.typography.bodySmall)
                         Text("Cronologia percorrenze", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleTrips.takeLast(12).map { it.distanceKm }, accent, "km", visibleTrips.takeLast(12).map { shortDate(it.lastSeen) })
@@ -330,10 +340,16 @@ private fun inDashboardPeriod(timestamp: String, days: Int, cutoff: Instant): Bo
 private fun shortDate(timestamp: String): String =
     runCatching { java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm", Locale.ITALY).withZone(java.time.ZoneId.systemDefault()).format(Instant.parse(timestamp)) }.getOrDefault(timestamp.take(16))
 
+private fun observedMinutes(first: String, last: String): Long? =
+    runCatching { java.time.Duration.between(Instant.parse(first), Instant.parse(last)).toMinutes() }
+        .getOrNull()?.takeIf { it > 0 }
+
 @Composable
-private fun PeriodPicker(days: Int, allowAll: Boolean = true, onChange: (Int) -> Unit) {
+private fun PeriodPicker(days: Int, allowAll: Boolean = true, charging: Boolean = false, onChange: (Int) -> Unit) {
+    val periods = if (charging) listOf(1 to "24h", 7 to "7g", 30 to "30g", 365 to "365g")
+        else listOf(7 to "7g", 30 to "30g", 90 to "90g", 0 to "Tutto")
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(7 to "7g", 30 to "30g", 90 to "90g", 0 to "Tutto").filter { allowAll || it.first != 0 }.forEach { (value, label) ->
+        periods.filter { allowAll || it.first != 0 }.forEach { (value, label) ->
             FilterChip(selected = value == days, onClick = { onChange(value) }, label = { Text(label) })
         }
     }

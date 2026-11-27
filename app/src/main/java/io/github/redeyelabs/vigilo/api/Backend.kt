@@ -334,7 +334,14 @@ class Backend(private val baseUrl: String, private val token: String) {
     )
 
     @Serializable
+    data class V2BatteryHistoryPoint(
+        val week: String,
+        @SerialName("capacity_kwh") val capacityKWh: Double,
+    )
+
+    @Serializable
     data class V2CapacityTrendResponse(
+        val history: List<V2BatteryHistoryPoint> = emptyList(),
         val ok: Boolean = false,
         val available: Boolean = false,
         val note: String = "",

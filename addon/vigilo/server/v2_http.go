@@ -99,12 +99,13 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
   readings:=v.metrics.History(vehicleID,"NominalFullPackEnergyKwh",time.Now().AddDate(-2,0,0),20000)
   trend,available:=BatteryCapacityTrend(vehicleID,readings)
+  history:=BatteryCapacityHistory(vehicleID,readings)
   if !available{
    v.write(w,map[string]any{"ok":true,"available":false,
-    "note":"Occorrono almeno sei misure BMS coerenti distribuite su 30 giorni; il SoH resta non determinabile."})
+    "history":history,"note":"Occorrono almeno sei misure BMS coerenti distribuite su 30 giorni; il SoH resta non determinabile."})
    return
   }
-  v.write(w,map[string]any{"ok":true,"available":true,"trend":trend})
+  v.write(w,map[string]any{"ok":true,"available":true,"trend":trend,"history":history})
  case "/api/v2/battery/summary":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
@@ -113,7 +114,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/api/v2/charging/sessions":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleCharging){http.Error(w,"module disabled",http.StatusForbidden);return}
-  since:=time.Now().AddDate(0,0,-90)
+  since:=time.Now().AddDate(-1,0,-1)
   observations:=v.metrics.History(vehicleID,"DCChargingEnergyIn",since,20000)
   tariff:=v.modules.Tariff(vehicleID)
   v.write(w,map[string]any{"ok":true,"sessions":ChargingSessions(vehicleID,observations,tariff),
