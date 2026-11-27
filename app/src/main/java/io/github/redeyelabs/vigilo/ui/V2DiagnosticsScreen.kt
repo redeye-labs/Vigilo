@@ -1,15 +1,11 @@
 package io.github.redeyelabs.vigilo.ui
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,8 +24,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import io.github.redeyelabs.vigilo.R
 import io.github.redeyelabs.vigilo.api.Backend
+import io.github.redeyelabs.vigilo.api.Snapshot
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,6 +37,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
     val paired by vm.backendMode.collectAsState()
+    val snapshot by vm.snapshot.collectAsState()
     val scope = rememberCoroutineScope()
     var refresh by remember { mutableStateOf(0) }
     var working by remember { mutableStateOf(false) }
@@ -66,6 +66,41 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
         } finally { working = false }
     }
 
+    V2DiagnosticsContent(
+        paired = paired, snapshot = snapshot, diagnostics = diagnostics, tires = tires,
+        message = message, enabled = enabled, working = working, onBack = onBack,
+        onRefresh = { refresh++ },
+        onToggle = {
+            working = true
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetModule("diagnostics", !enabled) }
+                    refresh++
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    message = e.message ?: "Impossibile attivare la diagnostica."
+                } finally {
+                    working = false
+                }
+            }
+        },
+    )
+}
+
+@Composable
+internal fun V2DiagnosticsContent(
+    paired: Boolean,
+    snapshot: Snapshot?,
+    diagnostics: Backend.V2Diagnostics?,
+    tires: List<Backend.V2Measurement>,
+    message: String?,
+    enabled: Boolean,
+    working: Boolean,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit,
+    onToggle: () -> Unit,
+) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -95,6 +130,18 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     )
                 }
             }
+            snapshot?.let { vehicle ->
+                VigiloCard {
+                    Text("Stato del veicolo", style = MaterialTheme.typography.titleMedium)
+                    fun degrees(value: Double?) = value?.let {
+                        String.format(Locale.ITALY, "%.1f °C", it)
+                    } ?: "—"
+                    MetricPair("Temperatura interna", degrees(vehicle.insideTemp),
+                        "Temperatura esterna", degrees(vehicle.outsideTemp), MaterialTheme.colorScheme.onSurface)
+                    Text("Ultima lettura veicolo: " + java.text.DateFormat.getDateTimeInstance()
+                        .format(java.util.Date(vehicle.timestamp)), style = MaterialTheme.typography.bodySmall)
+                }
+            }
             VigiloCard {
                 Text("Pressione pneumatici", style = MaterialTheme.typography.titleMedium)
                 Text(
@@ -104,19 +151,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 )
                 OutlinedButton(
                     enabled = !working,
-                    onClick = {
-                        working = true
-                        scope.launch {
-                            try {
-                                withContext(Dispatchers.IO) {
-                                    Backend(vm.prefs).v2SetModule("diagnostics", !enabled)
-                                }
-                                refresh++
-                            } catch (e: Exception) {
-                                message = e.message ?: "Impossibile attivare la diagnostica."
-                            } finally { working = false }
-                        }
-                    },
+                    onClick = onToggle,
                 ) { Text(if (enabled) "Disattiva raccolta pneumatici" else "Attiva raccolta pneumatici") }
                 if (enabled) {
                     TireLayout(tires)
@@ -131,14 +166,14 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
             }
             message?.let { VigiloCard { Text(it, color = MaterialTheme.colorScheme.error) } }
             OutlinedButton(
-                onClick = { refresh++ }, enabled = !working, modifier = Modifier.fillMaxWidth(),
+                onClick = onRefresh, enabled = !working, modifier = Modifier.fillMaxWidth(),
             ) { Text("Aggiorna diagnostica") }
         }
     }
 }
 
 @Composable
-private fun TireLayout(tires: List<Backend.V2Measurement>) {
+internal fun TireLayout(tires: List<Backend.V2Measurement>) {
     val accent = MaterialTheme.colorScheme.onSurface
     fun reading(signal: String): String {
         val m = tires.firstOrNull { it.signal == signal } ?: return "—"
@@ -150,16 +185,11 @@ private fun TireLayout(tires: List<Backend.V2Measurement>) {
             TireReading("Anteriore SX", reading("TpmsPressureFl"), accent)
             TireReading("Posteriore SX", reading("TpmsPressureRl"), accent)
         }
-        Canvas(Modifier.weight(0.9f).height(200.dp)) {
-            val w = size.width
-            val h = size.height
-            for (x in listOf(.04f, .76f)) for (y in listOf(.18f, .68f)) {
-                drawRoundRect(Color(0xFF454545), Offset(w * x, h * y), Size(w * .20f, h * .17f), CornerRadius(5.dp.toPx()))
-            }
-            drawRoundRect(Color(0xFFB5B5B5), Offset(w * .17f, h * .02f), Size(w * .66f, h * .96f), CornerRadius(24.dp.toPx()))
-            drawRoundRect(Color(0xFF252525), Offset(w * .25f, h * .22f), Size(w * .50f, h * .53f), CornerRadius(14.dp.toPx()))
-            drawRoundRect(Color(0xFF444444), Offset(w * .29f, h * .28f), Size(w * .42f, h * .14f), CornerRadius(5.dp.toPx()))
-        }
+        Image(
+            painter = painterResource(R.drawable.car_highland_top),
+            contentDescription = null,
+            modifier = Modifier.weight(0.9f).height(200.dp),
+        )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(40.dp)) {
             TireReading("Anteriore DX", reading("TpmsPressureFr"), accent)
             TireReading("Posteriore DX", reading("TpmsPressureRr"), accent)

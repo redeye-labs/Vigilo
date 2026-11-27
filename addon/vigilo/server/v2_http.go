@@ -99,12 +99,13 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
   readings:=v.metrics.History(vehicleID,"NominalFullPackEnergyKwh",time.Now().AddDate(-2,0,0),20000)
   trend,available:=BatteryCapacityTrend(vehicleID,readings)
+  history:=BatteryCapacityHistory(vehicleID,readings)
   if !available{
    v.write(w,map[string]any{"ok":true,"available":false,
-    "note":"Occorrono almeno sei misure BMS coerenti distribuite su 30 giorni; il SoH resta non determinabile."})
+    "history":history,"note":"Occorrono almeno sei misure BMS coerenti distribuite su 30 giorni; il SoH resta non determinabile."})
    return
   }
-  v.write(w,map[string]any{"ok":true,"available":true,"trend":trend})
+  v.write(w,map[string]any{"ok":true,"available":true,"trend":trend,"history":history})
  case "/api/v2/battery/summary":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
@@ -113,7 +114,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/api/v2/charging/sessions":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleCharging){http.Error(w,"module disabled",http.StatusForbidden);return}
-  since:=time.Now().AddDate(0,0,-90)
+  since:=time.Now().AddDate(-1,0,-1)
   observations:=v.metrics.History(vehicleID,"DCChargingEnergyIn",since,20000)
   tariff:=v.modules.Tariff(vehicleID)
   v.write(w,map[string]any{"ok":true,"sessions":ChargingSessions(vehicleID,observations,tariff),
@@ -130,6 +131,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   if n,e:=strconv.Atoi(r.URL.Query().Get("days"));e==nil&&n>=1&&n<=90{days=n}
   since:=time.Now().AddDate(0,0,-days)
   report:=ObservedEnergy(vehicleID,v.metrics.History(vehicleID,"LifetimeEnergyUsed",since,20000),v.metrics.History(vehicleID,"Odometer",since,20000),v.metrics.History(vehicleID,"Gear",since,20000),v.metrics.History(vehicleID,"SentryMode",since,20000))
+  report.TariffEURPerKWh=v.modules.Tariff(vehicleID)
   v.write(w,map[string]any{"ok":true,"report":report})
  case "/api/v2/trips/observations":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
@@ -176,7 +178,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/api/v2/automations":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if v.rules==nil{http.Error(w,"automation unavailable",http.StatusServiceUnavailable);return}
-  v.write(w,map[string]any{"ok":true,"enabled":v.modules.Enabled(vehicleID,ModuleAutomation),"rules":v.rules.Rules(vehicleID)})
+  v.write(w,map[string]any{"ok":true,"enabled":v.modules.Enabled(vehicleID,ModuleAutomation),"rules":v.rules.Rules(vehicleID),"executions":v.rules.Executions(vehicleID)})
  case "/api/v2/backup/export":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBackup){http.Error(w,"backup module disabled",http.StatusForbidden);return}

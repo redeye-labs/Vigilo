@@ -96,7 +96,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit,
         if (embedded) Modifier.fillMaxWidth() else Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (!embedded) ScreenHeader(when (onlyModule) { "security" -> "Sicurezza"; "commands" -> "Comandi avanzati"; else -> "Vigilo 2" }, "Dati dal server personale.", onBack = onBack)
+        if (!embedded) ScreenHeader(when (onlyModule) { "security" -> "Sicurezza"; "commands" -> "Comandi"; else -> "Vigilo 2" }, "Dati dal server personale.", onBack = onBack)
         if (onlyModule == null) {
         VigiloCard {
             Text("Versione sperimentale", style = MaterialTheme.typography.titleMedium)
@@ -189,7 +189,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit,
                     Spacer(Modifier.height(8.dp))
                     val names = mapOf(
                         "security" to "Sicurezza", "diagnostics" to "Diagnostica",
-                        "backup" to "Backup e report", "commands" to "Comandi avanzati",
+                        "backup" to "Backup e report", "commands" to "Comandi",
                         "battery" to "Salute batteria", "charging" to "Ricariche e costi",
                         "automation" to "Automazioni", "trips" to "Viaggi e consumi",
                     )

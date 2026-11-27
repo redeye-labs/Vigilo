@@ -32,7 +32,9 @@ type App struct {
 	v2Modules *V2ModuleStore
 	v2Identity *V2VehicleIdentity
 	v2Rules *V2RuleEngine
-	v2HomeKnown bool
+	v2HomeAt time.Time
+	v2GearAt time.Time
+	v2GearVehicle string
 	v2AtHome bool
 	v2HomeVehicle string
 
@@ -115,23 +117,27 @@ func (a *App) OnTelemetryField(field string, val any) {
 	if sentryChange=="Panic"{a.triggerV2Automations("sentry_panic",1)}
 	// Tesla's boolean LocatedAtHome indicates an existing vehicle home
 	// setting. Never infer a home location from GPS coordinates.
-	if field=="LocatedAtHome" {
-		if home,ok:=val.(bool);ok {
-			a.mu.Lock()
-			a.v2HomeKnown,a.v2AtHome,a.v2HomeVehicle=true,home,a.store.Get().VIN
-			a.mu.Unlock()
-		}
-	}
-	if field=="LocatedAtHome"||field=="Gear"{
+	if field == "LocatedAtHome" || field == "Gear" {
+		state := a.store.Get()
+		now := time.Now()
 		a.mu.Lock()
-		known,home,owner:=a.v2HomeKnown,a.v2AtHome,a.v2HomeVehicle
-		a.mu.Unlock()
-		if known && owner==a.store.Get().VIN{
-			if home{
-				a.triggerV2Automations("away_from_home",1)
-			}else if a.store.Get().Vehicle.Gear=="P"{
-				a.triggerV2Automations("away_from_home",0)
+		if field == "LocatedAtHome" {
+			a.v2HomeAt = time.Time{}
+			if home, ok := val.(bool); ok {
+				a.v2HomeAt, a.v2AtHome, a.v2HomeVehicle = now, home, state.VIN
 			}
+		} else {
+			a.v2GearAt, a.v2GearVehicle = now, state.VIN
+		}
+		home := a.v2AtHome
+		const maxAge = 2 * time.Minute
+		homeFresh := a.v2HomeVehicle == state.VIN && now.Sub(a.v2HomeAt) <= maxAge
+		parked := state.Vehicle.Gear == "P" && a.v2GearVehicle == state.VIN && now.Sub(a.v2GearAt) <= maxAge
+		a.mu.Unlock()
+		if homeFresh && home {
+			a.triggerV2Automations("away_from_home", 1)
+		} else if homeFresh && parked {
+			a.triggerV2Automations("away_from_home", 0)
 		}
 	}
 	a.bus.PublishState()

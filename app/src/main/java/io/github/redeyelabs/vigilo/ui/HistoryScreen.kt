@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.redeyelabs.vigilo.data.EventEntity
 import io.github.redeyelabs.vigilo.data.EventType
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -32,6 +33,15 @@ import java.util.Locale
 fun HistoryScreen(vm: MainViewModel, onBack: (() -> Unit)? = null) {
     val events by vm.events.collectAsState()
     androidx.compose.runtime.LaunchedEffect(Unit) { vm.syncEvents() }
+    HistoryScreenContent(events, { vm.clearHistory() }, onBack)
+}
+
+@Composable
+internal fun HistoryScreenContent(
+    events: List<EventEntity>,
+    onClear: () -> Unit,
+    onBack: (() -> Unit)?,
+) {
     var onlyAlerts by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
     val fmt = remember { SimpleDateFormat("EEE dd/MM HH:mm", Locale.ITALY) }
@@ -72,7 +82,7 @@ fun HistoryScreen(vm: MainViewModel, onBack: (() -> Unit)? = null) {
     }
     if (confirm) AlertDialog(
         onDismissRequest = { confirm = false },
-        confirmButton = { TextButton(onClick = { vm.clearHistory(); confirm = false }) { Text("Svuota") } },
+        confirmButton = { TextButton(onClick = { onClear(); confirm = false }) { Text("Svuota") } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("Annulla") } },
         title = { Text("Svuotare lo storico?") },
         text = { Text("Tutti gli eventi salvati sul telefono verranno eliminati.") },

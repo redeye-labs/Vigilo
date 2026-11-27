@@ -5,13 +5,23 @@ import io.github.redeyelabs.vigilo.work.BatteryOpt
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,18 +29,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.ElectricalServices
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Tune
@@ -142,13 +154,15 @@ fun StatusScreenContent(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 4.dp),
         ) {
-            CompactHeader(
+            VehicleDashboard(
                 name = name,
                 s = snapshot,
                 ready = ready,
                 now = now,
                 onRefresh = { if (ready) onRefresh() },
                 onSettings = { onOpen(Screen.SETTINGS) },
+                onCommands = { onOpen(Screen.COMMANDS) },
+                onMap = { onOpen(Screen.MAP) },
             )
 
             if (showHero) {
@@ -169,135 +183,170 @@ fun StatusScreenContent(
             }
 
             Spacer(Modifier.height(16.dp))
-            SentryStatusCard(
-                active = snapshot?.sentry == true,
-                ready = ready,
-                busy = pendingSentry,
-                subtitle = sentrySubtitle(snapshot, ready),
-                onToggle = onToggleSentry,
-            )
+            Column(
+                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                SentryStatusRow(
+                    active = snapshot?.sentry,
+                    ready = ready,
+                    busy = pendingSentry,
+                    subtitle = sentrySubtitle(snapshot, ready),
+                    onToggle = onToggleSentry,
+                )
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                MonitoringSummary(
+                    total = sessionEvents,
+                    alerts = sessionAlerts,
+                    startedAt = sessionStartedAt,
+                    active = monitoringEnabled,
+                    enabled = ready,
+                    onToggle = onToggleMonitoring,
+                )
+            }
 
-            Spacer(Modifier.height(16.dp))
-            MonitoringSummaryCard(
-                total = sessionEvents,
-                alerts = sessionAlerts,
-                startedAt = sessionStartedAt,
-                active = monitoringEnabled,
-                enabled = ready,
-                onToggle = onToggleMonitoring,
-            )
-
-            Spacer(Modifier.height(8.dp))
-            MenuRow(
-                Icons.Filled.Notifications,
-                "Notifiche",
-                subtitle = notificationsSubtitle,
-                onClick = { onOpen(Screen.NOTIFICATIONS) },
-            )
-            MenuRow(
-                Icons.Filled.FlashOn,
-                "Azioni automatiche",
-                subtitle = actionsSubtitle,
-                onClick = { onOpen(Screen.ACTIONS) },
-            )
-            MenuRow(
-                Icons.Filled.Schedule,
-                "Programma Sentinella",
-                subtitle = "Accendi e spegni la Sentinella in automatico",
-                onClick = { onOpen(Screen.SCHEDULE) },
-            )
-            MenuRow(
-                Icons.Filled.Tune,
-                "Comandi",
-                subtitle = commandSubtitle(snapshot),
-                onClick = { onOpen(Screen.COMMANDS) },
-            )
-            MenuRow(
-                Icons.Filled.History,
-                "Storico eventi",
-                onClick = { onOpen(Screen.HISTORY) },
-            )
-            MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Salute, capacità e autonomia", onClick = { onOpen(Screen.V2_BATTERY) })
-            MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
-            MenuRow(Icons.Filled.Route, "Viaggi", subtitle = "Percorrenze osservate", onClick = { onOpen(Screen.V2_TRIPS) })
-            MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
-            MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
-            MenuRow(Icons.Filled.MonitorHeart, "Diagnostica", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
-            MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
+            HomeModuleGroup("Energia e percorrenze") {
+                MenuRow(Icons.Filled.BatteryChargingFull, "Batteria", subtitle = "Autonomia e capacità BMS", onClick = { onOpen(Screen.V2_BATTERY) })
+                MenuRow(Icons.Filled.ElectricalServices, "Ricariche", subtitle = "Sessioni, energia e costi", onClick = { onOpen(Screen.V2_CHARGING) })
+                MenuRow(Icons.Filled.Route, "Viaggi", subtitle = "Distanza e consumi in marcia", onClick = { onOpen(Screen.V2_TRIPS) })
+                MenuRow(Icons.Filled.LocalParking, "Parcheggi", subtitle = "Consumi osservati da fermo", onClick = { onOpen(Screen.V2_PARKING) })
+            }
+            HomeModuleGroup("Sicurezza e automazioni") {
+                MenuRow(Icons.Filled.Notifications, "Notifiche", subtitle = notificationsSubtitle, onClick = { onOpen(Screen.NOTIFICATIONS) })
+                MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
+                MenuRow(Icons.Filled.Schedule, "Programma Sentinella", subtitle = "Orari di attivazione e spegnimento", onClick = { onOpen(Screen.SCHEDULE) })
+                MenuRow(Icons.Filled.FlashOn, "Azioni automatiche", subtitle = actionsSubtitle, onClick = { onOpen(Screen.ACTIONS) })
+                MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
+            }
+            HomeModuleGroup("Veicolo e dati") {
+                MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
+                MenuRow(Icons.Filled.History, "Storico eventi", onClick = { onOpen(Screen.HISTORY) })
+                MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
+                MenuRow(Icons.Filled.Settings, "Impostazioni", onClick = { onOpen(Screen.SETTINGS) })
+            }
             Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun CompactHeader(
+private fun HomeModuleGroup(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    Spacer(Modifier.height(28.dp))
+    Text(title, style = MaterialTheme.typography.headlineSmall)
+    Spacer(Modifier.height(8.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    Column(content = content)
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+}
+
+@Composable
+private fun VehicleDashboard(
     name: String,
     s: Snapshot?,
     ready: Boolean,
     now: Long,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
+    onCommands: () -> Unit,
+    onMap: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f).clickable(onClick = onRefresh)) {
-            Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1)
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (s?.locked == false) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                    contentDescription = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Chiusura" },
-                    tint = VigiloIconGray,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                MiniBattery(s)
+    Row(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(name, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
+        IconButton(onClick = onRefresh, enabled = ready) {
+            Icon(Icons.Filled.Refresh, contentDescription = "Aggiorna stato")
+        }
+        IconButton(onClick = onSettings) {
+            Icon(Icons.Filled.Settings, contentDescription = "Impostazioni")
+        }
+    }
+    val charge = s?.batteryLevel?.takeIf { it in 0..100 }
+    val dialTrack = MaterialTheme.colorScheme.outlineVariant
+    val dialFill = MaterialTheme.colorScheme.onSurface
+    Box(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp).aspectRatio(1.38f),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.matchParentSize()) {
+            val stroke = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round)
+            val diameter = size.height - stroke.width * 2
+            val origin = Offset((size.width - diameter) / 2, stroke.width)
+            val bounds = Size(diameter, diameter)
+            drawArc(dialTrack, 144f, 252f, false, origin, bounds, style = stroke)
+            if (charge != null && charge > 0) {
+                drawArc(dialFill, 144f, 252f * charge / 100f, false, origin, bounds, style = stroke)
             }
-            Spacer(Modifier.height(4.dp))
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(charge?.let { "$it%" } ?: "—", style = MaterialTheme.typography.displayLarge)
             Text(
-                if (!ready) "Collega l'account in Impostazioni" else formatUpdatedAgo(s?.timestamp, now),
-                style = MaterialTheme.typography.labelSmall,
+                s?.rangeKm?.let { "%.0f km di autonomia".format(Locale.ITALY, it) } ?: "Autonomia non disponibile",
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = onSettings) {
-            Icon(Icons.Outlined.Menu, contentDescription = "Impostazioni", tint = VigiloIconGray)
+    }
+    Text(
+        listOfNotNull(
+            commandSubtitle(s),
+            if (ready) formatUpdatedAgo(s?.timestamp, now) else "Server da collegare",
+        ).joinToString(" · "),
+        modifier = Modifier.fillMaxWidth(),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+    )
+    Spacer(Modifier.height(14.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Button(onClick = onCommands, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+            Icon(Icons.Filled.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Comandi")
+        }
+        OutlinedButton(onClick = onMap, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+            Icon(Icons.Filled.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Posizione")
         }
     }
 }
 
 @Composable
-private fun SentryStatusCard(
-    active: Boolean,
+private fun SentryStatusRow(
+    active: Boolean?,
     ready: Boolean,
     busy: Boolean,
     subtitle: String,
     onToggle: () -> Unit,
 ) {
-    VigiloCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SentryIcon(active = active, size = 40.dp)
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Sentinella", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    if (active) "Attiva" else "Spenta",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = if (active) VigiloDanger else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (busy) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = VigiloIconGray)
-            } else {
-                VigiloSwitch(checked = active, onCheckedChange = { onToggle() }, enabled = ready, danger = true)
-            }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SentryIcon(active = active == true, size = 32.dp)
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Sentinella", style = MaterialTheme.typography.titleLarge)
+            Text(
+                when (active) { true -> "Attiva"; false -> "Spenta"; null -> "Stato sconosciuto" },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = if (active == true) VigiloDanger else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (busy) {
+            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = VigiloIconGray)
+        } else {
+            VigiloSwitch(checked = active == true, onCheckedChange = { onToggle() }, enabled = ready, danger = true)
         }
     }
 }
 
 @Composable
-private fun MonitoringSummaryCard(
+private fun MonitoringSummary(
     total: Int,
     alerts: Int,
     startedAt: Long,
@@ -308,77 +357,33 @@ private fun MonitoringSummaryCard(
     val since = remember(startedAt) {
         if (startedAt > 0L) SimpleDateFormat("dd/MM 'alle' HH:mm", Locale.ITALY).format(Date(startedAt)) else null
     }
-    VigiloCard {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Notifications, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Monitoraggio avvisi", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when {
-                        active -> "Attivo dal ${since ?: "momento attuale"}"
-                        since != null -> "Ultima sessione: dal $since"
-                        else -> "Non ancora attivato"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            VigiloSwitch(checked = active, onCheckedChange = onToggle, enabled = enabled)
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("$total", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                Text("Eventi registrati", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Column(Modifier.weight(1f)) {
-                Text("$alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun MiniBattery(s: Snapshot?) {
-    val pct = s?.batteryLevel
-    val charging = s?.chargingState == "Charging"
-    val fill = when {
-        charging -> VigiloOk
-        else -> MaterialTheme.colorScheme.onSurface
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            Modifier
-                .width(26.dp)
-                .height(12.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(MaterialTheme.colorScheme.outline),
-        ) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(((pct ?: 0).coerceIn(0, 100)) / 100f)
-                    .padding(1.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(if (pct != null) fill else MaterialTheme.colorScheme.outlineVariant),
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Notifications, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Monitoraggio avvisi", style = MaterialTheme.typography.titleMedium)
+            Text(
+                when {
+                    active -> "Attivo dal ${since ?: "momento attuale"}"
+                    since != null -> "Ultima sessione: dal $since"
+                    else -> "Non ancora attivato"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Box(
-            Modifier
-                .padding(start = 1.dp)
-                .width(2.dp)
-                .height(5.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(MaterialTheme.colorScheme.outline),
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            if (pct != null) "$pct%" else "—",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        VigiloSwitch(checked = active, onCheckedChange = onToggle, enabled = enabled)
+    }
+    Spacer(Modifier.height(14.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("$total", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("Eventi registrati", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(Modifier.weight(1f)) {
+            Text("$alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

@@ -10,6 +10,8 @@ type V2ChargingSession struct {
  FirstSeen time.Time `json:"first_seen"`
  LastSeen time.Time `json:"last_seen"`
  BatteryEnergyKWh float64 `json:"battery_energy_kwh"`
+ AverageObservedPowerKW *float64 `json:"average_observed_power_kw,omitempty"`
+ ObservedChargingMinutes *float64 `json:"observed_charging_minutes,omitempty"`
  EnergySource string `json:"energy_source"`
  Coverage string `json:"coverage"`
  EstimatedCostEUR *float64 `json:"estimated_cost_eur,omitempty"`
@@ -22,12 +24,21 @@ type V2ChargingSession struct {
 // not invoices, and missing observations never become guessed kWh.
 func ChargingSessions(vehicle VehicleID, measurements []V2Measurement, tariff *float64) []V2ChargingSession {
  const maxGap=8*time.Hour
+ const maxPowerGap=10*time.Minute
  result:=make([]V2ChargingSession,0)
  var current *V2ChargingSession
  var prev V2Measurement
  havePrev:=false
+ var sampledEnergy float64
+ var sampledDuration time.Duration
  commit:=func(){
   if current!=nil && current.BatteryEnergyKWh>0 {
+   if sampledDuration>0{
+    power := sampledEnergy / sampledDuration.Hours()
+    minutes := sampledDuration.Minutes()
+    current.AverageObservedPowerKW = &power
+    current.ObservedChargingMinutes = &minutes
+   }
    if tariff!=nil && !math.IsNaN(*tariff)&&!math.IsInf(*tariff,0)&&*tariff>=0{
     amount:=math.Round(current.BatteryEnergyKWh * (*tariff)*100)/100
     current.EstimatedCostEUR=&amount
@@ -42,12 +53,18 @@ func ChargingSessions(vehicle VehicleID, measurements []V2Measurement, tariff *f
   split:=!havePrev || m.Value+0.05<prev.Value || m.ReceivedAt.Sub(prev.ReceivedAt)>maxGap
   if split{
    commit()
+   sampledEnergy, sampledDuration = 0, 0
    current=&V2ChargingSession{
     VehicleID:vehicle,FirstSeen:m.ReceivedAt,LastSeen:m.ReceivedAt,
     BatteryEnergyKWh:m.Value,EnergySource:"tesla.DCChargingEnergyIn",
     Coverage:"observed_session_counter; may_be_partial",
    }
   }else if current!=nil{
+   gap := m.ReceivedAt.Sub(prev.ReceivedAt)
+   if delta := m.Value-prev.Value; delta>0.05 && gap<=maxPowerGap {
+    sampledEnergy += delta
+    sampledDuration += gap
+   }
    current.LastSeen=m.ReceivedAt
    if m.Value>current.BatteryEnergyKWh{current.BatteryEnergyKWh=m.Value}
   }

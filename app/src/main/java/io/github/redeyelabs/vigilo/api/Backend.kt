@@ -281,6 +281,8 @@ class Backend(private val baseUrl: String, private val token: String) {
         @SerialName("first_seen") val firstSeen: String = "",
         @SerialName("last_seen") val lastSeen: String = "",
         @SerialName("battery_energy_kwh") val batteryKWh: Double = 0.0,
+        @SerialName("average_observed_power_kw") val averageObservedPowerKW: Double? = null,
+        @SerialName("observed_charging_minutes") val observedChargingMinutes: Double? = null,
         @SerialName("energy_source") val energySource: String = "",
         val coverage: String = "",
         @SerialName("estimated_cost_eur") val costEUR: Double? = null,
@@ -334,7 +336,14 @@ class Backend(private val baseUrl: String, private val token: String) {
     )
 
     @Serializable
+    data class V2BatteryHistoryPoint(
+        val week: String,
+        @SerialName("capacity_kwh") val capacityKWh: Double,
+    )
+
+    @Serializable
     data class V2CapacityTrendResponse(
+        val history: List<V2BatteryHistoryPoint> = emptyList(),
         val ok: Boolean = false,
         val available: Boolean = false,
         val note: String = "",
@@ -350,7 +359,28 @@ class Backend(private val baseUrl: String, private val token: String) {
         get<V2ChargingResponse>("/api/v2/charging/sessions").sessions
 
     @Serializable
+    data class V2ObservedParking(
+        @SerialName("first_seen") val firstSeen: String,
+        @SerialName("last_seen") val lastSeen: String,
+        @SerialName("energy_kwh") val energyKWh: Double,
+        val sentry: String,
+    )
+
+    @Serializable
+    data class V2ObservedDrive(
+        @SerialName("first_seen") val firstSeen: String,
+        @SerialName("last_seen") val lastSeen: String,
+        @SerialName("energy_kwh") val energyKWh: Double,
+        @SerialName("distance_km") val distanceKm: Double,
+    )
+
+    @Serializable
     data class V2ObservedEnergy(
+        val driving: List<V2ObservedDrive> = emptyList(),
+        @SerialName("tariff_eur_per_kwh") val tariffEURPerKWh: Double? = null,
+        val parking: List<V2ObservedParking> = emptyList(),
+        @SerialName("sentry_off_kwh") val sentryOffKWh: Double? = null,
+        @SerialName("sentry_off_hours") val sentryOffHours: Double? = null,
         @SerialName("driving_kwh") val drivingKWh: Double? = null,
         @SerialName("driving_km") val drivingKm: Double? = null,
         @SerialName("wh_per_km") val whPerKm: Double? = null,
@@ -388,7 +418,15 @@ class Backend(private val baseUrl: String, private val token: String) {
     )
 
     @Serializable
+    data class V2RuleExecution(
+        @SerialName("rule_id") val ruleId: String,
+        val condition: String,
+        val at: String,
+    )
+
+    @Serializable
     data class V2AutomationsResponse(
+        val executions: List<V2RuleExecution> = emptyList(),
         val ok: Boolean = false,
         val enabled: Boolean = false,
         val rules: List<V2AutomationRule> = emptyList(),

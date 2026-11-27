@@ -2,6 +2,7 @@ package io.github.redeyelabs.vigilo.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +24,7 @@ import app.cash.paparazzi.Paparazzi
 import io.github.redeyelabs.vigilo.api.Snapshot
 import io.github.redeyelabs.vigilo.data.EventEntity
 import io.github.redeyelabs.vigilo.data.EventType
+import java.time.Instant
 import org.junit.Rule
 import org.junit.Test
 
@@ -167,22 +170,163 @@ class ScreenshotsTest {
     fun impostazioni() {
         paparazzi.snapshot(name = "impostazioni") {
             PhoneShell {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ScreenHeader("Impostazioni", "Home Assistant, avvisi e preferenze.", onBack = {})
-                    HomeAssistantSettings(
-                        paired = true,
-                        backendUrl = "https://vigilo.tailnet-example.ts.net",
-                        settings = Backend.SettingsResponse(
-                            ok = true,
-                            settings = Backend.Settings(notifyTargets = listOf("mobile_app_telefono")),
-                            availableTargets = listOf("mobile_app_telefono"),
-                        ),
-                        onGuide = {},
-                        onUnpair = {},
-                        onChange = {},
-                    )
-                    PrefToggle("Mostra la foto dell'auto", false) {}
-                    PrefToggle("Esempio interruttore acceso", true) {}
+                SettingsScreenContent(
+                    paired = true,
+                    backendUrl = "https://vigilo.tailnet-example.ts.net",
+                    settings = Backend.SettingsResponse(
+                        ok = true,
+                        settings = Backend.Settings(notifyTargets = listOf("mobile_app_telefono")),
+                        availableTargets = listOf("mobile_app_telefono"),
+                    ),
+                    onBack = {}, onGuide = {}, onUnpair = {}, onChange = {},
+                ) {
+                    SettingsGroup("Avvisi sul telefono") {
+                        PrefToggle("Suona anche in silenzioso", true) {}
+                    }
+                    SettingsGroup("Schermata principale") {
+                        PrefToggle("Mostra la foto dell'auto", false) {}
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun batteria() = energyScreenshot("batteria", "battery")
+
+    @Test
+    fun saluteBatteria() = energyScreenshot("salute_batteria", "battery", scroll = 1200)
+
+    @Test
+    fun ricariche() = energyScreenshot("ricariche", "charging")
+
+    @Test
+    fun viaggi() = energyScreenshot("viaggi", "trips")
+
+    @Test
+    fun parcheggi() = energyScreenshot("parcheggi", "parking")
+
+    private fun energyScreenshot(name: String, module: String, scroll: Int = 0) {
+        val now = Instant.parse("2026-11-27T12:00:00Z")
+        val readings = listOf(74.9, 75.2, 74.8, 74.6, 74.7, 74.6)
+        val first = "2026-11-27T09:10:00Z"
+        val last = "2026-11-27T09:25:00Z"
+        val data = EnergyScreenData(
+            modules = listOf("battery", "charging", "trips").map { Backend.V2Module(it, true, true) },
+            battery = Backend.V2BatteryObservations(
+                fullPackKWh = 74.6, remainingKWh = 46.1, ratedRangeKm = 263.3, chargePercent = 62.0,
+                tempMinC = 19.0, tempMaxC = 22.0, equivalentChargeCycles = 31.0,
+                ratedFullRangeKm = 424.7, latestReceivedAt = last,
+            ),
+            trend = Backend.V2CapacityTrendResponse(
+                available = true,
+                trend = Backend.V2CapacityTrend(firstKWh = 75.0, latestKWh = 74.6, percentChange = -0.53),
+                history = readings.mapIndexed { index, value ->
+                    Backend.V2BatteryHistoryPoint(now.minusSeconds((6L - index) * 604_800).toString(), value)
+                },
+            ),
+            charges = listOf(
+                Backend.V2ChargingSession(firstSeen = "2026-11-24T06:10:00Z",
+                    lastSeen = "2026-11-24T07:35:00Z", batteryKWh = 10.5, costEUR = 3.15),
+                Backend.V2ChargingSession(firstSeen = "2026-11-26T07:55:00Z",
+                    lastSeen = "2026-11-26T08:25:00Z", batteryKWh = 14.2, costEUR = 4.26),
+            ),
+            trips = listOf(Backend.V2TripObservation(firstSeen = first, lastSeen = last, distanceKm = 17.0)),
+        )
+        val report = Backend.V2ObservedEnergy(
+            driving = listOf(Backend.V2ObservedDrive(first, last, 2.8, 17.0)),
+            parking = listOf(Backend.V2ObservedParking(last, "2026-11-27T09:40:00Z", 0.2, "on")),
+            drivingKWh = 2.8, drivingKm = 17.0, whPerKm = 164.7,
+            parkedKWh = 0.2, parkedHours = 0.25, sentryKWh = 0.2, tariffEURPerKWh = 0.30,
+            note = "Consumi stimati sugli intervalli osservati.",
+        )
+        paparazzi.snapshot(name = name) {
+            PhoneShell {
+                EnergyScreenContent(
+                    data = data, energyReport = report, onlyModule = module,
+                    paired = true, days = 30, loading = false, working = false,
+                    error = null, energyError = null, tariffInput = "0,30", tariffSaved = true,
+                    onPeriodChange = {}, onEditTariff = {}, onSetModule = { _, _ -> },
+                    onSaveTariff = {}, onRefresh = {}, onBack = {}, now = now,
+                    scrollState = rememberScrollState(scroll),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun comandi() {
+        paparazzi.snapshot(name = "comandi") {
+            PhoneShell {
+                CommandsScreenContent(
+                    s = sampleSnapshot(NOW), pending = null, ready = true, lastError = "",
+                    onCommand = { _, _ -> }, onSetSentry = {}, onBack = {}, onOpen = {},
+                    additionalCommands = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun automazioni() {
+        paparazzi.snapshot(name = "automazioni") {
+            PhoneShell {
+                V2AutomationContent(
+                    paired = true, working = false, error = null, rulesLoaded = true,
+                    moduleEnabled = true, lowEnabled = true, panicEnabled = true, parkedEnabled = false,
+                    savedLimit = "20", limit = "20",
+                    executions = listOf(Backend.V2RuleExecution(
+                        "soc-low", "soc_below", "2026-11-27T09:10:00Z",
+                    )),
+                    onEditLimit = {}, onSetModule = {}, onSaveRule = {}, onOpenSchedule = {}, onBack = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun storico() {
+        paparazzi.snapshot(name = "storico") {
+            PhoneShell { HistoryScreenContent(sampleEvents(NOW), onClear = {}, onBack = {}) }
+        }
+    }
+
+    @Test
+    fun diagnostica() {
+        paparazzi.snapshot(name = "diagnostica") {
+            PhoneShell {
+                V2DiagnosticsContent(
+                    paired = true,
+                    snapshot = sampleSnapshot(NOW).copy(insideTemp = 20.1, outsideTemp = 13.6),
+                    diagnostics = Backend.V2Diagnostics(
+                        serverReachable = true,
+                        telemetry = Backend.V2Connection(status = "ok", details = "Ultima telemetria recente."),
+                    ),
+                    tires = sampleTires(),
+                    message = null, enabled = true, working = false,
+                    onBack = {}, onRefresh = {}, onToggle = {},
+                )
+            }
+        }
+    }
+
+    private fun sampleTires() = listOf(
+        "TpmsPressureFl" to 2.90, "TpmsPressureFr" to 2.89,
+        "TpmsPressureRl" to 2.92, "TpmsPressureRr" to 2.91,
+    ).map { (signal, pressure) ->
+        Backend.V2Measurement(signal = signal, value = pressure, unit = "bar", quality = "valid")
+    }
+
+    @Test
+    fun pneumatici() {
+        paparazzi.snapshot(name = "pneumatici") {
+            PhoneShell {
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    ScreenHeader("Diagnostica Vigilo", "Connessione e segnali ricevuti dalla Tesla.", onBack = {})
+                    VigiloCard {
+                        Text("Pressione pneumatici", style = MaterialTheme.typography.titleMedium)
+                        TireLayout(sampleTires())
+                    }
                 }
             }
         }

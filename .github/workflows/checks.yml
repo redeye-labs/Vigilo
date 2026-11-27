@@ -38,6 +38,17 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build and unit tests
         run: ./gradlew :app:assembleDebug :app:testDebugUnitTest --no-daemon
+      - name: Render Android screenshots
+        if: github.event_name == 'pull_request'
+        run: ./gradlew :app:recordPaparazziDebug --no-daemon
+      - name: Save Android screenshots
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Vigilo-Android-screenshots
+          path: app/src/test/snapshots/images/*.png
+          if-no-files-found: error
+          retention-days: 14
       - name: Save separately installable Vigilo 2 beta APK
         if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vigilo-2-foundations' }}
         uses: actions/upload-artifact@v4
@@ -111,10 +122,18 @@ jobs:
 
   ha-container-build:
     name: Home Assistant Docker image compile
-    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'feature/vigilo-2-foundations' }}
     needs: [backend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Compile actual Home Assistant add-on image (no container start)
         run: docker build --pull --tag vigilo2-ha-candidate:ci addon/vigilo
+
+  standalone-container-build:
+    name: Standalone Docker image compile
+    needs: [backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile standalone image
+        run: docker build --pull --tag vigilo-standalone-candidate:ci -f standalone/Dockerfile .
