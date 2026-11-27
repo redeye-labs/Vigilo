@@ -192,14 +192,18 @@ internal fun EnergyScreenContent(
             ).filter { onlyModule == null || it.first == onlyModule }.forEach { (id, title, description) ->
                 val moduleId = if (id == "parking") "trips" else id
                 val active = enabled(moduleId)
+                if (active) {
+                    when (id) {
+                        "charging" -> PeriodPicker(chargingDays, allowAll = false, charging = true) { chargingDays = it }
+                        "parking" -> PeriodPicker(days, allowAll = false, onChange = onPeriodChange)
+                        "trips" -> PeriodPicker(days, onChange = onPeriodChange)
+                    }
+                }
                 VigiloCard {
                     val accent = MaterialTheme.colorScheme.onSurface
-                    Text(title, style = MaterialTheme.typography.titleLarge, color = accent)
-                    Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedButton(
-                        enabled = !loading && !working,
-                        onClick = { onSetModule(moduleId, !active) },
-                    ) { Text(if (active) "Disattiva raccolta" else "Attiva raccolta") }
+                    Text(title, style = MaterialTheme.typography.titleMedium, color = accent)
+                    if (!active) Text(description, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     if (active && id == "battery") {
                         battery?.let { b ->
@@ -242,7 +246,6 @@ internal fun EnergyScreenContent(
                         }
                     }
                     if (active && id == "charging") {
-                        PeriodPicker(chargingDays, allowAll = false, charging = true) { chargingDays = it }
                         MetricPair("Energia osservata", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.sumOf { it.batteryKWh }, "kWh"), "Costo stimato", if (visibleCharges.isNotEmpty() && visibleCharges.all { it.costEUR != null }) fmt(visibleCharges.sumOf { it.costEUR ?: 0.0 }, "€") else "—", accent)
                         MetricPair("Sessioni osservate", visibleCharges.size.toString(), "Energia media", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.map { it.batteryKWh }.average(), "kWh"), accent)
                         Text("Cronologia ricariche", style = MaterialTheme.typography.titleMedium)
@@ -280,7 +283,6 @@ internal fun EnergyScreenContent(
                         ) { Text(if (tariffSaved) "Tariffa salvata" else "Salva tariffa") }
                     }
                     if (active && id == "parking") {
-                        PeriodPicker(days, allowAll = false, onChange = onPeriodChange)
                         val report = energyReport
                         val average = report?.parkedHours?.takeIf { it > 0 }?.let { hours ->
                             report.parkedKWh?.div(hours)
@@ -311,7 +313,6 @@ internal fun EnergyScreenContent(
                         }
                     }
                     if (active && id == "trips") {
-                        PeriodPicker(days, onChange = onPeriodChange)
                         MetricPair("Distanza osservata", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.sumOf { it.distanceKm }, "km"), "Tratti osservati", visibleTrips.size.toString(), accent)
                         MetricPair("Distanza media per tratto", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.map { it.distanceKm }.average(), "km"), "Tratto più lungo", visibleTrips.maxOfOrNull { it.distanceKm }?.let { fmt(it, "km") } ?: "—", accent)
                         Text("Energia in marcia", style = MaterialTheme.typography.titleMedium)
@@ -345,6 +346,11 @@ internal fun EnergyScreenContent(
                         )
                     }
                 }
+                OutlinedButton(
+                    enabled = !loading && !working,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { onSetModule(moduleId, !active) },
+                ) { Text(if (active) "Disattiva raccolta" else "Attiva raccolta") }
             }
             OutlinedButton(onClick = onRefresh, modifier = Modifier.fillMaxWidth(), enabled = !working) {
                 Text("Aggiorna statistiche")
