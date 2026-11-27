@@ -170,6 +170,7 @@ func (a *App) recordV2Telemetry(field string,val any){
  case "Soc":module,unit=ModuleBattery,"percent"
  case "RatedRange":module,unit=ModuleBattery,"mile"
  case "NominalFullPackEnergyKwh", "EnergyRemaining":module,unit=ModuleBattery,"kWh"
+ case "ModuleTempMin", "ModuleTempMax":module,unit=ModuleBattery,"celsius"
  case "LifetimeEnergyChargedKwh", "ACChargingEnergyIn", "DCChargingEnergyIn":module,unit=ModuleCharging,"kWh"
  case "DCChargingPower":module,unit=ModuleCharging,"kW"
  case "Odometer":module,unit=ModuleTrips,"mile"
@@ -177,7 +178,7 @@ func (a *App) recordV2Telemetry(field string,val any){
  case "TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr":module,unit=ModuleDiagnostics,"bar"
  default:return
  }
- if !a.v2Modules.Enabled(vin,module){return}
+ if !a.v2Modules.Enabled(vin,module) && !(field=="LifetimeEnergyChargedKwh" && a.v2Modules.Enabled(vin,ModuleBattery)){return}
  value,ok:=num(val)
  if !ok || math.IsNaN(value)||math.IsInf(value,0){return}
  now:=time.Now().UTC()

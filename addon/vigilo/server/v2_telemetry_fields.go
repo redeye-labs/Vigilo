@@ -17,7 +17,7 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID, needHomeFlag ...
   for _,name:=range names{fields[name]=map[string]any{"interval_seconds":seconds}}
  }
  if prefs.Enabled(vehicle,ModuleBattery){
-  add(900,"NominalFullPackEnergyKwh","EnergyRemaining")
+  add(900,"NominalFullPackEnergyKwh","EnergyRemaining","ModuleTempMin","ModuleTempMax","LifetimeEnergyChargedKwh")
  }
  if prefs.Enabled(vehicle,ModuleCharging){
   add(300,"LifetimeEnergyChargedKwh","ACChargingEnergyIn","DCChargingEnergyIn","DCChargingPower")

@@ -143,6 +143,9 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             BatteryGauge(b.chargePercent, accent)
                             MetricPair("Autonomia nominale", b.ratedRangeKm?.let { fmt(it, "km") } ?: "—", "Energia residua", b.remainingKWh?.let { fmt(it, "kWh") } ?: "—", accent)
                             BatteryHealthPanel(b.healthPercent, b.fullPackKWh, b.stale, accent)
+                            MetricPair("Autonomia nominale al 100% (stima)", b.ratedFullRangeKm?.let { fmt(it, "km") } ?: "—", "Cicli di carica equivalenti (stima)", b.equivalentChargeCycles?.let { fmt(it, "") } ?: "—", accent)
+                            MetricPair("Temperatura minima batteria", b.tempMinC?.let { fmt(it, "°C") } ?: "—", "Temperatura massima batteria", b.tempMaxC?.let { fmt(it, "°C") } ?: "—", accent)
+                            Text("Cicli stimati: energia totale caricata divisa per capacità BMS attuale; non sono cicli di fabbrica certificati.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (b.stale) {
                                 Text("Dati precedenti: la Tesla non ha trasmesso letture recenti.",
                                     color = MaterialTheme.colorScheme.error)

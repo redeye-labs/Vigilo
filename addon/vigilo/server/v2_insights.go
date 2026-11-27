@@ -120,6 +120,10 @@ type V2BatteryObservations struct {
  RatedRangeKm *float64 `json:"rated_range_km,omitempty"`
  ChargePercent *float64 `json:"charge_percent,omitempty"`
  HealthPercent *float64 `json:"health_percent,omitempty"`
+ TempMinC *float64 `json:"temp_min_c,omitempty"`
+ TempMaxC *float64 `json:"temp_max_c,omitempty"`
+ EquivalentChargeCycles *float64 `json:"equivalent_charge_cycles,omitempty"`
+ RatedFullRangeKm *float64 `json:"rated_full_range_km,omitempty"`
  LatestReceivedAt time.Time `json:"latest_received_at,omitempty"`
  Stale bool `json:"stale"`
  Note string `json:"note"`
@@ -127,22 +131,36 @@ type V2BatteryObservations struct {
 
 func BatteryObservations(vehicle VehicleID,latest []V2Measurement) V2BatteryObservations {
  out:=V2BatteryObservations{Note:"Valori forniti dalla telemetria Tesla. SoH non disponibile senza una misura iniziale BMS validata."}
+ var charged *float64
+ var socTime, rangeTime time.Time
  allStale:=true
  for _,m:=range latest{
-  if m.VehicleID!=vehicle||!finiteNumber(m.Value)||m.Value<0{continue}
+  if m.VehicleID!=vehicle||!finiteNumber(m.Value)||(m.Value<0 && m.Signal!="ModuleTempMin" && m.Signal!="ModuleTempMax"){continue}
   if m.ReceivedAt.After(out.LatestReceivedAt){out.LatestReceivedAt=m.ReceivedAt}
   if m.Quality!=QualityStale{allStale=false}
   value:=m.Value
   switch m.Signal{
   case "NominalFullPackEnergyKwh":out.NominalFullPackKWh=&value
   case "EnergyRemaining":out.EnergyRemainingKWh=&value
+  case "ModuleTempMin":if value>=-60 && value<=100{out.TempMinC=&value}
+  case "ModuleTempMax":if value>=-60 && value<=100{out.TempMaxC=&value}
+  case "LifetimeEnergyChargedKwh":charged=&value
   case "RatedRange":
+   rangeTime=m.ReceivedAt
    // Older Vigilo builds mislabeled raw Fleet Telemetry miles as km.
    if m.Source==SourceFleetTelemetry && (m.Unit=="mile" || m.Unit=="km"){value*=1.609344}
    out.RatedRangeKm=&value
   case "Soc":
-   if value<=100{out.ChargePercent=&value}
+   if value<=100{out.ChargePercent=&value;socTime=m.ReceivedAt}
   }
+ }
+ if charged!=nil && out.NominalFullPackKWh!=nil && *out.NominalFullPackKWh>0 {
+  cycles:=*charged / *out.NominalFullPackKWh
+  out.EquivalentChargeCycles=&cycles
+ }
+ if out.RatedRangeKm!=nil && out.ChargePercent!=nil && *out.ChargePercent>=10 && math.Abs(socTime.Sub(rangeTime).Minutes())<=5 {
+  full:=*out.RatedRangeKm * 100 / *out.ChargePercent
+  out.RatedFullRangeKm=&full
  }
  out.Stale=allStale
  if allStale && !out.LatestReceivedAt.IsZero(){

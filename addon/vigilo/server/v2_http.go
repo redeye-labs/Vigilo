@@ -108,7 +108,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
  case "/api/v2/battery/summary":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
   if !v.modules.Enabled(vehicleID,ModuleBattery){http.Error(w,"module disabled",http.StatusForbidden);return}
-  latest:=v.metrics.Latest(vehicleID,[]string{"Soc","RatedRange","EnergyRemaining","NominalFullPackEnergyKwh"})
+  latest:=v.metrics.Latest(vehicleID,[]string{"Soc","RatedRange","EnergyRemaining","NominalFullPackEnergyKwh","ModuleTempMin","ModuleTempMax","LifetimeEnergyChargedKwh"})
   v.write(w,map[string]any{"ok":true,"battery":BatteryObservations(vehicleID,latest)})
  case "/api/v2/charging/sessions":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}
