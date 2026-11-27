@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.ElectricalServices
 import androidx.compose.material.icons.filled.LocationOn
@@ -149,6 +150,7 @@ fun StatusScreenContent(
                 now = now,
                 onRefresh = { if (ready) onRefresh() },
                 onSettings = { onOpen(Screen.SETTINGS) },
+                onCommands = { onOpen(Screen.COMMANDS) },
             )
 
             if (showHero) {
@@ -169,26 +171,29 @@ fun StatusScreenContent(
             }
 
             Spacer(Modifier.height(16.dp))
-            SentryStatusCard(
-                active = snapshot?.sentry == true,
-                ready = ready,
-                busy = pendingSentry,
-                subtitle = sentrySubtitle(snapshot, ready),
-                onToggle = onToggleSentry,
-            )
-
-            Spacer(Modifier.height(16.dp))
-            MonitoringSummaryCard(
-                total = sessionEvents,
-                alerts = sessionAlerts,
-                startedAt = sessionStartedAt,
-                active = monitoringEnabled,
-                enabled = ready,
-                onToggle = onToggleMonitoring,
-            )
+            VigiloCard {
+                SentryStatusRow(
+                    active = snapshot?.sentry,
+                    ready = ready,
+                    busy = pendingSentry,
+                    subtitle = sentrySubtitle(snapshot, ready),
+                    onToggle = onToggleSentry,
+                )
+                androidx.compose.material3.HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
+                MonitoringSummary(
+                    total = sessionEvents,
+                    alerts = sessionAlerts,
+                    startedAt = sessionStartedAt,
+                    active = monitoringEnabled,
+                    enabled = ready,
+                    onToggle = onToggleMonitoring,
+                )
+            }
 
             HomeModuleGroup("Controllo") {
-                MenuRow(Icons.Filled.Tune, "Comandi", subtitle = commandSubtitle(snapshot), onClick = { onOpen(Screen.COMMANDS) })
                 MenuRow(Icons.Filled.LocationOn, "Posizione attuale", onClick = { onOpen(Screen.MAP) })
                 MenuRow(Icons.Filled.MonitorHeart, "Salute del veicolo", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
             }
@@ -231,17 +236,21 @@ private fun CompactHeader(
     now: Long,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
+    onCommands: () -> Unit,
 ) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("Vigilo", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(name, style = MaterialTheme.typography.headlineLarge)
         }
+        IconButton(onClick = onRefresh, enabled = ready) {
+            Icon(Icons.Filled.Refresh, contentDescription = "Aggiorna stato", tint = VigiloIconGray)
+        }
         IconButton(onClick = onSettings) {
             Icon(Icons.Filled.Settings, contentDescription = "Impostazioni", tint = VigiloIconGray)
         }
     }
-    VigiloCard(onClick = if (ready) onRefresh else null) {
+    VigiloCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
             Column(Modifier.weight(1f)) {
                 Text("Carica", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -253,8 +262,9 @@ private fun CompactHeader(
             }
         }
         androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        val lock = when (s?.locked) { true -> "Chiusa"; false -> "Aperta"; null -> "Chiusura sconosciuta" }
-        Text(lock, style = MaterialTheme.typography.bodyMedium)
+        MenuRow(
+            Icons.Filled.Tune, "Comandi", subtitle = commandSubtitle(s), onClick = onCommands,
+        )
         Text(
             if (ready) formatUpdatedAgo(s?.timestamp, now) else "Server da collegare",
             style = MaterialTheme.typography.labelSmall,
@@ -264,38 +274,36 @@ private fun CompactHeader(
 }
 
 @Composable
-private fun SentryStatusCard(
-    active: Boolean,
+private fun SentryStatusRow(
+    active: Boolean?,
     ready: Boolean,
     busy: Boolean,
     subtitle: String,
     onToggle: () -> Unit,
 ) {
-    VigiloCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SentryIcon(active = active, size = 40.dp)
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Sentinella", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    if (active) "Attiva" else "Spenta",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = if (active) VigiloDanger else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (busy) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = VigiloIconGray)
-            } else {
-                VigiloSwitch(checked = active, onCheckedChange = { onToggle() }, enabled = ready, danger = true)
-            }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SentryIcon(active = active == true, size = 32.dp)
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Sentinella", style = MaterialTheme.typography.titleLarge)
+            Text(
+                when (active) { true -> "Attiva"; false -> "Spenta"; null -> "Stato sconosciuto" },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = if (active == true) VigiloDanger else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (busy) {
+            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp, color = VigiloIconGray)
+        } else {
+            VigiloSwitch(checked = active == true, onCheckedChange = { onToggle() }, enabled = ready, danger = true)
         }
     }
 }
 
 @Composable
-private fun MonitoringSummaryCard(
+private fun MonitoringSummary(
     total: Int,
     alerts: Int,
     startedAt: Long,
@@ -306,34 +314,32 @@ private fun MonitoringSummaryCard(
     val since = remember(startedAt) {
         if (startedAt > 0L) SimpleDateFormat("dd/MM 'alle' HH:mm", Locale.ITALY).format(Date(startedAt)) else null
     }
-    VigiloCard {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.Notifications, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Monitoraggio avvisi", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when {
-                        active -> "Attivo dal ${since ?: "momento attuale"}"
-                        since != null -> "Ultima sessione: dal $since"
-                        else -> "Non ancora attivato"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            VigiloSwitch(checked = active, onCheckedChange = onToggle, enabled = enabled)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Filled.Notifications, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Monitoraggio avvisi", style = MaterialTheme.typography.titleMedium)
+            Text(
+                when {
+                    active -> "Attivo dal ${since ?: "momento attuale"}"
+                    since != null -> "Ultima sessione: dal $since"
+                    else -> "Non ancora attivato"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Spacer(Modifier.height(14.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("$total", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                Text("Eventi registrati", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Column(Modifier.weight(1f)) {
-                Text("$alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-                Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+        VigiloSwitch(checked = active, onCheckedChange = onToggle, enabled = enabled)
+    }
+    Spacer(Modifier.height(14.dp))
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("$total", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("Eventi registrati", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(Modifier.weight(1f)) {
+            Text("$alerts", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("Avvisi Sentinella", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
