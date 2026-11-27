@@ -365,7 +365,17 @@ class Backend(private val baseUrl: String, private val token: String) {
     )
 
     @Serializable
+    data class V2ObservedDrive(
+        @SerialName("first_seen") val firstSeen: String,
+        @SerialName("last_seen") val lastSeen: String,
+        @SerialName("energy_kwh") val energyKWh: Double,
+        @SerialName("distance_km") val distanceKm: Double,
+    )
+
+    @Serializable
     data class V2ObservedEnergy(
+        val driving: List<V2ObservedDrive> = emptyList(),
+        @SerialName("tariff_eur_per_kwh") val tariffEURPerKWh: Double? = null,
         val parking: List<V2ObservedParking> = emptyList(),
         @SerialName("sentry_off_kwh") val sentryOffKWh: Double? = null,
         @SerialName("sentry_off_hours") val sentryOffHours: Double? = null,

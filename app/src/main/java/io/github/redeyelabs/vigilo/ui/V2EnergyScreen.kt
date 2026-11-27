@@ -250,6 +250,9 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                             "Consumo orario", average?.let { fmt(it, "kWh/h") } ?: "—", accent)
                         MetricPair("Sentinella attiva", report?.sentryKWh?.let { fmt(it, "kWh") } ?: "—",
                             "Sentinella spenta", report?.sentryOffKWh?.let { fmt(it, "kWh") } ?: "—", accent)
+                        val parkedCost = estimatedEnergyCost(report?.parkedKWh, report?.tariffEURPerKWh)
+                        MetricPair("Tempo osservato", report?.parkedHours?.let { fmt(it, "h") } ?: "—",
+                            "Costo energetico stimato", parkedCost, accent)
                         Text(energyError ?: report?.note ?: "Dati energetici non ancora disponibili.",
                             style = MaterialTheme.typography.bodySmall)
                         val recent = report?.parking.orEmpty().takeLast(12)
@@ -277,7 +280,20 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                         MetricPair("Consumo osservato", energyReport?.whPerKm?.let { fmt(it / 10, "kWh/100 km") } ?: "—",
                             "Distanza con misura energetica", energyReport?.drivingKm?.let { fmt(it, "km") } ?: "—", accent)
                         Text(energyError ?: energyReport?.note ?: "Dati energetici non ancora disponibili.", style = MaterialTheme.typography.bodySmall)
-                        Text("Cronologia percorrenze", style = MaterialTheme.typography.titleMedium)
+                        val drives = energyReport?.driving.orEmpty().takeLast(12).filter { it.distanceKm > 0 }
+                        if (drives.isNotEmpty()) {
+                            Text("Tratti con energia e distanza abbinate", style = MaterialTheme.typography.titleMedium)
+                            EnergyBars(drives.map { it.energyKWh * 100 / it.distanceKm }, accent,
+                                "kWh/100 km", drives.map { shortDate(it.lastSeen) })
+                            drives.asReversed().forEach { drive ->
+                                val minutes = observedMinutes(drive.firstSeen, drive.lastSeen)
+                                MetricPair(shortDate(drive.lastSeen), fmt(drive.distanceKm, "km"),
+                                    "Durata osservata", minutes?.let { "$it min" } ?: "—", accent)
+                                MetricPair("Energia osservata", fmt(drive.energyKWh, "kWh"), "Costo energetico stimato",
+                                    estimatedEnergyCost(drive.energyKWh, energyReport?.tariffEURPerKWh), accent)
+                            }
+                        }
+                        Text("Cronologia da contachilometri", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleTrips.takeLast(12).map { it.distanceKm }, accent, "km", visibleTrips.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleTrips.takeLast(8).asReversed().forEach { trip ->
                             MetricPair(shortDate(trip.lastSeen), fmt(trip.distanceKm, "km"), "Fonte", "Odometro", accent)
@@ -339,6 +355,9 @@ private fun inDashboardPeriod(timestamp: String, days: Int, cutoff: Instant): Bo
 
 private fun shortDate(timestamp: String): String =
     runCatching { java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm", Locale.ITALY).withZone(java.time.ZoneId.systemDefault()).format(Instant.parse(timestamp)) }.getOrDefault(timestamp.take(16))
+
+private fun estimatedEnergyCost(kWh: Double?, tariff: Double?): String =
+    if (kWh != null && tariff != null) fmt(kWh * tariff, "€") else "—"
 
 private fun observedMinutes(first: String, last: String): Long? =
     runCatching { java.time.Duration.between(Instant.parse(first), Instant.parse(last)).toMinutes() }

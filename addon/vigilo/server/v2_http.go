@@ -131,6 +131,7 @@ func (v *V2PublicAPI) ServeHTTP(w http.ResponseWriter,r *http.Request){
   if n,e:=strconv.Atoi(r.URL.Query().Get("days"));e==nil&&n>=1&&n<=90{days=n}
   since:=time.Now().AddDate(0,0,-days)
   report:=ObservedEnergy(vehicleID,v.metrics.History(vehicleID,"LifetimeEnergyUsed",since,20000),v.metrics.History(vehicleID,"Odometer",since,20000),v.metrics.History(vehicleID,"Gear",since,20000),v.metrics.History(vehicleID,"SentryMode",since,20000))
+  report.TariffEURPerKWh=v.modules.Tariff(vehicleID)
   v.write(w,map[string]any{"ok":true,"report":report})
  case "/api/v2/trips/observations":
   if vehicleID==""{http.Error(w,"vehicle not configured",http.StatusConflict);return}

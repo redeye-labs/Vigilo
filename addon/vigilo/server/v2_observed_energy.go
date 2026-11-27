@@ -12,10 +12,19 @@ type V2ObservedParking struct {
 	Sentry    string    `json:"sentry"`
 }
 
+type V2ObservedDrive struct {
+	FirstSeen  time.Time `json:"first_seen"`
+	LastSeen   time.Time `json:"last_seen"`
+	EnergyKWh  float64   `json:"energy_kwh"`
+	DistanceKm float64   `json:"distance_km"`
+}
+
 type V2ObservedEnergy struct {
-	Parking        []V2ObservedParking `json:"parking,omitempty"`
-	SentryOffKWh   *float64            `json:"sentry_off_kwh,omitempty"`
-	SentryOffHours *float64            `json:"sentry_off_hours,omitempty"`
+	Driving         []V2ObservedDrive   `json:"driving,omitempty"`
+	TariffEURPerKWh *float64            `json:"tariff_eur_per_kwh,omitempty"`
+	Parking         []V2ObservedParking `json:"parking,omitempty"`
+	SentryOffKWh    *float64            `json:"sentry_off_kwh,omitempty"`
+	SentryOffHours  *float64            `json:"sentry_off_hours,omitempty"`
 
 	DrivingKWh  *float64 `json:"driving_kwh,omitempty"`
 	DrivingKm   *float64 `json:"driving_km,omitempty"`
@@ -76,6 +85,7 @@ func ObservedEnergy(vehicle VehicleID, energy, odo, gear, sentry []V2Measurement
 		**p += x
 	}
 	var parking []V2ObservedParking
+	var driving []V2ObservedDrive
 	for i := 1; i < len(energy); i++ {
 		a, b := energy[i-1], energy[i]
 		dt := b.ReceivedAt.Sub(a.ReceivedAt)
@@ -92,6 +102,15 @@ func ObservedEnergy(vehicle VehicleID, energy, odo, gear, sentry []V2Measurement
 		if km > 0.1 && km <= 50 && stable(gear, a.ReceivedAt, b.ReceivedAt, 1) {
 			add(&r.DrivingKWh, de)
 			add(&r.DrivingKm, km)
+			if last := len(driving) - 1; last >= 0 && driving[last].LastSeen.Equal(a.ReceivedAt) {
+				driving[last].LastSeen = b.ReceivedAt
+				driving[last].EnergyKWh += de
+				driving[last].DistanceKm += km
+			} else {
+				driving = append(driving, V2ObservedDrive{
+					FirstSeen: a.ReceivedAt, LastSeen: b.ReceivedAt, EnergyKWh: de, DistanceKm: km,
+				})
+			}
 		} else if km < 0.01 && stable(gear, a.ReceivedAt, b.ReceivedAt, 0) {
 			add(&r.ParkedKWh, de)
 			add(&r.ParkedHours, dt.Hours())
@@ -119,5 +138,6 @@ func ObservedEnergy(vehicle VehicleID, energy, odo, gear, sentry []V2Measurement
 	}
 	// Limit response size independently of the totals for the requested period.
 	r.Parking = parking[max(0, len(parking)-100):]
+	r.Driving = driving[max(0, len(driving)-100):]
 	return r
 }

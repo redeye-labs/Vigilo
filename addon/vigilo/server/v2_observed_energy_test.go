@@ -19,6 +19,11 @@ func TestObservedEnergySeparatesDrivingAndParked(t *testing.T) {
 	if r.DrivingKm == nil || math.Abs(*r.DrivingKm-6.437376) > 0.001 || r.WhPerKm == nil {
 		t.Fatalf("driving %+v", r)
 	}
+	if len(r.Driving) != 1 || r.Driving[0].EnergyKWh != 1 ||
+		r.Driving[0].DistanceKm != *r.DrivingKm ||
+		r.Driving[0].LastSeen.Sub(r.Driving[0].FirstSeen) != 5*time.Minute {
+		t.Fatalf("driving timeline %+v", r.Driving)
+	}
 	if r.ParkedKWh == nil || r.SentryKWh == nil || math.Abs(*r.ParkedKWh-0.2) > 0.001 || math.Abs(*r.SentryKWh-0.2) > 0.001 {
 		t.Fatalf("parked %+v", r)
 	}
