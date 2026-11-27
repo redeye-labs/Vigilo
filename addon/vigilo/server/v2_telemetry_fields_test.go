@@ -91,8 +91,12 @@ func TestHomeLocationOnlyWhenExplicitAwayRuleConfigured(t *testing.T) {
 	if _, ok := V2TelemetryFields(store, vehicle)["LocatedAtHome"]; ok {
 		t.Fatal("location data requested for unrelated automations")
 	}
-	if _, ok := V2TelemetryFields(store, vehicle, true)["LocatedAtHome"]; !ok {
-		t.Fatal("home flag not requested for opted-in parked-away rule")
+	fields := V2TelemetryFields(store, vehicle, true)
+	for _, name := range []string{"LocatedAtHome", "Gear"} {
+		config, ok := fields[name].(map[string]any)
+		if !ok || config["resend_interval_seconds"] != 60 {
+			t.Errorf("%s lacks periodic evidence for opted-in parked-away rule", name)
+		}
 	}
 	if err = store.Set(vehicle, ModuleAutomation, false); err != nil {
 		t.Fatal(err)

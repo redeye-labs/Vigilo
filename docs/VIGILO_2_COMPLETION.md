@@ -1,6 +1,6 @@
 # Vigilo 2 · Stato di completamento
 
-Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0-beta.5 build 36, add-on 2.0.0-beta.5. Punto di ripristino dei sorgenti: `vigilo-2-completion-base-7eb9d4c`. Il backup dei dati privati è separato.
+Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0-beta.5 build 36, add-on 2.0.0-beta.5. Punto di ripristino dei sorgenti: `vigilo-2-completion-base-7eb9d4c`. Il backup dei dati privati è separato. Le versioni di APK e add-on restano allineate alla base durante il collaudo. Prima di un rilascio serve un versionCode maggiore di 36.
 
 ## Changelog del ramo
 
@@ -8,10 +8,10 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 - Parcheggi mostra intervalli osservati, costo energetico stimato, energia da fermo e distinzione fra Sentinella attiva, spenta o incerta. Il contatore rappresenta la scarica del veicolo durante la sosta. Una lacuna interrompe la cronologia.
 - Viaggi mostra durata, energia, distanza, efficienza e costo stimato per i tratti con campioni compatibili.
 - Il modulo Viaggi richiede campioni periodici durante lo streaming attivo per correlare energia, odometro e stato. Tesla documenta `resend_interval_seconds` da firmware 2024.44.32. La raccolta resta opt-in e richiede una verifica di compatibilità e volume sul veicolo.
-- Storico persistente degli avvisi automatici attivati, limitato agli ultimi 500 eventi e filtrato per veicolo. La soglia SOC configurata si può aggiornare mantenendo attiva la regola.
+- Storico persistente degli avvisi automatici attivati, limitato agli ultimi 500 eventi e filtrato per veicolo. La soglia SOC configurata si può aggiornare mantenendo attiva la regola. L’avviso fuori casa richiede posizione relativa e cambio freschi per lo stesso veicolo.
 - La rotta legacy dei comandi v2 apre la schermata Comandi unica. Da Automazioni si accede al programma Sentinella.
 - Diagnostica mostra le temperature interne ed esterne già raccolte e usa una vista dall'alto originale per le quattro pressioni.
-- Grafico con mediane settimanali BMS e filtri ricarica fino a 365 giorni. Le righe mostrano la finestra osservata quando misurabile.
+- Grafico con mediane settimanali BMS e filtri ricarica fino a 365 giorni di campioni ancora presenti nell’archivio a capacità limitata. Le righe mostrano la finestra osservata quando misurabile.
 - Aggiunte regressioni per il caso di autonomia in miglia e per gli intervalli di sosta incompleti.
 
 ## Inventario e lavoro residuo
@@ -37,7 +37,7 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 
 - Backend: `go test ./... -count=1` e `go vet ./...` eseguiti con Go 1.27.4.
 - GitHub Actions della base 2.0.0-beta.5: workflow test e APK firmato riusciti. I risultati della base non valgono come verifica del ramo.
-- Android nel workspace: SDK 36, Gradle 8.14.3 e JDK 17 installati. La PR esegue la build e pubblica le schermate coperte dai test Paparazzi, incluse le schermate energetiche e la grafica degli pneumatici.
+- Android nel workspace: SDK 36, Gradle 8.14.3 e JDK 17. Build debug riuscita e 44 test verdi, compresi i test Paparazzi. La PR esegue la build e pubblica le schermate coperte dai test Paparazzi, incluse le schermate energetiche e la grafica degli pneumatici.
 - Build Docker locale bloccata durante l’estrazione della base Go per spazio insufficiente nel daemon. Le build HA e standalone sono attive in CI.
 - I test Paparazzi coprono le 12 viste richieste con dati dimostrativi nei sorgenti di test. La schermata Comandi acquisisce la sezione con i comandi base. Il collaudo su Galaxy S26 Ultra, l’installazione su Home Assistant e Docker, l’upgrade con dati e le prove su Model 3 Highland restano da verificare.
 - Per riprendere: usare il ramo della PR #6, verificare i check su HEAD e completare le righe residue nella tabella prima di preparare una release.

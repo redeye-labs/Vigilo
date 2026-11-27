@@ -22,6 +22,20 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID, needHomeFlag ...
 			fields[name] = map[string]any{"interval_seconds": seconds}
 		}
 	}
+	resend := func(seconds int, names ...string) {
+		for _, name := range names {
+			original, ok := fields[name].(map[string]any)
+			if !ok {
+				continue
+			}
+			config := make(map[string]any, len(original)+1)
+			for key, value := range original {
+				config[key] = value
+			}
+			config["resend_interval_seconds"] = seconds
+			fields[name] = config
+		}
+	}
 	if prefs.Enabled(vehicle, ModuleBattery) {
 		add(900, "NominalFullPackEnergyKwh", "EnergyRemaining", "ModuleTempMin", "ModuleTempMax", "LifetimeEnergyChargedKwh")
 	}
@@ -34,18 +48,7 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID, needHomeFlag ...
 		add(300, "Odometer", "LifetimeEnergyUsed")
 		// Fleet sends changes by default. Periodic evidence within an active stream
 		// lets the report distinguish a stable state from missing data.
-		for _, name := range []string{"Odometer", "LifetimeEnergyUsed", "Gear", "SentryMode"} {
-			original, ok := fields[name].(map[string]any)
-			if !ok {
-				continue
-			}
-			config := make(map[string]any, len(original)+1)
-			for key, value := range original {
-				config[key] = value
-			}
-			config["resend_interval_seconds"] = 300
-			fields[name] = config
-		}
+		resend(300, "Odometer", "LifetimeEnergyUsed", "Gear", "SentryMode")
 	}
 	if prefs.Enabled(vehicle, ModuleDiagnostics) {
 		add(900, "TpmsPressureFl", "TpmsPressureFr", "TpmsPressureRl", "TpmsPressureRr")
@@ -53,6 +56,7 @@ func V2TelemetryFields(prefs *V2ModuleStore, vehicle VehicleID, needHomeFlag ...
 	if prefs.Enabled(vehicle, ModuleAutomation) && len(needHomeFlag) > 0 && needHomeFlag[0] {
 		// Only request this signal when the explicit away-from-home rule is enabled.
 		add(60, "LocatedAtHome")
+		resend(60, "LocatedAtHome", "Gear")
 	}
 	return fields
 }
