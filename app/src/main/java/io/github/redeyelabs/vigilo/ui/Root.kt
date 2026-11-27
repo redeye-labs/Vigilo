@@ -120,7 +120,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.V2_COMMANDS -> V2HubScreen(vm, onBack = { screen = Screen.COMMANDS }, onOpen = { screen = it }, onlyModule = "commands")
                     Screen.V2_SECURITY -> V2HubScreen(vm, onBack = goHome, onOpen = { screen = it }, onlyModule = "security")
                     Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = goHome)
-                    Screen.V2_BACKUP -> V2BackupScreen(vm, onBack = { screen = Screen.SETTINGS })
+                    Screen.V2_BACKUP -> V2BackupScreen(vm, onBack = goHome)
                     Screen.V2_DIAGNOSTICS -> V2DiagnosticsScreen(vm, onBack = goHome)
                 }
                 if (busy && !progress.isNullOrBlank()) {
