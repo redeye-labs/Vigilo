@@ -104,7 +104,7 @@ func (a *App) OnTelemetryField(field string, val any) {
 	a.bus.PublishState()
 }
 
-// Fleet Telemetry fornisce i chilometri già convertiti; la Fleet API separata usa miglia.
+// Fleet Telemetry e Fleet API forniscono l'autonomia in miglia; lo stato usa km.
 // RatedRange rappresenta l'autonomia nominale visualizzata da Tesla e ha priorità
 // su EstBatteryRange, la stima legata alle condizioni di guida.
 func updateRangeFromTelemetry(v *VehicleState, field string, val any) {
@@ -112,6 +112,7 @@ func updateRangeFromTelemetry(v *VehicleState, field string, val any) {
 	if !ok || f < 0 {
 		return
 	}
+	f *= 1.609344
 	switch field {
 	case "RatedRange":
 		v.RangeKm, v.RangeRated = &f, true

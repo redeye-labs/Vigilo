@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.0.2
+- Corregge la conversione dell'autonomia Fleet Telemetry da miglia a km, mantenendo la priorità di RatedRange e la compatibilità con l'app Android esistente.
+
 ## 1.0.8
 - Temperatura interna ed esterna, contachilometri e stato di bagagliaio/frunk: ora li legge anche il
   server, nella stessa lettura dei dati dell'auto che già faceva (nessuna chiamata in più, l'auto non
