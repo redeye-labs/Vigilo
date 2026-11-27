@@ -1,5 +1,5 @@
 name: Vigilo
-version: "2.0.0-beta.5"
+version: "2.0.0-beta.6"
 slug: vigilo
 description: Vigilo 2 beta sperimentale - moduli Tesla e sicurezza. Non installare sulla produzione senza backup e collaudo.
 url: https://github.com/redeye-labs/Vigilo

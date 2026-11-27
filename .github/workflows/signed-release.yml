@@ -21,7 +21,12 @@ permissions:
 
 jobs:
   signed-apk:
-    if: github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main' ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.repository == 'redeye-labs/Vigilo' &&
+       github.ref == 'refs/heads/development/vigilo-2-completion' &&
+       inputs.publish_release == false)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -89,7 +94,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Publish signed GitHub Release
-        if: inputs.publish_release == true
+        if: github.ref == 'refs/heads/main' && inputs.publish_release == true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
