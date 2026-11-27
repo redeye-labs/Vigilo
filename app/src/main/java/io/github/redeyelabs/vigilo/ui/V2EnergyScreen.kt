@@ -170,7 +170,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                     if (active && id == "charging") {
                         PeriodPicker(days) { days = it }
                         MetricPair("Energia osservata", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.sumOf { it.batteryKWh }, "kWh"), "Costo stimato", if (visibleCharges.isNotEmpty() && visibleCharges.all { it.costEUR != null }) fmt(visibleCharges.sumOf { it.costEUR ?: 0.0 }, "€") else "—", accent)
-                        Text("Sessioni osservate: ${visibleCharges.size}", style = MaterialTheme.typography.titleMedium)
+                        MetricPair("Sessioni osservate", visibleCharges.size.toString(), "Energia media", if (visibleCharges.isEmpty()) "—" else fmt(visibleCharges.map { it.batteryKWh }.average(), "kWh"), accent)
+                        Text("Cronologia ricariche", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleCharges.takeLast(12).map { it.batteryKWh }, accent, "kWh", visibleCharges.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleCharges.takeLast(8).asReversed().forEach { session ->
                             MetricPair(shortDate(session.lastSeen), fmt(session.batteryKWh, "kWh"), "Costo stimato", session.costEUR?.let { fmt(it, "€") } ?: "—", accent)
@@ -212,6 +213,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
                     if (active && id == "trips") {
                         PeriodPicker(days) { days = it }
                         MetricPair("Distanza osservata", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.sumOf { it.distanceKm }, "km"), "Tratti osservati", visibleTrips.size.toString(), accent)
+                        MetricPair("Distanza media per tratto", if (visibleTrips.isEmpty()) "—" else fmt(visibleTrips.map { it.distanceKm }.average(), "km"), "Tratto più lungo", visibleTrips.maxOfOrNull { it.distanceKm }?.let { fmt(it, "km") } ?: "—", accent)
+                        Text("Cronologia percorrenze", style = MaterialTheme.typography.titleMedium)
                         EnergyBars(visibleTrips.takeLast(12).map { it.distanceKm }, accent, "km", visibleTrips.takeLast(12).map { shortDate(it.lastSeen) })
                         visibleTrips.takeLast(8).asReversed().forEach { trip ->
                             MetricPair(shortDate(trip.lastSeen), fmt(trip.distanceKm, "km"), "Fonte", "Odometro", accent)
