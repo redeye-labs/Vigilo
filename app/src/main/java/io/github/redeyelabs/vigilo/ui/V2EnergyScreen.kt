@@ -1,5 +1,7 @@
 package io.github.redeyelabs.vigilo.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -121,7 +123,8 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
 
                     if (active && id == "battery") {
                         battery?.let { b ->
-                            Text("Carica: " + (b.chargePercent?.let { fmt(it, "%") } ?: "Non disponibile"))
+                            Text(b.chargePercent?.let { fmt(it, "%") } ?: "—", style = MaterialTheme.typography.displayMedium)
+                            Text("Stato di carica")
                             Text("Autonomia: " + (b.ratedRangeKm?.let { fmt(it, "km") } ?: "Non disponibile"))
                             Text("Capacità BMS: " + (b.fullPackKWh?.let { fmt(it, "kWh") } ?: "Non disponibile"))
                             Text("Energia residua: " + (b.remainingKWh?.let { fmt(it, "kWh") } ?: "Non disponibile"))
@@ -141,6 +144,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                                 Text("Variazione capacità BMS nel periodo: " + fmt(trend.percentChange, "%"))
                                 Text("Capacità iniziale rilevata: " + fmt(trend.firstKWh, "kWh"))
                                 Text("Capacità recente: " + fmt(trend.latestKWh, "kWh"))
+                                EnergyBars(listOf(trend.firstKWh, trend.latestKWh))
                                 Text(trend.note, style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             } else {
@@ -150,7 +154,10 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                         }
                     }
                     if (active && id == "charging") {
+                        Text(fmt(charges.sumOf { it.batteryKWh }, "kWh"), style = MaterialTheme.typography.displayMedium)
                         Text("Sessioni osservate: ${charges.size}")
+                        if (charges.isNotEmpty()) EnergyBars(charges.takeLast(12).map { it.batteryKWh })
+                        if (charges.isNotEmpty() && charges.all { it.costEUR != null }) Text("Costo stimato: " + fmt(charges.sumOf { it.costEUR ?: 0.0 }, "€"))
                         charges.takeLast(8).asReversed().forEach { session ->
                             Text("${fmt(session.batteryKWh, "kWh")} nella batteria · " +
                                 (session.costEUR?.let { fmt(it, "€ stimati") } ?: "Costo non disponibile"))
@@ -190,7 +197,9 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit) {
                         ) { Text(if (tariffSaved) "Tariffa salvata" else "Salva tariffa") }
                     }
                     if (active && id == "trips") {
+                        Text(fmt(trips.sumOf { it.distanceKm }, "km"), style = MaterialTheme.typography.displayMedium)
                         Text("Tratti osservati: ${trips.size}")
+                        if (trips.isNotEmpty()) EnergyBars(trips.takeLast(12).map { it.distanceKm })
                         trips.takeLast(8).asReversed().forEach { trip ->
                             Text(fmt(trip.distanceKm, "km") + " · Distanza da contachilometri")
                         }
@@ -221,3 +230,23 @@ private data class EnergyScreenData(
 
 private fun fmt(n: Double, unit: String): String =
     String.format(Locale.ITALY, "%.1f %s", n, unit)
+
+@Composable
+private fun EnergyBars(values: List<Double>) {
+    val clean = values.filter { it.isFinite() && it >= 0.0 }
+    val peak = clean.maxOrNull() ?: return
+    if (peak <= 0.0) return
+    val accent = MaterialTheme.colorScheme.primary
+    Canvas(Modifier.fillMaxWidth().height(112.dp).padding(vertical = 8.dp)) {
+        val slot = size.width / clean.size
+        clean.forEachIndexed { index, value ->
+            val h = (value / peak).toFloat() * size.height
+            drawRoundRect(
+                color = accent.copy(alpha = if (index == clean.lastIndex) 1f else 0.65f),
+                topLeft = androidx.compose.ui.geometry.Offset(index * slot + slot * 0.15f, size.height - h),
+                size = androidx.compose.ui.geometry.Size(slot * 0.7f, h),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+            )
+        }
+    }
+}
