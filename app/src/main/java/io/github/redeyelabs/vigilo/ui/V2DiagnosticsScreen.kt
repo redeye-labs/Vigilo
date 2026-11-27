@@ -144,18 +144,34 @@ private fun TireLayout(tires: List<Backend.V2Measurement>) {
         val m = tires.firstOrNull { it.signal == signal } ?: return "—"
         return String.format(Locale.ITALY, "%.2f bar", m.value) + if (m.quality == "stale") " *" else ""
     }
-    MetricPair("Ant. sinistra", reading("TpmsPressureFl"), "Ant. destra", reading("TpmsPressureFr"), accent)
-    Box(Modifier.fillMaxWidth().height(164.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxWidth().height(156.dp)) {
+    Row(Modifier.fillMaxWidth().height(220.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(40.dp)) {
+            TireReading("Anteriore SX", reading("TpmsPressureFl"), accent)
+            TireReading("Posteriore SX", reading("TpmsPressureRl"), accent)
+        }
+        Canvas(Modifier.weight(0.9f).height(200.dp)) {
             val w = size.width
             val h = size.height
-            drawRoundRect(Color(0xFF454550), Offset(w * .37f, h * .03f), Size(w * .26f, h * .94f), CornerRadius(23.dp.toPx()))
-            drawRoundRect(Color(0xFF16161D), Offset(w * .40f, h * .24f), Size(w * .20f, h * .52f), CornerRadius(12.dp.toPx()))
-            for (x in listOf(.31f, .63f)) for (y in listOf(.17f, .67f)) {
-                drawRoundRect(Color(0xFF22222B), Offset(w * x, h * y), Size(w * .06f, h * .16f), CornerRadius(4.dp.toPx()))
+            for (x in listOf(.04f, .76f)) for (y in listOf(.18f, .68f)) {
+                drawRoundRect(Color(0xFF50505B), Offset(w * x, h * y), Size(w * .20f, h * .17f), CornerRadius(5.dp.toPx()))
             }
+            drawRoundRect(Color(0xFF777782), Offset(w * .17f, h * .02f), Size(w * .66f, h * .96f), CornerRadius(24.dp.toPx()))
+            drawRoundRect(Color(0xFF25252F), Offset(w * .25f, h * .22f), Size(w * .50f, h * .53f), CornerRadius(14.dp.toPx()))
+            drawRoundRect(Color(0xFF444450), Offset(w * .29f, h * .28f), Size(w * .42f, h * .14f), CornerRadius(5.dp.toPx()))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(40.dp)) {
+            TireReading("Anteriore DX", reading("TpmsPressureFr"), accent)
+            TireReading("Posteriore DX", reading("TpmsPressureRr"), accent)
         }
     }
-    MetricPair("Post. sinistra", reading("TpmsPressureRl"), "Post. destra", reading("TpmsPressureRr"), accent)
     if (tires.any { it.quality == "stale" }) Text("* Lettura non recente", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun TireReading(label: String, value: String, accent: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.titleMedium, color = if (value == "—" || value.endsWith("*")) MaterialTheme.colorScheme.onSurfaceVariant else accent)
+    }
 }
