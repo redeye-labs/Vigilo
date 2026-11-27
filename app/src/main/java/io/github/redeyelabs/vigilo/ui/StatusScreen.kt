@@ -223,6 +223,7 @@ fun StatusScreenContent(
             MenuRow(Icons.Filled.Security, "Sicurezza", subtitle = "Statistiche Sentinella", onClick = { onOpen(Screen.V2_SECURITY) })
             MenuRow(Icons.Filled.Schedule, "Automazioni", subtitle = "Condizioni e scenari", onClick = { onOpen(Screen.V2_AUTOMATIONS) })
             MenuRow(Icons.Filled.MonitorHeart, "Diagnostica", subtitle = "Pneumatici e telemetria", onClick = { onOpen(Screen.V2_DIAGNOSTICS) })
+            MenuRow(Icons.Filled.History, "Backup e report", subtitle = "Esportazione dati e storico", onClick = { onOpen(Screen.V2_BACKUP) })
             Spacer(Modifier.height(24.dp))
         }
     }
