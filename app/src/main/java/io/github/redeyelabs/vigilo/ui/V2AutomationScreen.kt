@@ -85,7 +85,8 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                 Text("Caricamento regole…")
             } else {
                 VigiloCard {
-                    Text("Abilitazione", style = MaterialTheme.typography.titleMedium)
+                    Text("Stato automazioni", style = MaterialTheme.typography.titleMedium)
+                    MetricPair("Servizio", if (moduleEnabled) "Attivo" else "Disattivo", "Regole abilitate", listOf(lowEnabled, panicEnabled, parkedEnabled).count { it }.toString() + "/3", MaterialTheme.colorScheme.primary)
                     OutlinedButton(
                         enabled = !working,
                         onClick = {
@@ -107,6 +108,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                 }
                 VigiloCard {
                     Text("Batteria sotto soglia", style = MaterialTheme.typography.titleMedium)
+                    Text(if (lowEnabled && moduleEnabled) "Attiva" else if (lowEnabled) "Configurata · servizio disattivo" else "Disattiva", style = MaterialTheme.typography.labelMedium, color = if (lowEnabled && moduleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         "Un solo avviso quando la carica scende sotto la soglia. Reset quando risale almeno di due punti.",
                         style = MaterialTheme.typography.bodySmall,
@@ -142,6 +144,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                 }
                 VigiloCard {
                     Text("Allarme Sentinella", style = MaterialTheme.typography.titleMedium)
+                    Text(if (panicEnabled && moduleEnabled) "Attiva" else if (panicEnabled) "Configurata · servizio disattivo" else "Disattiva", style = MaterialTheme.typography.labelMedium, color = if (panicEnabled && moduleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         "Invia un avviso aggiuntivo in caso di evento Panic, con intervallo minimo di un'ora.",
                         style = MaterialTheme.typography.bodySmall,
@@ -169,6 +172,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                 }
                 VigiloCard {
                     Text("Parcheggio fuori casa", style = MaterialTheme.typography.titleMedium)
+                    Text(if (parkedEnabled && moduleEnabled) "Attiva" else if (parkedEnabled) "Configurata · servizio disattivo" else "Disattiva", style = MaterialTheme.typography.labelMedium, color = if (parkedEnabled && moduleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
                         "Avviso una volta quando la Tesla indica che si trova fuori casa ed è in P. " +
                             "Richiede il segnale LocatedAtHome: potrebbe non essere disponibile su tutti i veicoli.",
