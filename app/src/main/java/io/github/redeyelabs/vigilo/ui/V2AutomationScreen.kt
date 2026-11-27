@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
 
 /** Notification-only automations: NO autonomous Tesla movement commands. */
 @Composable
-fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
+fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit, onOpenSchedule: () -> Unit) {
     val paired by vm.backendMode.collectAsState()
     val scope = rememberCoroutineScope()
     var refresh by remember { mutableStateOf(0) }
@@ -68,6 +68,52 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
         }
     }
 
+    fun updateRules(action: (Backend) -> Unit) {
+        working = true
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { action(Backend(vm.prefs)) }
+                refresh++
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = e.message ?: "Impossibile salvare le automazioni."
+            } finally {
+                working = false
+            }
+        }
+    }
+
+    V2AutomationContent(
+        paired = paired, working = working, error = error, rulesLoaded = rulesLoaded,
+        moduleEnabled = moduleEnabled, lowEnabled = lowEnabled, panicEnabled = panicEnabled,
+        parkedEnabled = parkedEnabled, savedLimit = savedLimit, limit = limit, executions = executions,
+        onEditLimit = { limit = it.filter(Char::isDigit).take(2) },
+        onSetModule = { active -> updateRules { it.v2SetModule("automation", active) } },
+        onSaveRule = { rule -> updateRules { it.v2SaveAutomation(rule) } },
+        onOpenSchedule = onOpenSchedule, onBack = onBack,
+    )
+}
+
+@Composable
+internal fun V2AutomationContent(
+    paired: Boolean,
+    working: Boolean,
+    error: String?,
+    rulesLoaded: Boolean,
+    moduleEnabled: Boolean,
+    lowEnabled: Boolean,
+    panicEnabled: Boolean,
+    parkedEnabled: Boolean,
+    savedLimit: String,
+    limit: String,
+    executions: List<Backend.V2RuleExecution>,
+    onEditLimit: (String) -> Unit,
+    onSetModule: (Boolean) -> Unit,
+    onSaveRule: (Backend.V2AutomationRule) -> Unit,
+    onOpenSchedule: () -> Unit,
+    onBack: () -> Unit,
+) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -81,6 +127,9 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        OutlinedButton(onClick = onOpenSchedule, modifier = Modifier.fillMaxWidth()) {
+            Text("Programma Sentinella")
+        }
         if (!paired) {
             VigiloCard { Text("Collega prima il server Vigilo.") }
         } else {
@@ -93,21 +142,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                     MetricPair("Servizio", if (moduleEnabled) "Attivo" else "Disattivo", "Regole abilitate", listOf(lowEnabled, panicEnabled, parkedEnabled).count { it }.toString() + "/3", MaterialTheme.colorScheme.primary)
                     OutlinedButton(
                         enabled = !working,
-                        onClick = {
-                            working = true
-                            scope.launch {
-                                try {
-                                    withContext(Dispatchers.IO) {
-                                        Backend(vm.prefs).v2SetModule("automation", !moduleEnabled)
-                                    }
-                                    refresh++
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Operazione non riuscita."
-                                } finally {
-                                    working = false
-                                }
-                            }
-                        },
+                        onClick = { onSetModule(!moduleEnabled) },
                     ) { Text(if (moduleEnabled) "Disattiva automazioni" else "Attiva automazioni") }
                 }
                 VigiloCard {
@@ -139,7 +174,7 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                     )
                     OutlinedTextField(
                         value = limit,
-                        onValueChange = { limit = it.filter(Char::isDigit).take(2) },
+                        onValueChange = onEditLimit,
                         label = { Text("Soglia % (5–60)") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
@@ -147,21 +182,10 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                     OutlinedButton(
                         enabled = !working && limit.toIntOrNull()?.let { it in 5..60 } == true,
                         onClick = {
-                            working = true
-                            scope.launch {
-                                try {
-                                    val next = !lowEnabled || limit != savedLimit
-                                    withContext(Dispatchers.IO) {
-                                        Backend(vm.prefs).v2SaveAutomation(Backend.V2AutomationRule(
-                                            id = "soc-low", enabled = next, condition = "soc_below",
-                                            threshold = limit.toInt().toDouble(), cooldownSec = 3600,
-                                        ))
-                                    }
-                                    refresh++
-                                } catch (e: Exception) {
-                                    error = e.message ?: "La regola non è stata salvata."
-                                } finally { working = false }
-                            }
+                            onSaveRule(Backend.V2AutomationRule(
+                                id = "soc-low", enabled = !lowEnabled || limit != savedLimit, condition = "soc_below",
+                                threshold = limit.toInt().toDouble(), cooldownSec = 3600,
+                            ))
                         },
                     ) { Text(when { !lowEnabled -> "Attiva avviso batteria"; limit != savedLimit -> "Salva soglia"; else -> "Disattiva avviso batteria" }) }
                 }
@@ -176,20 +200,10 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                     OutlinedButton(
                         enabled = !working,
                         onClick = {
-                            working = true
-                            scope.launch {
-                                try {
-                                    withContext(Dispatchers.IO) {
-                                        Backend(vm.prefs).v2SaveAutomation(Backend.V2AutomationRule(
-                                            id = "sentry-panic", enabled = !panicEnabled,
-                                            condition = "sentry_panic", threshold = 0.0, cooldownSec = 3600,
-                                        ))
-                                    }
-                                    refresh++
-                                } catch (e: Exception) {
-                                    error = e.message ?: "La regola non è stata salvata."
-                                } finally { working = false }
-                            }
+                            onSaveRule(Backend.V2AutomationRule(
+                                id = "sentry-panic", enabled = !panicEnabled, condition = "sentry_panic",
+                                threshold = 0.0, cooldownSec = 3600,
+                            ))
                         },
                     ) { Text(if (panicEnabled) "Disattiva avviso Panic aggiuntivo" else "Attiva avviso Panic aggiuntivo") }
                 }
@@ -205,20 +219,10 @@ fun V2AutomationScreen(vm: MainViewModel, onBack: () -> Unit) {
                     OutlinedButton(
                         enabled = !working,
                         onClick = {
-                            working = true
-                            scope.launch {
-                                try {
-                                    withContext(Dispatchers.IO) {
-                                        Backend(vm.prefs).v2SaveAutomation(Backend.V2AutomationRule(
-                                            id = "parked-away", enabled = !parkedEnabled,
-                                            condition = "away_from_home", threshold = 0.0, cooldownSec = 3600,
-                                        ))
-                                    }
-                                    refresh++
-                                } catch (e: Exception) {
-                                    error = e.message ?: "La regola non è stata salvata."
-                                } finally { working = false }
-                            }
+                            onSaveRule(Backend.V2AutomationRule(
+                                id = "parked-away", enabled = !parkedEnabled, condition = "away_from_home",
+                                threshold = 0.0, cooldownSec = 3600,
+                            ))
                         },
                     ) { Text(if (parkedEnabled) "Disattiva avviso fuori casa" else "Attiva avviso fuori casa") }
                 }

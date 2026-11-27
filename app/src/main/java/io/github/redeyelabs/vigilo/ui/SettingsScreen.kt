@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.github.redeyelabs.vigilo.api.Backend
 import kotlin.math.roundToInt
 
 @Composable
@@ -66,17 +67,11 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
     val haSettings by vm.backendSettings.collectAsState()
     LaunchedEffect(paired) { if (paired) vm.loadBackendSettings() }
 
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader("Impostazioni", "Server Vigilo, avvisi e preferenze.", onBack = onBack)
-        HomeAssistantSettings(
-            paired = paired,
-            backendUrl = backendUrl,
-            settings = haSettings,
-            onGuide = { onOpen(Screen.GUIDE) },
-            onUnpair = { vm.unpairBackend() },
-            onChange = { vm.saveBackendSettings(it) },
-        )
-
+    SettingsScreenContent(
+        paired = paired, backendUrl = backendUrl, settings = haSettings, onBack = onBack,
+        onGuide = { onOpen(Screen.GUIDE) }, onUnpair = { vm.unpairBackend() },
+        onChange = { vm.saveBackendSettings(it) },
+    ) {
         if (paired) {
             SettingsGroup("Avvisi sul telefono") {
                 val notifyFromApp by vm.monitoringEnabled.collectAsState()
@@ -171,6 +166,27 @@ fun SettingsScreen(vm: MainViewModel, onBack: (() -> Unit)? = null, onOpen: (Scr
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
         )
+    }
+}
+
+@Composable
+internal fun SettingsScreenContent(
+    paired: Boolean,
+    backendUrl: String,
+    settings: Backend.SettingsResponse?,
+    onBack: (() -> Unit)?,
+    onGuide: () -> Unit,
+    onUnpair: () -> Unit,
+    onChange: ((Backend.Settings) -> Backend.Settings) -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        ScreenHeader("Impostazioni", "Server Vigilo, avvisi e preferenze.", onBack = onBack)
+        HomeAssistantSettings(paired, backendUrl, settings, onGuide, onUnpair, onChange)
+        content()
     }
 }
 

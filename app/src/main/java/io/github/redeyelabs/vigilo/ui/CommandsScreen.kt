@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.redeyelabs.vigilo.api.Snapshot
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,6 +41,28 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
     val pending by vm.pendingAction.collectAsState()
     val loggedIn by vm.loggedIn.collectAsState()
     val ready = loggedIn && vm.prefs.vin.isNotBlank()
+    CommandsScreenContent(
+        s = s, pending = pending, ready = ready, lastError = vm.prefs.lastError,
+        onCommand = { action, backend -> vm.command(action, backend = backend) },
+        onSetSentry = { vm.setSentry(it) },
+        onBack = onBack, onOpen = onOpen,
+    ) {
+        V2HubScreen(vm, onBack = onBack, onOpen = onOpen, onlyModule = "commands", embedded = true)
+    }
+}
+
+@Composable
+internal fun CommandsScreenContent(
+    s: Snapshot?,
+    pending: String?,
+    ready: Boolean,
+    lastError: String,
+    onCommand: (String, String) -> Unit,
+    onSetSentry: (Boolean) -> Unit,
+    onBack: () -> Unit,
+    onOpen: (Screen) -> Unit,
+    additionalCommands: @Composable () -> Unit,
+) {
     val busyOther = pending != null
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp)) {
         ScreenHeader("Comandi", "Ogni comando può svegliare l'auto se dorme.", onBack = onBack)
@@ -52,8 +75,8 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             enabled = ready && (!busyOther || pending == "lock"),
             busy = pending == "lock",
             onCheckedChange = { wantLocked ->
-                if (wantLocked && s?.locked != true) vm.command("lock", backend = "lock")
-                else if (!wantLocked && s?.locked != false) vm.command("lock", backend = "unlock")
+                if (wantLocked && s?.locked != true) onCommand("lock", "lock")
+                else if (!wantLocked && s?.locked != false) onCommand("lock", "unlock")
             },
             leading = {
                 Icon(
@@ -71,7 +94,7 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             checked = s?.sentry == true,
             enabled = ready && (!busyOther || pending == "sentry"),
             busy = pending == "sentry",
-            onCheckedChange = { vm.setSentry(it) },
+            onCheckedChange = onSetSentry,
             leading = { SentryIcon(active = s?.sentry == true, size = 22.dp) },
         )
         Text("Luci e clacson", style = MaterialTheme.typography.titleSmall)
@@ -80,18 +103,18 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
             title = "Lampeggia",
             enabled = ready && (!busyOther || pending == "flash"),
             busy = pending == "flash",
-            onClick = { vm.command("flash", backend = "flash") },
+            onClick = { onCommand("flash", "flash") },
         )
         ActionRow(
             icon = { Icon(Icons.Filled.Campaign, contentDescription = null, tint = VigiloIconGray, modifier = Modifier.size(24.dp)) },
             title = "Clacson",
             enabled = ready && (!busyOther || pending == "honk"),
             busy = pending == "honk",
-            onClick = { vm.command("honk", backend = "honk") },
+            onClick = { onCommand("honk", "honk") },
         )
 
         Spacer(Modifier.height(12.dp))
-        V2HubScreen(vm, onBack = onBack, onOpen = onOpen, onlyModule = "commands", embedded = true)
+        additionalCommands()
         Spacer(Modifier.height(20.dp))
         VigiloCard {
             Row2("Porte", yesNo(s?.doorsOpen, "Aperte", "Chiuse"))
@@ -116,9 +139,9 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            if (vm.prefs.lastError.isNotBlank()) {
+            if (lastError.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Text("Ultimo errore: ${vm.prefs.lastError}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text("Ultimo errore: ${lastError}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
         }
         Spacer(Modifier.height(8.dp))

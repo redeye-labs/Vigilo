@@ -170,22 +170,22 @@ class ScreenshotsTest {
     fun impostazioni() {
         paparazzi.snapshot(name = "impostazioni") {
             PhoneShell {
-                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ScreenHeader("Impostazioni", "Home Assistant, avvisi e preferenze.", onBack = {})
-                    HomeAssistantSettings(
-                        paired = true,
-                        backendUrl = "https://vigilo.tailnet-example.ts.net",
-                        settings = Backend.SettingsResponse(
-                            ok = true,
-                            settings = Backend.Settings(notifyTargets = listOf("mobile_app_telefono")),
-                            availableTargets = listOf("mobile_app_telefono"),
-                        ),
-                        onGuide = {},
-                        onUnpair = {},
-                        onChange = {},
-                    )
-                    PrefToggle("Mostra la foto dell'auto", false) {}
-                    PrefToggle("Esempio interruttore acceso", true) {}
+                SettingsScreenContent(
+                    paired = true,
+                    backendUrl = "https://vigilo.tailnet-example.ts.net",
+                    settings = Backend.SettingsResponse(
+                        ok = true,
+                        settings = Backend.Settings(notifyTargets = listOf("mobile_app_telefono")),
+                        availableTargets = listOf("mobile_app_telefono"),
+                    ),
+                    onBack = {}, onGuide = {}, onUnpair = {}, onChange = {},
+                ) {
+                    SettingsGroup("Avvisi sul telefono") {
+                        PrefToggle("Suona anche in silenzioso", true) {}
+                    }
+                    SettingsGroup("Schermata principale") {
+                        PrefToggle("Mostra la foto dell'auto", false) {}
+                    }
                 }
             }
         }
@@ -255,20 +255,77 @@ class ScreenshotsTest {
     }
 
     @Test
-    fun pneumatici() {
-        val readings = listOf(
-            "TpmsPressureFl" to 2.90, "TpmsPressureFr" to 2.89,
-            "TpmsPressureRl" to 2.92, "TpmsPressureRr" to 2.91,
-        ).map { (signal, pressure) ->
-            Backend.V2Measurement(signal = signal, value = pressure, unit = "bar", quality = "valid")
+    fun comandi() {
+        paparazzi.snapshot(name = "comandi") {
+            PhoneShell {
+                CommandsScreenContent(
+                    s = sampleSnapshot(NOW), pending = null, ready = true, lastError = "",
+                    onCommand = { _, _ -> }, onSetSentry = {}, onBack = {}, onOpen = {},
+                    additionalCommands = {},
+                )
+            }
         }
+    }
+
+    @Test
+    fun automazioni() {
+        paparazzi.snapshot(name = "automazioni") {
+            PhoneShell {
+                V2AutomationContent(
+                    paired = true, working = false, error = null, rulesLoaded = true,
+                    moduleEnabled = true, lowEnabled = true, panicEnabled = true, parkedEnabled = false,
+                    savedLimit = "20", limit = "20",
+                    executions = listOf(Backend.V2RuleExecution(
+                        "soc-low", "soc_below", "2026-11-27T09:10:00Z",
+                    )),
+                    onEditLimit = {}, onSetModule = {}, onSaveRule = {}, onOpenSchedule = {}, onBack = {},
+                )
+            }
+        }
+    }
+
+    @Test
+    fun storico() {
+        paparazzi.snapshot(name = "storico") {
+            PhoneShell { HistoryScreenContent(sampleEvents(NOW), onClear = {}, onBack = {}) }
+        }
+    }
+
+    @Test
+    fun diagnostica() {
+        paparazzi.snapshot(name = "diagnostica") {
+            PhoneShell {
+                V2DiagnosticsContent(
+                    paired = true,
+                    snapshot = sampleSnapshot(NOW).copy(insideTemp = 20.1, outsideTemp = 13.6),
+                    diagnostics = Backend.V2Diagnostics(
+                        serverReachable = true,
+                        telemetry = Backend.V2Connection(status = "ok", details = "Ultima telemetria recente."),
+                    ),
+                    tires = sampleTires(),
+                    message = null, enabled = true, working = false,
+                    onBack = {}, onRefresh = {}, onToggle = {},
+                )
+            }
+        }
+    }
+
+    private fun sampleTires() = listOf(
+        "TpmsPressureFl" to 2.90, "TpmsPressureFr" to 2.89,
+        "TpmsPressureRl" to 2.92, "TpmsPressureRr" to 2.91,
+    ).map { (signal, pressure) ->
+        Backend.V2Measurement(signal = signal, value = pressure, unit = "bar", quality = "valid")
+    }
+
+    @Test
+    fun pneumatici() {
         paparazzi.snapshot(name = "pneumatici") {
             PhoneShell {
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
                     ScreenHeader("Diagnostica Vigilo", "Connessione e segnali ricevuti dalla Tesla.", onBack = {})
                     VigiloCard {
                         Text("Pressione pneumatici", style = MaterialTheme.typography.titleMedium)
-                        TireLayout(readings)
+                        TireLayout(sampleTires())
                     }
                 }
             }

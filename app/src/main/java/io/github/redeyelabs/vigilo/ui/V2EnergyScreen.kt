@@ -277,7 +277,7 @@ internal fun EnergyScreenContent(
                         PeriodPicker(days, allowAll = false, onChange = onPeriodChange)
                         val report = energyReport
                         val average = report?.parkedHours?.takeIf { it > 0 }?.let { hours ->
-                            report?.parkedKWh?.div(hours)
+                            report.parkedKWh?.div(hours)
                         }
                         MetricPair("Energia da fermo", report?.parkedKWh?.let { fmt(it, "kWh") } ?: "—",
                             "Consumo orario", average?.let { fmt(it, "kWh/h") } ?: "—", accent)

@@ -28,6 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import io.github.redeyelabs.vigilo.R
 import io.github.redeyelabs.vigilo.api.Backend
+import io.github.redeyelabs.vigilo.api.Snapshot
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,6 +66,41 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
         } finally { working = false }
     }
 
+    V2DiagnosticsContent(
+        paired = paired, snapshot = snapshot, diagnostics = diagnostics, tires = tires,
+        message = message, enabled = enabled, working = working, onBack = onBack,
+        onRefresh = { refresh++ },
+        onToggle = {
+            working = true
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) { Backend(vm.prefs).v2SetModule("diagnostics", !enabled) }
+                    refresh++
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    message = e.message ?: "Impossibile attivare la diagnostica."
+                } finally {
+                    working = false
+                }
+            }
+        },
+    )
+}
+
+@Composable
+internal fun V2DiagnosticsContent(
+    paired: Boolean,
+    snapshot: Snapshot?,
+    diagnostics: Backend.V2Diagnostics?,
+    tires: List<Backend.V2Measurement>,
+    message: String?,
+    enabled: Boolean,
+    working: Boolean,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit,
+    onToggle: () -> Unit,
+) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -115,19 +151,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 )
                 OutlinedButton(
                     enabled = !working,
-                    onClick = {
-                        working = true
-                        scope.launch {
-                            try {
-                                withContext(Dispatchers.IO) {
-                                    Backend(vm.prefs).v2SetModule("diagnostics", !enabled)
-                                }
-                                refresh++
-                            } catch (e: Exception) {
-                                message = e.message ?: "Impossibile attivare la diagnostica."
-                            } finally { working = false }
-                        }
-                    },
+                    onClick = onToggle,
                 ) { Text(if (enabled) "Disattiva raccolta pneumatici" else "Attiva raccolta pneumatici") }
                 if (enabled) {
                     TireLayout(tires)
@@ -142,7 +166,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
             }
             message?.let { VigiloCard { Text(it, color = MaterialTheme.colorScheme.error) } }
             OutlinedButton(
-                onClick = { refresh++ }, enabled = !working, modifier = Modifier.fillMaxWidth(),
+                onClick = onRefresh, enabled = !working, modifier = Modifier.fillMaxWidth(),
             ) { Text("Aggiorna diagnostica") }
         }
     }

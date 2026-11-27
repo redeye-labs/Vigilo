@@ -122,7 +122,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
                     Screen.V2_PARKING -> V2EnergyScreen(vm, onBack = goHome, onlyModule = "parking")
                     Screen.V2_TRIPS -> V2EnergyScreen(vm, onBack = goHome, onlyModule = "trips")
                     Screen.V2_SECURITY -> V2HubScreen(vm, onBack = goHome, onOpen = { screen = it }, onlyModule = "security")
-                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = goHome)
+                    Screen.V2_AUTOMATIONS -> V2AutomationScreen(vm, onBack = goHome, onOpenSchedule = { screen = Screen.SCHEDULE })
                     Screen.V2_BACKUP -> V2BackupScreen(vm, onBack = goHome)
                     Screen.V2_DIAGNOSTICS -> V2DiagnosticsScreen(vm, onBack = goHome)
                 }
