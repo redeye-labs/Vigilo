@@ -35,8 +35,8 @@ Base verificata su GitHub: `7eb9d4c578947166b0fcd065fdbd5ed929da162f`, APK 2.0.0
 
 - Backend: `go test ./... -count=1` e `go vet ./...` eseguiti con Go 1.27.4.
 - GitHub Actions della base 2.0.0-beta.5: workflow test e APK firmato riusciti. I risultati della base non valgono come verifica del ramo.
-- Android nel workspace: installati SDK 36 e Gradle 8.14.3. Il JRE preinstallato è privo di javac. Controllare GitHub Actions sulla PR e completare il collaudo locale con JDK.
-- Screenshot dei 12 schermi, installazione su Home Assistant e Docker, upgrade con dati e prove su Model 3 Highland e Galaxy S26 Ultra restano da verificare.
+- Android nel workspace: SDK 36, Gradle 8.14.3 e JDK 17 installati. La PR esegue la build e pubblica le schermate coperte dai test Paparazzi, inclusa la grafica degli pneumatici.
+- Copertura Paparazzi di tutti i 12 schermi, installazione su Home Assistant e Docker, upgrade con dati e prove su Model 3 Highland e Galaxy S26 Ultra restano da verificare.
 - Per riprendere: usare il ramo della PR #6, verificare i check su HEAD e completare le righe residue nella tabella prima di preparare una release.
 
 ## Installazione e ripristino

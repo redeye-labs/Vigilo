@@ -149,7 +149,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
 }
 
 @Composable
-private fun TireLayout(tires: List<Backend.V2Measurement>) {
+internal fun TireLayout(tires: List<Backend.V2Measurement>) {
     val accent = MaterialTheme.colorScheme.onSurface
     fun reading(signal: String): String {
         val m = tires.firstOrNull { it.signal == signal } ?: return "—"

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -183,6 +184,27 @@ class ScreenshotsTest {
                     )
                     PrefToggle("Mostra la foto dell'auto", false) {}
                     PrefToggle("Esempio interruttore acceso", true) {}
+                }
+            }
+        }
+    }
+
+    @Test
+    fun pneumatici() {
+        val readings = listOf(
+            "TpmsPressureFl" to 2.90, "TpmsPressureFr" to 2.89,
+            "TpmsPressureRl" to 2.92, "TpmsPressureRr" to 2.91,
+        ).map { (signal, pressure) ->
+            Backend.V2Measurement(signal = signal, value = pressure, unit = "bar", quality = "valid")
+        }
+        paparazzi.snapshot(name = "pneumatici") {
+            PhoneShell {
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    ScreenHeader("Diagnostica Vigilo", "Connessione e segnali ricevuti dalla Tesla.", onBack = {})
+                    VigiloCard {
+                        Text("Pressione pneumatici", style = MaterialTheme.typography.titleMedium)
+                        TireLayout(readings)
+                    }
                 }
             }
         }
