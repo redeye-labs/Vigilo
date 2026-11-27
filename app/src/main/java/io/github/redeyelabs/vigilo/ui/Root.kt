@@ -26,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,6 +68,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
     val msg by vm.message.collectAsState()
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(msg) { msg?.let { snack.showSnackbar(it); vm.message.value = null } }
+    val screenState = rememberSaveableStateHolder()
     val goHome = { screen = Screen.HOME }
     // Senza server Vigilo l'app non può mostrare l'auto: si apre la guida di abbinamento.
     LaunchedEffect(loggedIn) {
@@ -101,7 +103,7 @@ fun VigiloRoot(vm: MainViewModel, startTab: String?) {
             }
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 when (screen) {
-                    Screen.HOME -> StatusScreen(vm, onOpen = { screen = it })
+                    Screen.HOME -> screenState.SaveableStateProvider(Screen.HOME.key) { StatusScreen(vm, onOpen = { screen = it }) }
                     Screen.NOTIFICATIONS -> NotificationsScreen(vm, onBack = goHome)
                     Screen.COMMANDS -> CommandsScreen(vm, onBack = goHome, onOpen = { screen = it })
                     Screen.MAP -> MapScreen(vm, onBack = goHome)

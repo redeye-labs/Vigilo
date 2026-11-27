@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 /** Vigilo 2 preview. Never substitutes demo values for missing telemetry. */
 @Composable
-fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit, onlyModule: String? = null) {
+fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit, onlyModule: String? = null, embedded: Boolean = false) {
     val paired by vm.backendMode.collectAsState()
     var refresh by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
@@ -93,11 +93,10 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit,
     }
 
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+        if (embedded) Modifier.fillMaxWidth() else Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeader(when (onlyModule) { "security" -> "Sicurezza"; "commands" -> "Comandi avanzati"; else -> "Vigilo 2" }, "Dati dal server personale.", onBack = onBack)
+        if (!embedded) ScreenHeader(when (onlyModule) { "security" -> "Sicurezza"; "commands" -> "Comandi avanzati"; else -> "Vigilo 2" }, "Dati dal server personale.", onBack = onBack)
         if (onlyModule == null) {
         VigiloCard {
             Text("Versione sperimentale", style = MaterialTheme.typography.titleMedium)
@@ -256,7 +255,7 @@ fun V2HubScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Unit,
             }
             capabilities?.modules?.firstOrNull { (onlyModule == null || onlyModule == "commands") && it.id == "commands" }?.let { commandModule ->
                 VigiloCard {
-                    Text("Comandi Tesla avanzati", style = MaterialTheme.typography.titleMedium)
+                    Text("Controllo veicolo", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Le azioni sono manuali, richiedono conferma e non svegliano automaticamente l'auto.",

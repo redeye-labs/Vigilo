@@ -86,7 +86,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                         "missing_permission" -> "Permessi mancanti"
                         else -> "Non disponibile"
                     }
-                    MetricPair("Telemetria", status, "Server", if (d.serverReachable) "Raggiungibile" else "Offline", Color(0xFF38BDF8))
+                    MetricPair("Telemetria", status, "Server", if (d.serverReachable) "Raggiungibile" else "Offline", MaterialTheme.colorScheme.onSurface)
                     Text("Permessi Tesla: " + if (d.permissionStatus == "not_verified") "Non verificati" else d.permissionStatus)
                     Text(
                         "Un'auto addormentata non equivale a un errore. L'assenza di un segnale può dipendere dal firmware.",
@@ -139,7 +139,7 @@ fun V2DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun TireLayout(tires: List<Backend.V2Measurement>) {
-    val accent = Color(0xFF38BDF8)
+    val accent = MaterialTheme.colorScheme.onSurface
     fun reading(signal: String): String {
         val m = tires.firstOrNull { it.signal == signal } ?: return "—"
         return String.format(Locale.ITALY, "%.2f bar", m.value) + if (m.quality == "stale") " *" else ""
@@ -154,11 +154,11 @@ private fun TireLayout(tires: List<Backend.V2Measurement>) {
             val w = size.width
             val h = size.height
             for (x in listOf(.04f, .76f)) for (y in listOf(.18f, .68f)) {
-                drawRoundRect(Color(0xFF50505B), Offset(w * x, h * y), Size(w * .20f, h * .17f), CornerRadius(5.dp.toPx()))
+                drawRoundRect(Color(0xFF454545), Offset(w * x, h * y), Size(w * .20f, h * .17f), CornerRadius(5.dp.toPx()))
             }
-            drawRoundRect(Color(0xFF777782), Offset(w * .17f, h * .02f), Size(w * .66f, h * .96f), CornerRadius(24.dp.toPx()))
-            drawRoundRect(Color(0xFF25252F), Offset(w * .25f, h * .22f), Size(w * .50f, h * .53f), CornerRadius(14.dp.toPx()))
-            drawRoundRect(Color(0xFF444450), Offset(w * .29f, h * .28f), Size(w * .42f, h * .14f), CornerRadius(5.dp.toPx()))
+            drawRoundRect(Color(0xFFB5B5B5), Offset(w * .17f, h * .02f), Size(w * .66f, h * .96f), CornerRadius(24.dp.toPx()))
+            drawRoundRect(Color(0xFF252525), Offset(w * .25f, h * .22f), Size(w * .50f, h * .53f), CornerRadius(14.dp.toPx()))
+            drawRoundRect(Color(0xFF444444), Offset(w * .29f, h * .28f), Size(w * .42f, h * .14f), CornerRadius(5.dp.toPx()))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(40.dp)) {
             TireReading("Anteriore DX", reading("TpmsPressureFr"), accent)

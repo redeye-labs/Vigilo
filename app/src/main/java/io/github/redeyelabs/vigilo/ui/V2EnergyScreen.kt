@@ -117,7 +117,7 @@ fun V2EnergyScreen(vm: MainViewModel, onBack: () -> Unit, onlyModule: String? = 
             ).filter { onlyModule == null || it.first == onlyModule }.forEach { (id, title, description) ->
                 val active = enabled(id)
                 VigiloCard {
-                    val accent = when (id) { "battery" -> Color(0xFF30D158); "charging" -> Color(0xFF38BDF8); else -> Color(0xFFA78BFA) }
+                    val accent = MaterialTheme.colorScheme.onSurface
                     Text(title, style = MaterialTheme.typography.titleLarge, color = accent)
                     Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(
@@ -307,7 +307,7 @@ private fun BatteryGauge(percent: Double?, accent: Color) {
             val offset = androidx.compose.ui.geometry.Offset(width / 2, width / 2)
             val arcSize = androidx.compose.ui.geometry.Size(size.width - width, size.height - width)
             val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-            drawArc(Color(0xFF37373F), 135f, 270f, false, offset, arcSize, style = stroke)
+            drawArc(Color(0xFF424242), 135f, 270f, false, offset, arcSize, style = stroke)
             if (valid != null && valid > 0) drawArc(accent, 135f, (270 * valid / 100).toFloat(), false, offset, arcSize, style = stroke)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

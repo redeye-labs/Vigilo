@@ -88,7 +88,7 @@ fun CommandsScreen(vm: MainViewModel, onBack: () -> Unit, onOpen: (Screen) -> Un
         )
 
         Spacer(Modifier.height(12.dp))
-        MenuRow(Icons.Filled.FlashOn, "Comandi avanzati", subtitle = "Climatizzazione, ricarica e aperture", onClick = { onOpen(Screen.V2_COMMANDS) })
+        V2HubScreen(vm, onBack = onBack, onOpen = onOpen, onlyModule = "commands", embedded = true)
         Spacer(Modifier.height(20.dp))
         VigiloCard {
             Row2("Porte", yesNo(s?.doorsOpen, "Aperte", "Chiuse"))
