@@ -168,7 +168,7 @@ func (a *App) recordV2Telemetry(field string,val any){
  var unit string
  switch field{
  case "Soc":module,unit=ModuleBattery,"percent"
- case "RatedRange":module,unit=ModuleBattery,"km"
+ case "RatedRange":module,unit=ModuleBattery,"mile"
  case "NominalFullPackEnergyKwh", "EnergyRemaining":module,unit=ModuleBattery,"kWh"
  case "LifetimeEnergyChargedKwh", "ACChargingEnergyIn", "DCChargingEnergyIn":module,unit=ModuleCharging,"kWh"
  case "DCChargingPower":module,unit=ModuleCharging,"kW"

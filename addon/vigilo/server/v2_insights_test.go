@@ -50,10 +50,19 @@ func TestV2BatteryWithoutValidatedBaselineHasNoSOH(t *testing.T){
  now:=time.Now()
  samples:=[]V2Measurement{
   insightSample("a","NominalFullPackEnergyKwh",52.3,now),
-  insightSample("a","RatedRange",278,now),
+  {VehicleID:"a",Signal:"RatedRange",Value:163,Unit:"mile",Source:SourceFleetTelemetry,Quality:QualityValid,ReceivedAt:now,MeasuredAt:now},
   insightSample("a","Soc",66,now),
  }
  r:=BatteryObservations("a",samples)
  if r.NominalFullPackKWh==nil||*r.NominalFullPackKWh!=52.3||r.HealthPercent!=nil{t.Fatalf("invented health: %+v",r)}
- if r.RatedRangeKm==nil||*r.RatedRangeKm!=278{t.Fatalf("wrong range %+v",r)}
+ if r.RatedRangeKm==nil||math.Abs(*r.RatedRangeKm-163*1.609344)>0.001{t.Fatalf("wrong range %+v",r)}
+}
+
+func TestLegacyRatedRangeMislabeledMiles(t *testing.T){
+ now:=time.Now()
+ for _,unit:=range []string{"km","mile"}{
+  m:=V2Measurement{VehicleID:"a",Signal:"RatedRange",Value:163,Unit:unit,Source:SourceFleetTelemetry,Quality:QualityValid,ReceivedAt:now,MeasuredAt:now}
+  r:=BatteryObservations("a",[]V2Measurement{m})
+  if r.RatedRangeKm==nil||math.Abs(*r.RatedRangeKm-262.323072)>0.001{t.Fatalf("range conversion failed: %+v",r)}
+ }
 }

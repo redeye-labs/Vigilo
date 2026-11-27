@@ -136,7 +136,10 @@ func BatteryObservations(vehicle VehicleID,latest []V2Measurement) V2BatteryObse
   switch m.Signal{
   case "NominalFullPackEnergyKwh":out.NominalFullPackKWh=&value
   case "EnergyRemaining":out.EnergyRemainingKWh=&value
-  case "RatedRange":out.RatedRangeKm=&value
+  case "RatedRange":
+   // Older Vigilo builds mislabeled raw Fleet Telemetry miles as km.
+   if m.Source==SourceFleetTelemetry && (m.Unit=="mile" || m.Unit=="km"){value*=1.609344}
+   out.RatedRangeKm=&value
   case "Soc":
    if value<=100{out.ChargePercent=&value}
   }
